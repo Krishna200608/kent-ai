@@ -1,0 +1,32 @@
+# Conversational Patient Intake Chatbot Configuration
+chatbot:
+  model: "llama3:8b"
+  backend: "ollama"
+  api_base: "http://localhost:11434"
+  temperature: 0.5
+  max_turns: 15
+  min_dimensions_required: 4
+
+state_machine:
+  initial_state: "GREETING"
+  states:
+    - "GREETING"
+    - "CHIEF_COMPLAINT"
+    - "LOCATION"
+    - "SENSATION"
+    - "MODALITY"
+    - "CONCOMITANT"
+    - "MENTAL"
+    - "REVIEW"
+    - "CLARIFICATION"
+    - "DONE"
+  terminal_states:
+    - "DONE"
+
+dialogue:
+  persona: "Empathetic, attentive homeopathic clinical intake assistant"
+  rules:
+    - "Never prescribe or suggest specific homeopathic remedies directly to the patient."
+    - "Ask one focused question at a time to minimize cognitive burden."
+    - "Acknowledge patient discomfort with compassion before probing deeper."
+    - "Focus on eliciting Kent's 7 dimensions: organ location, pain sensation, aggravations, ameliorations, accompaniments, time of day, and emotional state."

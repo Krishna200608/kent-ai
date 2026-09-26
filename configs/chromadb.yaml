@@ -1,0 +1,24 @@
+# ChromaDB Semantic Rubric Vector Store Configuration
+vector_store:
+  collection_name: "kent_rubrics"
+  persist_directory: "data/embeddings/kent_rubrics"
+  distance_metric: "cosine"   # cosine | l2 | ip
+
+embedding_model:
+  name: "sentence-transformers/all-MiniLM-L6-v2"
+  device: "auto"              # cpu | cuda | auto
+  batch_size: 256
+  normalize_embeddings: true
+
+indexing:
+  text_template: "{path} - {label}"
+  metadata_fields:
+    - "id"
+    - "section_id"
+    - "section_name"
+    - "depth"
+    - "remedy_count"
+
+search:
+  top_k: 20
+  score_threshold: 0.40

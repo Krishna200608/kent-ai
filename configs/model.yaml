@@ -1,0 +1,46 @@
+# ClinicalBERT Fine-Tuning & Inference Configuration
+model:
+  name: "emilyalsentzer/Bio_ClinicalBERT"
+  output_dir: "data/models/clinicalbert_homeoNER"
+  max_seq_length: 256
+  seed: 42
+
+training:
+  epochs: 10
+  batch_size: 16
+  learning_rate: 2.0e-5
+  weight_decay: 0.01
+  warmup_ratio: 0.1
+  fp16: true
+  early_stopping_patience: 3
+  metric_for_best_model: "eval_f1"
+  greater_is_better: true
+  logging_steps: 50
+  save_total_limit: 2
+
+labels:
+  schema: "BIO"
+  categories:
+    - LOC        # Location / Anatomical organ or site
+    - SEN        # Sensation (burning, throbbing, stitching, aching)
+    - MOD_AGG    # Modality: Aggravation / worse from
+    - MOD_AMEL   # Modality: Amelioration / better from
+    - CONC       # Concomitant symptoms
+    - TEMP       # Temporal modalities (morning, night, 3 AM)
+    - MENT       # Mental / Emotional symptoms (fear, weeping, irritability)
+  tags:
+    - "O"
+    - "B-LOC"
+    - "I-LOC"
+    - "B-SEN"
+    - "I-SEN"
+    - "B-MOD_AGG"
+    - "I-MOD_AGG"
+    - "B-MOD_AMEL"
+    - "I-MOD_AMEL"
+    - "B-CONC"
+    - "I-CONC"
+    - "B-TEMP"
+    - "I-TEMP"
+    - "B-MENT"
+    - "I-MENT"

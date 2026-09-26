@@ -1,0 +1,75 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE & editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Data assets & large files (per architecture roadmap)
+data/raw/*.sqlite
+data/processed/*.jsonl
+data/embeddings/
+data/models/
+*.sqlite
+*.sqlite3
+*.gz
+*.tar
+*.zip
+kent_public_edition/*.sqlite
+kent_public_edition/*.gz
+kent_public_edition/*.txt
+
+# Checkpoints, logs, model weights
+checkpoints/
+models/
+*.log
+*.pt
+*.bin
+*.safetensors
+wandb/
+runs/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Testing & notebooks
+.pytest_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
