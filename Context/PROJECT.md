@@ -1,7 +1,7 @@
 # Kent-AI — Project Context
 
-> Last updated: 2026-09-26 by Antigravity (Phase 0 scaffolding agent)
-> Phase: 0 (complete)
+> Last updated: 2026-09-26 by Antigravity (Phase 1 case generation agent)
+> Phase: 1 (active)
 
 ---
 
@@ -63,7 +63,7 @@ It takes a patient's natural-language symptom description, extracts structured c
 | Phase | Name | Status | Days |
 |---|---|---|---|
 | 0 | Scaffolding & Data Layer | ✅ Complete | 1–2 |
-| 1 | Synthetic Case Generation (LLaMA 3) | ⬜ Planned | 3–7 |
+| 1 | Synthetic Case Generation (LLaMA 3) | 🔄 In Progress (Pipeline Ready) | 3–7 |
 | 2 | ChromaDB Rubric Index | ⬜ Planned | 5–6 |
 | 3 | ClinicalBERT NER Training | ⬜ Planned | 8–10 |
 | 4 | LLaMA 3 Post-Processor | ⬜ Planned | 11–12 |

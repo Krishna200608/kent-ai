@@ -58,21 +58,37 @@ def load_config(config_name: str) -> Dict[str, Any]:
     return load_yaml(config_dir / config_name)
 
 
-def get_model_config() -> Dict[str, Any]:
+def get_model_config(filepath: Optional[Path | str] = None) -> Dict[str, Any]:
     """Load ClinicalBERT model configuration."""
+    if filepath:
+        return load_yaml(filepath)
     return load_config("model.yaml")
 
 
-def get_generation_config() -> Dict[str, Any]:
+def get_generation_config(filepath: Optional[Path | str] = None) -> Dict[str, Any]:
     """Load LLaMA case generation configuration."""
+    if filepath:
+        return load_yaml(filepath)
     return load_config("generation.yaml")
 
 
-def get_chromadb_config() -> Dict[str, Any]:
+def get_chromadb_config(filepath: Optional[Path | str] = None) -> Dict[str, Any]:
     """Load ChromaDB vector store configuration."""
+    if filepath:
+        return load_yaml(filepath)
     return load_config("chromadb.yaml")
 
 
-def get_chatbot_config() -> Dict[str, Any]:
+def get_chatbot_config(filepath: Optional[Path | str] = None) -> Dict[str, Any]:
     """Load conversational chatbot configuration."""
+    if filepath:
+        return load_yaml(filepath)
     return load_config("chatbot.yaml")
+
+
+# Convenient aliases
+load_model_config = get_model_config
+load_generation_config = get_generation_config
+load_chromadb_config = get_chromadb_config
+load_chatbot_config = get_chatbot_config
+

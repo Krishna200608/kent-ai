@@ -217,17 +217,70 @@ Kent's Repertory uses a typographic grading system for remedy prominence:
 
 ---
 
-## Planned Data Artifacts (Phase 1+)
+## Processed Data Artifacts (Phase 1)
 
-| File | Phase | Format | Description |
+| File | Status | Format | Description |
 |---|---|---|---|
-| `data/processed/mind_cases.jsonl` | 1 | JSONL | ~22,200 synthetic clinical cases |
-| `data/processed/train.jsonl` | 1 | JSONL | 80% training split |
-| `data/processed/val.jsonl` | 1 | JSONL | 10% validation split |
-| `data/processed/test.jsonl` | 1 | JSONL | 10% test split |
-| `data/embeddings/kent_rubrics/` | 2 | ChromaDB | Dense HNSW index of all 74,513 rubrics |
-| `data/models/clinicalbert_homeoNER/` | 3 | HuggingFace | Fine-tuned Bio_ClinicalBERT checkpoint |
+| `data/processed/mind_cases.jsonl` | Active | JSONL | Synthetic clinical cases with tokens and BIO tags |
+| `data/processed/generation_checkpoint.json` | Active | JSON | Atomic crash-safe checkpoint (completed IDs, counts, timestamps) |
+| `data/processed/train.jsonl` | Active | JSONL | 80% stratified training partition |
+| `data/processed/val.jsonl` | Active | JSONL | 10% stratified validation partition |
+| `data/processed/test.jsonl` | Active | JSONL | 10% stratified test partition |
+| `data/embeddings/kent_rubrics/` | Phase 2 | ChromaDB | Dense HNSW index of all 74,513 rubrics |
+| `data/models/clinicalbert_homeoNER/` | Phase 3 | HuggingFace | Fine-tuned Bio_ClinicalBERT checkpoint |
+
+---
+
+## Synthetic Case Schema (`SyntheticCase`)
+
+Each line in `mind_cases.jsonl`, `train.jsonl`, `val.jsonl`, and `test.jsonl` is a JSON object with:
+
+```json
+{
+  "case_id": "case_4_1_a1b2c3",
+  "rubric_id": 4,
+  "rubric_path": "MIND > ABSENT-MINDED",
+  "narrative": "Doctor, I feel terribly absent-minded every morning. My thoughts wander constantly...",
+  "entities": [
+    {
+      "text": "absent-minded",
+      "label": "MENT",
+      "start": 23,
+      "end": 36
+    },
+    {
+      "text": "every morning",
+      "label": "TEMP",
+      "start": 37,
+      "end": 50
+    }
+  ],
+  "tokens": ["Doctor", ",", "I", "feel", "terribly", "absent", "-", "minded", "every", "morning", "."],
+  "bio_tags": ["O", "O", "O", "O", "O", "B-MENT", "I-MENT", "I-MENT", "B-TEMP", "I-TEMP", "O"],
+  "metadata": {
+    "model": "llama3:8b",
+    "backend": "ollama",
+    "rubric_id": 4,
+    "top_remedies": ["Cann-i.", "Lach.", "Nux-v."],
+    "case_idx": 1
+  }
+}
+```
+
+### Entity Categories & BIO Label Space (15 tags)
+
+| Category | Description | Examples | BIO Tags |
+|---|---|---|---|
+| `LOC` | Anatomical location / organ | forehead, temples, chest, stomach | `B-LOC`, `I-LOC` |
+| `SEN` | Sensation description | throbbing, burning, stitching, dull ache | `B-SEN`, `I-SEN` |
+| `MOD_AGG` | Aggravation (worse from) | worse from noise, worse in warm room | `B-MOD_AGG`, `I-MOD_AGG` |
+| `MOD_AMEL` | Amelioration (better from) | better lying down, improved by cold air | `B-MOD_AMEL`, `I-MOD_AMEL` |
+| `CONC` | Concomitant symptom | with nausea, trembling hands | `B-CONC`, `I-CONC` |
+| `TEMP` | Temporal modality | morning, at night, 3 AM, twilight | `B-TEMP`, `I-TEMP` |
+| `MENT` | Mental / Emotional state | anxiety, weeping, fear of death, rage | `B-MENT`, `I-MENT` |
+| `O` | Outside any entity span | punctuation, stop words, non-symptoms | `O` |
 
 ---
 
 _End of file._
+

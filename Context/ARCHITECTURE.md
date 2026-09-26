@@ -38,9 +38,9 @@ kent-ai/
 │   ├── data/
 │   │   ├── __init__.py            # Re-exports all kent_db public API
 │   │   ├── kent_db.py             # ★ CORE: SQLite DAL — fully implemented
-│   │   ├── case_generator.py      # Stub: LLaMA synthetic case pipeline (Phase 1)
-│   │   ├── bio_tagger.py          # Stub: BIO token tagger (Phase 1)
-│   │   └── splitter.py            # Stub: train/val/test splitter (Phase 1)
+│   │   ├── case_generator.py      # ★ CORE: LLaMA synthetic case pipeline (Ollama REST + Mock) — implemented
+│   │   ├── bio_tagger.py          # ★ CORE: BIO token tagger with offset repair — implemented
+│   │   └── splitter.py            # ★ CORE: 80/10/10 stratified deficit splitter — implemented
 │   │
 │   ├── models/
 │   │   ├── symptom_ner.py         # Stub: ClinicalBERT NER wrapper (Phase 3)
@@ -55,7 +55,7 @@ kent-ai/
 │   ├── chatbot/
 │   │   ├── state_machine.py       # Stub: FSM with IntakeState enum (Phase 6)
 │   │   ├── dialogue_manager.py    # Stub: Turn + slot manager (Phase 6)
-│   │   └── prompts.py             # Prompt templates (case gen, resolver, chatbot)
+│   │   └── prompts.py             # Prompt templates (case gen, resolver, chatbot) — active
 │   │
 │   ├── pipeline/
 │   │   ├── orchestrator.py        # Stub: End-to-end transcript→report (Phase 5)

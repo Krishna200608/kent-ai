@@ -97,4 +97,37 @@ Tests reference rubric IDs 1, 2, and 4 by their expected labels (`ABANDONED`, `f
 
 ---
 
+## 6. Case Generation & BIO Tagging Gotchas
+
+### 6.1 LLM Character Offset Drift in JSON Mode
+
+LLMs (including LLaMA 3 8B) frequently return character start/end offsets that are off by 1–3 characters due to leading whitespace, quotes, or tokenization boundaries.
+- **Problem**: `narrative[start:end]` does not exactly match `entity["text"]`.
+- **Solution**: `BIOTagger.align_entity_offsets()` implements a 4-tier verification ladder:
+  1. Exact check at `narrative[start:end]`
+  2. Local window search within ±15 characters of `start`
+  3. Global exact substring search
+  4. Global case-insensitive search
+  Always run raw entity outputs through `align_entity_offsets()` before downstream tokenization.
+
+### 6.2 Hyphenated Clinical Terms (e.g. `absent-minded`)
+
+Regex tokenizers that match `\w+` will split hyphenated terms into separate tokens (`['absent', 'minded']`).
+- **Convention**: Our standard tokenization regex `r"\w+|[^\w\s]"` splits into `['absent', '-', 'minded']`.
+- **BIO implication**: If the whole span `"absent-minded"` is labeled `MENT`, the tokens become `B-MENT`, `I-MENT`, `I-MENT`. This matches BERT/ClinicalBERT WordPiece subword tokenization expectations.
+
+### 6.3 Stratified Splitting on Small Rubric Groups (k=4)
+
+When splitting 4 cases per rubric with an 80/10/10 target:
+- Simple per-rubric integer rounding (`round(4 * 0.8) = 3`, `round(4 * 0.1) = 0`) forces either 0 cases into val/test or skews splits to 50/25/25.
+- **Solution**: `src.data.splitter.split_cases()` uses global deficit balancing: base quota of $\lfloor k \times 0.8 \rfloor$ goes to Train to guarantee representation, and remaining cases are assigned to the split with the largest remaining deficit relative to global 80/10/10 targets.
+
+### 6.4 Special Tokens in ClinicalBERT Need `-100` Masking
+
+When converting token BIO tags to HuggingFace tokenizer subwords:
+- Special tokens (`[CLS]`, `[SEP]`, `[PAD]`) have `offset_mapping == (0, 0)`.
+- **Requirement**: They MUST be labeled `-100` (PyTorch `CrossEntropyLoss` ignore index), never `"O"` or `0`, otherwise the model learns to predict entity tags for sentence boundary tokens. Use `BIOTagger.align_with_subwords(..., ignore_index=-100)`.
+
+---
+
 _End of file._

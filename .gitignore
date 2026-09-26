@@ -42,6 +42,8 @@ env/
 # Data assets & large files (per architecture roadmap)
 data/raw/*.sqlite
 data/processed/*.jsonl
+data/processed/*.json
+data/processed/*.tmp
 data/embeddings/
 data/models/
 *.sqlite
