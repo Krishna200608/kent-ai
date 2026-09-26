@@ -1,0 +1,100 @@
+# Kent-AI — Gotchas & Known Quirks
+
+> Last updated: 2026-09-26 by Antigravity (Phase 0 scaffolding agent)
+> Phase: 0 (complete)
+
+---
+
+## 1. Database Gotchas
+
+### 1.1 Remedy Grades Are Mostly NULL
+
+The `grade` column in `rubric_remedies` is `NULL` for **all 507,179 rows** — no human-reviewed grades exist yet. The `grade_candidate` column (auto-detected from OCR typography analysis) is populated for 458,354 rows but is `NULL` for 48,825 rows.
+
+**Impact**: The DAL resolves grades via `COALESCE(grade, grade_candidate, 1)`, meaning ~48,825 remedies silently default to Grade 1. This is a known approximation. Do not assume grade values are authoritative.
+
+### 1.2 Unresolved Remedies
+
+Some `rubric_remedies` rows have `remedy_id = NULL` — the OCR raw token could not be matched to a known remedy in the `remedies` dictionary. These entries still have `normalized` and `raw_token` populated but `abbreviation` and `full_name` will be `NULL`.
+
+**Impact**: When iterating remedies, always guard for `None` on `abbreviation` and `full_name`. The `normalized` or `raw_token` field is the fallback identifier.
+
+Example unresolved tokens: `alum-p'§`, `atrot!`, `Bar-§`, `CANN-L`, `lac-h` — many are OCR artifacts or abbreviations not in the 8-page remedy dictionary.
+
+### 1.3 OCR Superscripts vs. Grades
+
+Kent's Expanded Edition uses superscript numbers (1–24, 7a) as **bibliography citations**, NOT remedy grades. The editorial preface explicitly warns against confusing them. The extraction pipeline attempted to separate these, but ambiguity remains in `raw_token` values.
+
+### 1.4 FTS5 Content Sync
+
+The `rubric_search` and `page_search` FTS5 virtual tables are `content=` tables (they reference the source table's rowid). If you ever bulk-modify `rubrics` or `pages` (which you should not — this is read-only data), the FTS indexes will be stale. The database is treated as immutable.
+
+---
+
+## 2. Hierarchy Gotchas
+
+### 2.1 Compact Labels Are Not Always Semantic Hierarchy
+
+Kent's printed rubric labels like `midnight, before` are compact notations, not necessarily parent-child relationships. A mechanical parser yields `midnight, before > after`, but this does NOT mean "after" is semantically a child of "midnight, before." The `hierarchy_status` column flags uncertain cases.
+
+See `kent_public_edition/STRUCTURE.md` §"Important post-pass hierarchy qualification" for the full discussion.
+
+### 2.2 Shared Boundary Pages
+
+Eight PDF pages (331, 476, 681, 708, 713, 726, 760, 808) contain rubrics from two different sections. The `page_sections` table handles this many-to-many relationship. Do not assume one page belongs to one section.
+
+### 2.3 Carried Column Headings
+
+At column tops, the printed book repeats the active rubric path as a "carried heading" without leading dashes. These are NOT new rubrics — they are continuations. The parser has already handled this, but if you ever write new parsing code, be aware of this pattern.
+
+---
+
+## 3. Python / Environment Gotchas
+
+### 3.1 Windows `python` Alias
+
+On the dev machine, `python` is the Windows Store alias (fails with "Python was not found"). Use `py -3.12` or the venv's `.venv\Scripts\python.exe` directly.
+
+### 3.2 Line Endings
+
+Git warns about LF → CRLF conversion on Windows. The repo defaults to LF. If you create files programmatically, write them with `\n` not `\r\n`.
+
+### 3.3 Path with Spaces
+
+The project lives at `d:\Research Project\kent-ai` — note the space in "Research Project". Always quote paths in shell commands. Python `Path` handles this natively.
+
+### 3.4 Hardlink vs. Symlink
+
+`data/raw/repertory.sqlite` is a **hardlink** (not a symlink) to `kent_public_edition/repertory.sqlite`. Both paths refer to the same inode. Deleting either path does NOT delete the data (the other remains). There is also a directory junction at `d:\Research Project\Kent` → `d:\Research Project\kent-ai`.
+
+---
+
+## 4. Data Shape Gotchas
+
+### 4.1 `get_mind_rubrics()` Returns ALL Section 1 Rubrics (Not Just Roots)
+
+The function returns all 4,933 rubrics in section_id=1, across all depths (0–5). To get only root-level MIND rubrics, use `get_rubrics(section_id=1, parent_id=-1)`.
+
+### 4.2 Rubric `path` Column vs. Reconstructed Path
+
+Every rubric has a pre-populated `path` column (e.g., `"MIND > ABSENT-MINDED > morning"`). The `get_rubric_path()` function prefers this column and only falls back to recursive traversal if it's empty. The pre-populated path is authoritative.
+
+### 4.3 Section Name Is Part of the Path
+
+The `path` column includes the section name as the first component: `"MIND > FEAR > dark"`, not just `"FEAR > dark"`. This is intentional — it makes paths globally unique across sections.
+
+---
+
+## 5. Test Gotchas
+
+### 5.1 Tests Use the Real Database
+
+Unit tests in `test_kent_db.py` query the actual `repertory.sqlite` file. They are NOT mocked. If the database file is missing or moved, all 13 DB tests will fail with `FileNotFoundError`.
+
+### 5.2 Specific Rubric IDs Are Hardcoded in Tests
+
+Tests reference rubric IDs 1, 2, and 4 by their expected labels (`ABANDONED`, `feels he is`, `ABSENT-MINDED`). These IDs are stable in the digitized edition but would break if the database were regenerated with different IDs.
+
+---
+
+_End of file._

@@ -29,6 +29,15 @@ kent-ai/
 ├── pyproject.toml                     # Single source of truth for deps & project metadata
 ├── Makefile                           # Shortcut commands: make setup, make train, make serve
 │
+├── Context/                           # AI Agent context files (single source of truth)
+│   ├── CONTEXT_RULES.md               # Meta-rules for authoring/updating context files
+│   ├── PROJECT.md                     # High-level goals, clinical context, context index
+│   ├── ARCHITECTURE.md                # Component tree, implementation status, APIs
+│   ├── DATA.md                        # SQLite schema, table stats, constants
+│   ├── CONVENTIONS.md                 # Code style, imports, typing, DB access rules
+│   ├── PROGRESS.md                    # Phase-by-phase status, deliverables checklist
+│   └── GOTCHAS.md                     # Non-obvious quirks, NULL grades, SQLite pitfalls
+│
 ├── configs/                           # All YAML/JSON configuration files
 │   ├── model.yaml                     # ClinicalBERT hyperparams, label schema
 │   ├── generation.yaml                # LLaMA generation params, prompts, batch size
@@ -134,11 +143,29 @@ kent-ai/
 ## 3. Phased Roadmap
 
 > [!IMPORTANT]
-> **Execution Model:** Each phase is a self-contained milestone. Flash executes it. After completion, switch to Opus/Sonnet for review, course correction, and fleshing out the next phase.
+> **Execution Model & Context Discipline:**
+> - **Execution:** Each phase is a self-contained milestone. Flash executes it. After completion, switch to Opus/Sonnet for review, course correction, and fleshing out the next phase.
+> - **Mandatory Context Updates:** Every agent MUST update the relevant `Context/` files ([CONTEXT_RULES.md](file:///d:/Research%20Project/kent-ai/Context/CONTEXT_RULES.md)) at the end of each task or phase before declaring it complete.
+>   - Always update `Context/PROGRESS.md` with completed deliverables and exact metrics.
+>   - Update `Context/ARCHITECTURE.md` whenever a module changes status (e.g. from `stub` to `implemented`).
+>   - Update `Context/DATA.md` whenever data assets, split files, or embeddings are produced.
+>   - Update `Context/GOTCHAS.md` whenever a bug, quirk, or unexpected library behavior is discovered.
+>   - Update `Context/CONVENTIONS.md` if new code conventions or patterns are established.
+
+### Context Update Protocol Matrix
+
+| Trigger Event | Files to Update | Key Sections to Modify |
+|---|---|---|
+| **Phase / Task Completed** | `Context/PROGRESS.md` | Check off deliverables, update phase status badge, record metrics |
+| **New Module / API Implemented** | `Context/ARCHITECTURE.md` | Change status from `stub` to `implemented`, update API signatures & diagrams |
+| **Dataset Generated / Transformed** | `Context/DATA.md` | Record row counts, file paths, schema, split ratios, verification commands |
+| **Code Pattern / Import Rule Added** | `Context/CONVENTIONS.md` | Document new pattern, typing conventions, or library guidelines |
+| **Bug / Quirk / Edge Case Discovered** | `Context/GOTCHAS.md` | Add gotcha entry with symptom, root cause, and verified workaround |
+| **Scope / Milestone Shift** | `Context/PROJECT.md` | Update phase number, current milestone, and dependencies |
 
 ---
 
-### Phase 0 — Scaffolding & Data Layer `[Day 1–2]`
+### Phase 0 — Scaffolding & Data Layer `[Day 1–2]` ✅ *(Complete)*
 
 **Goal:** Create the repo skeleton and wire up the Kent SQLite reader.
 
@@ -147,10 +174,11 @@ kent-ai/
 | Initialize repo structure | `pyproject.toml`, `.gitignore`, `Makefile`, all `__init__.py` | Create every directory and placeholder file from the tree above |
 | Kent DB reader | `src/data/kent_db.py` | Functions: `get_sections()`, `get_rubrics(section_id)`, `get_rubric_path(rubric_id)`, `get_remedies(rubric_id)`, `get_mind_rubrics()` |
 | Config system | `configs/model.yaml`, `configs/generation.yaml` | YAML loader utility + default configs |
-| Unit tests for DB reader | `tests/test_kent_db.py` | Verify rubric counts, path resolution, remedy grades |
+| Unit tests for DB reader | `tests/test_kent_db.py` | Verify rubric counts, path resolution, remedy grades (13/13 passing) |
 | EDA notebook | `notebooks/01_eda_repertory.ipynb` | Section distribution, MIND rubric exploration |
+| Context layer init | `Context/` (all 7 files) | Create `CONTEXT_RULES.md`, `PROJECT.md`, `ARCHITECTURE.md`, `DATA.md`, `CONVENTIONS.md`, `PROGRESS.md`, `GOTCHAS.md` |
 
-**Exit Criteria:** `python -c "from src.data.kent_db import get_mind_rubrics; print(len(get_mind_rubrics()))"` prints `4933`.
+**Exit Criteria:** `python -c "from src.data.kent_db import get_mind_rubrics; print(len(get_mind_rubrics()))"` prints `4933` (Verified ✅).
 
 ---
 
@@ -167,11 +195,13 @@ kent-ai/
 | Data splitter | `src/data/splitter.py` | Stratified 80/10/10 split, reproducible seed |
 | Demo notebook | `notebooks/02_case_generation_demo.ipynb` | Generate 5 cases, visually inspect quality |
 | Config | `configs/generation.yaml` | Temperature, max_tokens, batch_size, model_name |
+| **Context update** | `Context/PROGRESS.md`<br>`Context/DATA.md`<br>`Context/ARCHITECTURE.md`<br>`Context/GOTCHAS.md` | Check off Phase 1 in `PROGRESS.md`; record generated case count, splits & token lengths in `DATA.md`; mark data modules `implemented` in `ARCHITECTURE.md`; log generation quirks in `GOTCHAS.md` |
 
 **Exit Criteria:**
 - `mind_cases.jsonl` contains ≥22,000 cases
 - `train.jsonl` / `val.jsonl` / `test.jsonl` are created with correct split ratios
 - 5 randomly sampled cases pass manual quality review
+- `Context/` files updated and verified per [CONTEXT_RULES.md](file:///d:/Research%20Project/kent-ai/Context/CONTEXT_RULES.md)
 
 **Hardware Plan:**
 ```
@@ -193,8 +223,9 @@ kent-ai/
 | Vector store wrapper | `src/search/vector_store.py` | ChromaDB: create collection, upsert embeddings, query top-K |
 | Index builder script | `scripts/build_embeddings.py` | Batch-embed all rubrics, persist to `data/embeddings/` |
 | Unit tests | `tests/test_vector_store.py` | Known rubric queries return expected top-5 results |
+| **Context update** | `Context/PROGRESS.md`<br>`Context/DATA.md`<br>`Context/ARCHITECTURE.md`<br>`Context/GOTCHAS.md` | Record ChromaDB collection size, distance metric & latency in `DATA.md` & `PROGRESS.md`; mark search modules `implemented` in `ARCHITECTURE.md`; log vector store quirks in `GOTCHAS.md` |
 
-**Exit Criteria:** Query `"splitting headache from sun"` returns `HEAD > PAIN > Sun, from exposure to` in top-5 results.
+**Exit Criteria:** Query `"splitting headache from sun"` returns `HEAD > PAIN > Sun, from exposure to` in top-5 results; `Context/` files updated.
 
 ---
 
@@ -209,10 +240,12 @@ kent-ai/
 | Config | `configs/model.yaml` | `learning_rate: 2e-5`, `epochs: 10`, `batch_size: 16`, `max_seq_length: 256`, label schema |
 | Colab notebook | `notebooks/03_train_clinicalbert.ipynb` | Self-contained Colab notebook: mount Drive, load data, train, save to Drive |
 | Training script | `scripts/train_ner.py` | CLI alternative to notebook for college GPU |
+| **Context update** | `Context/PROGRESS.md`<br>`Context/ARCHITECTURE.md`<br>`Context/GOTCHAS.md` | Record validation F1, precision, recall, and loss curves in `PROGRESS.md`; mark model modules `implemented` in `ARCHITECTURE.md`; log tokenizer/alignment gotchas in `GOTCHAS.md` |
 
 **Exit Criteria:**
 - Token-level F1 ≥ 88% on validation set
 - Saved model checkpoint in `data/models/clinicalbert_homeoNER/`
+- `Context/` files updated with model performance metrics
 
 **Hardware:** Google Colab T4 free tier (~35–50 min training time).
 
@@ -227,8 +260,9 @@ kent-ai/
 | Resolver module | `src/models/resolver.py` | Ollama client, JSON mode, negation resolution, coreference linking |
 | Prompt templates | `src/chatbot/prompts.py` | Add resolver-specific prompts with few-shot examples |
 | Unit tests | `tests/test_pipeline.py` | Known transcript → expected 7-dim JSON output |
+| **Context update** | `Context/PROGRESS.md`<br>`Context/ARCHITECTURE.md`<br>`Context/GOTCHAS.md` | Document resolver JSON schemas & accuracy in `PROGRESS.md`; update `ARCHITECTURE.md`; record edge case prompts & resolution failure modes in `GOTCHAS.md` |
 
-**Exit Criteria:** Given a sample patient transcript, the resolver outputs a valid 7-dimension symptom JSON with zero hallucinated entities.
+**Exit Criteria:** Given a sample patient transcript, the resolver outputs a valid 7-dimension symptom JSON with zero hallucinated entities; `Context/` updated.
 
 ---
 
@@ -243,10 +277,12 @@ kent-ai/
 | Report generator | `src/pipeline/report_generator.py` | Structured JSON + human-readable markdown report |
 | End-to-end notebook | `notebooks/04_pipeline_demo.ipynb` | Full demo: paste a transcript, get a report |
 | Evaluation script | `scripts/evaluate.py` | Run test split through pipeline, compute F1, Top-K Recall, MRR |
+| **Context update** | `Context/PROGRESS.md`<br>`Context/ARCHITECTURE.md`<br>`Context/DATA.md` | Log end-to-end evaluation metrics (F1, Top-20 Recall, MRR) in `PROGRESS.md`; mark pipeline modules `implemented` in `ARCHITECTURE.md`; document scoring logic in `CONVENTIONS.md` |
 
 **Exit Criteria:**
 - `python scripts/evaluate.py` completes on 2,220 test cases
 - Token-level F1 ≥ 88%, Top-20 Rubric Recall ≥ 90%, MRR ≥ 0.65
+- `Context/` files updated with complete benchmark results
 
 ---
 
@@ -260,8 +296,9 @@ kent-ai/
 | Dialogue manager | `src/chatbot/dialogue_manager.py` | Turn management, history tracking, dimension completeness check |
 | Prompt templates | `src/chatbot/prompts.py` | Add chatbot system/user prompts for each state |
 | Integration with pipeline | Wire chatbot output → `orchestrator.process_transcript()` |
+| **Context update** | `Context/PROGRESS.md`<br>`Context/ARCHITECTURE.md`<br>`Context/GOTCHAS.md` | Document state flow and transition graph in `ARCHITECTURE.md`; record simulated conversation results in `PROGRESS.md`; log dialogue edge-cases in `GOTCHAS.md` |
 
-**Exit Criteria:** A 7-turn simulated conversation fills all 7 symptom dimensions and triggers report generation.
+**Exit Criteria:** A 7-turn simulated conversation fills all 7 symptom dimensions and triggers report generation; `Context/` updated.
 
 ---
 
@@ -276,8 +313,9 @@ kent-ai/
 | Rubric explorer page | `src/dashboard/pages/rubric_explorer.py` | Interactive Kent tree with search |
 | Remedy lookup page | `src/dashboard/pages/remedy_lookup.py` | Reverse lookup: remedy → all rubrics |
 | Components | `src/dashboard/components/` | Reusable tree widget, chat transcript viewer |
+| **Context update** | `Context/PROGRESS.md`<br>`Context/ARCHITECTURE.md` | Document dashboard launch procedure and page routes in `PROGRESS.md` & `ARCHITECTURE.md`; mark all dashboard modules `implemented` |
 
-**Exit Criteria:** `streamlit run src/dashboard/app.py` serves a functional dashboard showing a pre-generated patient report, rubric tree, and remedy lookup.
+**Exit Criteria:** `streamlit run src/dashboard/app.py` serves a functional dashboard showing a pre-generated patient report, rubric tree, and remedy lookup; `Context/` updated.
 
 ---
 
@@ -290,6 +328,7 @@ kent-ai/
 | `docs/evaluation_results.md` | Final metrics tables, error analysis, comparison with baselines |
 | Edge case testing | Empty transcripts, single-word inputs, non-English text, adversarial inputs |
 | Demo recording | Screen recording of chatbot → dashboard flow for defense presentation |
+| **Context final sync** | `Context/` (all files) — finalize `PROJECT.md` to `Phase: Completed`, verify all stats, ensure zero stale references across all 7 files |
 
 ---
 
