@@ -10,6 +10,7 @@ def inject_custom_css() -> None:
     css = """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
     /* Global Body and Font Settings */
     html, body, [class*="css"], [class*="st-"] {
@@ -21,13 +22,48 @@ def inject_custom_css() -> None:
         letter-spacing: -0.02em;
     }
 
+    /* Google Material Symbols Font Utility */
+    .material-symbols-outlined {
+        font-family: 'Material Symbols Outlined' !important;
+        font-weight: normal;
+        font-style: normal;
+        font-size: 20px;
+        line-height: 1;
+        letter-spacing: normal;
+        text-transform: none;
+        display: inline-flex;
+        vertical-align: middle;
+        white-space: nowrap;
+        word-wrap: normal;
+        direction: ltr;
+        -webkit-font-feature-settings: 'liga';
+        -webkit-font-smoothing: antialiased;
+    }
+
     /* Main Container Background */
     .stApp {
         background-color: #0A0F1D;
         color: #F9FAFB;
     }
 
-    /* Glassmorphic Container Cards */
+    /* Native Streamlit Bordered Container as Google Stitch Glassmorphic Card */
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        background: rgba(17, 24, 39, 0.75) !important;
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 12px !important;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
+        padding: 4px !important;
+        margin-bottom: 16px !important;
+        transition: border-color 0.2s ease !important;
+    }
+
+    [data-testid="stVerticalBlockBorderWrapper"]:hover {
+        border-color: rgba(16, 185, 129, 0.3) !important;
+    }
+
+    /* Glassmorphic Container Cards for Pure HTML */
     .stGlassCard {
         background: rgba(17, 24, 39, 0.75);
         backdrop-filter: blur(16px);

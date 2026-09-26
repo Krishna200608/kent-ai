@@ -37,36 +37,38 @@ def render_slot_badges(slots: Dict[str, List[str]]) -> None:
 def render_chat_interface(dm: DialogueManager) -> None:
     """Render multi-turn conversation and slot tracking."""
     # Top slot tracking card
-    st.markdown('<div class="stGlassCard">', unsafe_allow_html=True)
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.markdown("<h4 style='margin:0 0 8px 0;'>🎯 Live Symptom Dimension HUD</h4>", unsafe_allow_html=True)
-        render_slot_badges(dm.extracted_slots)
-    with col2:
-        state_name = dm.state_machine.current_state.value
-        filled = len(dm.state_machine.filled_slots)
-        st.markdown(
-            f"""
-            <div style='text-align: right;'>
-                <div style='font-size: 11px; color: #9CA3AF; text-transform: uppercase;'>Current Stage</div>
-                <div style='font-weight: 700; color: #10B981; font-size: 15px;'>{state_name}</div>
-                <div style='font-size: 12px; color: #06B6D4; margin-top: 2px;'>Totality: {filled}/7 dimensions</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    st.progress(min(1.0, max(0.0, filled / 7.0)))
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.markdown(
+                "<h4 style='margin:0 0 8px 0;'><span class='material-symbols-outlined' style='vertical-align:middle; color:#10B981; margin-right:6px;'>track_changes</span> Live Symptom Dimension HUD</h4>",
+                unsafe_allow_html=True,
+            )
+            render_slot_badges(dm.extracted_slots)
+        with col2:
+            state_name = dm.state_machine.current_state.value
+            filled = len(dm.state_machine.filled_slots)
+            st.markdown(
+                f"""
+                <div style='text-align: right;'>
+                    <div style='font-size: 11px; color: #9CA3AF; text-transform: uppercase;'>Current Stage</div>
+                    <div style='font-weight: 700; color: #10B981; font-size: 15px;'>{state_name}</div>
+                    <div style='font-size: 12px; color: #06B6D4; margin-top: 2px;'>Totality: {filled}/7 dimensions</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        st.progress(min(1.0, max(0.0, filled / 7.0)))
 
     # Chat history display container
     for msg in dm.history:
         role = msg["role"]
         content = msg["content"]
         if role == "assistant":
-            with st.chat_message("assistant", avatar="🌿"):
+            with st.chat_message("assistant", avatar=":material/local_florist:"):
                 st.markdown(content)
         else:
-            with st.chat_message("user", avatar="👤"):
+            with st.chat_message("user", avatar=":material/person:"):
                 st.markdown(content)
 
     # Dynamic contextual suggestion chips based on active stage
@@ -87,7 +89,7 @@ def render_chat_interface(dm: DialogueManager) -> None:
     selected_chip = None
     for idx, suggestion in enumerate(current_suggestions):
         with chip_cols[idx]:
-            if st.button(f"💬 {suggestion}", key=f"chip_{idx}_{dm.state_machine.current_state.name}", use_container_width=True):
+            if st.button(suggestion, icon=":material/chat_bubble:", key=f"chip_{idx}_{dm.state_machine.current_state.name}", use_container_width=True):
                 selected_chip = suggestion
 
     # Chat input
@@ -95,12 +97,13 @@ def render_chat_interface(dm: DialogueManager) -> None:
     
     input_to_process = selected_chip or user_prompt
     if input_to_process:
-        with st.chat_message("user", avatar="👤"):
+        with st.chat_message("user", avatar=":material/person:"):
             st.markdown(input_to_process)
 
         with st.spinner("Kent-AI is reflecting..."):
             bot_reply = dm.process_turn(input_to_process)
 
-        with st.chat_message("assistant", avatar="🌿"):
+        with st.chat_message("assistant", avatar=":material/local_florist:"):
             st.markdown(bot_reply)
         st.rerun()
+

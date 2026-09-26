@@ -23,7 +23,9 @@ def render_rubric_card(rubric: Dict[str, Any], db: KentDB) -> None:
         f"""
         <div class="stGlassCard" style="padding: 16px; margin-bottom: 12px;">
             {sim_badge}
-            <div style="font-size: 11px; color: #9CA3AF; text-transform: uppercase;">Rubric #{r_id}</div>
+            <div style="font-size: 11px; color: #9CA3AF; text-transform: uppercase;">
+                <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; margin-right:4px; color:#06B6D4;">bookmark</span> Rubric #{r_id}
+            </div>
             <div style="font-weight: 700; font-size: 15px; color: #F9FAFB; margin: 4px 0 8px 0;">{path}</div>
             <div style="font-size: 12px; color: #06B6D4;">Remedies in Kent's Repertory: <b>{remedy_count}</b></div>
         </div>
@@ -31,7 +33,7 @@ def render_rubric_card(rubric: Dict[str, Any], db: KentDB) -> None:
         unsafe_allow_html=True,
     )
 
-    with st.expander(f"Inspect remedies for: {path.split('>')[-1].strip()}"):
+    with st.expander(f"Inspect remedies for: {path.split('>')[-1].strip()}", icon=":material/medication:"):
         remedies = db.get_remedies(int(r_id))
         if not remedies:
             st.write("No remedies cataloged under this rubric.")

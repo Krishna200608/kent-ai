@@ -39,7 +39,6 @@ logger = logging.getLogger("dashboard")
 # Set wide page layout
 st.set_page_config(
     page_title="Kent-AI — Clinical Assistant",
-    page_icon="🌿",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -85,18 +84,25 @@ def render_header():
         """
         <div class="brand-header">
             <div class="brand-title">
-                <span>🌿</span> Kent-AI Clinical Assistant
+                <span class="material-symbols-outlined" style="color: #10B981; font-size: 28px; vertical-align: middle;">local_florist</span>
+                Kent-AI Clinical Assistant
                 <span style="font-size: 13px; font-weight: 400; color: #9CA3AF; margin-left: 10px;">
                     Classical Homeopathic Repertorization & AI Intake
                 </span>
             </div>
             <div style="display: flex; gap: 10px; align-items: center;">
-                <span class="status-pill"><span class="status-dot"></span> LLM: llama3:8b</span>
+                <span class="status-pill">
+                    <span class="status-dot"></span>
+                    <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">memory</span>
+                    LLM: llama3:8b
+                </span>
                 <span class="status-pill" style="border-color: rgba(6, 182, 212, 0.3); color: #22D3EE;">
                     <span class="status-dot" style="background: #06B6D4; box-shadow: 0 0 8px #06B6D4;"></span> 
+                    <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">database</span>
                     Vector Store: 74,513 Rubrics
                 </span>
                 <span class="status-pill" style="border-color: rgba(139, 92, 246, 0.3); color: #A78BFA;">
+                    <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">menu_book</span>
                     Repertory: 37 Chapters
                 </span>
             </div>
@@ -272,26 +278,34 @@ def render_report_view(report: PatientReport, db: KentDB):
     st.markdown('<div class="stGlassCard">', unsafe_allow_html=True)
     col_rep_head, col_rep_dl = st.columns([3, 1])
     with col_rep_head:
-        st.markdown(f"<h3>📋 Case Analysis Report — <code>{report.patient_id}</code></h3>", unsafe_allow_html=True)
+        st.markdown(
+            f"<h3><span class='material-symbols-outlined' style='vertical-align:middle; color:#10B981; margin-right:6px;'>clinical_notes</span> Case Analysis Report — <code>{report.patient_id}</code></h3>",
+            unsafe_allow_html=True,
+        )
         st.markdown(f"> *\"{report.transcript}\"*")
     with col_rep_dl:
         st.download_button(
-            "📥 Export Clinical Report (MD)",
+            "Export Clinical Report (MD)",
             data=report.to_markdown(),
             file_name=f"{report.patient_id}_repertorization.md",
             mime="text/markdown",
+            icon=":material/download:",
             use_container_width=True,
         )
         st.download_button(
-            "📦 Export Data (JSON)",
+            "Export Data (JSON)",
             data=report.to_json(),
             file_name=f"{report.patient_id}_data.json",
             mime="application/json",
+            icon=":material/data_object:",
             use_container_width=True,
         )
     st.markdown("---")
     
-    st.markdown("<h4>1. 7-Dimension Clinical Parsing</h4>", unsafe_allow_html=True)
+    st.markdown(
+        "<h4><span class='material-symbols-outlined' style='vertical-align:middle; color:#06B6D4; margin-right:6px;'>account_tree</span> 1. 7-Dimension Clinical Parsing</h4>",
+        unsafe_allow_html=True,
+    )
     render_dimensions_grid(report.dimensions)
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -302,7 +316,7 @@ def render_report_view(report: PatientReport, db: KentDB):
             f"""
             <div class="hero-simillimum">
                 <div style="font-size: 13px; text-transform: uppercase; color: #34D399; font-weight: 700; letter-spacing: 0.05em;">
-                    🌿 Primary Simillimum Indication
+                    <span class="material-symbols-outlined" style="vertical-align:middle; margin-right:4px;">verified</span> Primary Simillimum Indication
                 </div>
                 <div style="font-size: 26px; font-weight: 800; color: #FFFFFF; margin: 6px 0;">
                     {top_rem.get('full_name')} <span style="color: #34D399; font-size: 20px;">({top_rem.get('abbreviation')})</span>
@@ -317,10 +331,16 @@ def render_report_view(report: PatientReport, db: KentDB):
 
         col1, col2 = st.columns([3, 2])
         with col1:
-            st.markdown("<h4>2. Remedy Totality Ranking</h4>", unsafe_allow_html=True)
+            st.markdown(
+                "<h4><span class='material-symbols-outlined' style='vertical-align:middle; color:#10B981; margin-right:6px;'>bar_chart</span> 2. Remedy Totality Ranking</h4>",
+                unsafe_allow_html=True,
+            )
             render_repertorization_chart(remedies)
         with col2:
-            st.markdown("<h4>3. Top Remedy Breakdown</h4>", unsafe_allow_html=True)
+            st.markdown(
+                "<h4><span class='material-symbols-outlined' style='vertical-align:middle; color:#A78BFA; margin-right:6px;'>table_chart</span> 3. Top Remedy Breakdown</h4>",
+                unsafe_allow_html=True,
+            )
             table_data = []
             for idx, r in enumerate(remedies[:8], start=1):
                 table_data.append({
@@ -332,10 +352,16 @@ def render_report_view(report: PatientReport, db: KentDB):
                 })
             st.dataframe(pd.DataFrame(table_data), use_container_width=True, hide_index=True)
 
-        st.markdown("<h4>4. Classical Repertorization Totality Matrix (Remedies × Rubrics)</h4>", unsafe_allow_html=True)
+        st.markdown(
+            "<h4><span class='material-symbols-outlined' style='vertical-align:middle; color:#FBBF24; margin-right:6px;'>grid_on</span> 4. Classical Repertorization Totality Matrix (Remedies × Rubrics)</h4>",
+            unsafe_allow_html=True,
+        )
         render_totality_matrix(report, db)
 
-    st.markdown("<h4>5. Matched Kent Repertory Rubrics</h4>", unsafe_allow_html=True)
+    st.markdown(
+        "<h4><span class='material-symbols-outlined' style='vertical-align:middle; color:#34D399; margin-right:6px;'>format_list_bulleted</span> 5. Matched Kent Repertory Rubrics</h4>",
+        unsafe_allow_html=True,
+    )
     for r in report.matched_rubrics:
         render_rubric_card(r, db)
 
@@ -347,7 +373,9 @@ def render_sidebar():
         st.markdown(
             """
             <div style='text-align: center; margin-bottom: 20px;'>
-                <div style='font-size: 32px;'>🌿</div>
+                <div style='margin-bottom: 6px;'>
+                    <span class="material-symbols-outlined" style="font-size: 42px; color: #10B981;">local_florist</span>
+                </div>
                 <div style='font-size: 18px; font-weight: 800; color: #10B981;'>Kent-AI Clinical Suite</div>
                 <div style='font-size: 11px; color: #9CA3AF;'>Classical Homeopathy + Generative AI</div>
             </div>
@@ -355,7 +383,10 @@ def render_sidebar():
             unsafe_allow_html=True,
         )
 
-        st.markdown("### 📡 System Telemetry")
+        st.markdown(
+            "### <span class='material-symbols-outlined' style='vertical-align:middle; color:#06B6D4; margin-right:4px;'>sensors</span> System Telemetry",
+            unsafe_allow_html=True,
+        )
         st.markdown(
             """
             <div class="stitch-metric" style="margin-bottom: 8px;">
@@ -375,7 +406,10 @@ def render_sidebar():
         )
 
         st.markdown("---")
-        st.markdown("### ⚖️ Totality Weights (Kentian)")
+        st.markdown(
+            "### <span class='material-symbols-outlined' style='vertical-align:middle; color:#FBBF24; margin-right:4px;'>scale</span> Totality Weights (Kentian)",
+            unsafe_allow_html=True,
+        )
         st.markdown(
             """
             <div style='font-size: 12px; color: #D1D5DB; line-height: 1.8;'>
@@ -410,10 +444,10 @@ def main():
     dm: DialogueManager = st.session_state.dialogue_manager
 
     tab1, tab2, tab3, tab4 = st.tabs([
-        "💬 Live Patient Intake",
-        "📊 Repertorization Engine",
-        "🔍 Rubric Explorer (74k)",
-        "💊 Materia Medica Index",
+        "Live Patient Intake",
+        "Repertorization Engine",
+        "Rubric Explorer (74k)",
+        "Materia Medica Index",
     ])
 
     # =========================================================================
@@ -422,27 +456,29 @@ def main():
     with tab1:
         col_chat, col_ctrl = st.columns([3, 1])
         with col_ctrl:
-            st.markdown('<div class="stGlassCard">', unsafe_allow_html=True)
-            st.markdown("<h4>⚙️ Intake Controls</h4>", unsafe_allow_html=True)
-            if st.button("📋 Generate Full Report Now", use_container_width=True):
-                transcript = dm.get_full_transcript()
-                if transcript.strip():
-                    with st.spinner("Analyzing totality and ranking remedies..."):
-                        report = pipeline.process_transcript(transcript)
-                        st.session_state.current_report = report
-                    st.success("Repertorization complete! Scroll down to view report.")
-                else:
-                    st.warning("Please chat with Kent-AI first before generating report.")
+            with st.container(border=True):
+                st.markdown(
+                    "<h4 style='margin:0 0 12px 0;'><span class='material-symbols-outlined' style='vertical-align:middle; color:#10B981; margin-right:6px;'>tune</span> Intake Controls</h4>",
+                    unsafe_allow_html=True,
+                )
+                if st.button("Generate Full Report Now", icon=":material/assignment:", use_container_width=True):
+                    transcript = dm.get_full_transcript()
+                    if transcript.strip():
+                        with st.spinner("Analyzing totality and ranking remedies..."):
+                            report = pipeline.process_transcript(transcript)
+                            st.session_state.current_report = report
+                        st.success("Repertorization complete! Scroll down to view report.")
+                    else:
+                        st.warning("Please chat with Kent-AI first before generating report.")
 
-            if st.button("🔄 Reset Consultation", use_container_width=True):
-                dm.reset()
-                dm.get_greeting()
-                st.session_state.current_report = None
-                st.rerun()
+                if st.button("Reset Consultation", icon=":material/refresh:", use_container_width=True):
+                    dm.reset()
+                    dm.get_greeting()
+                    st.session_state.current_report = None
+                    st.rerun()
 
-            st.markdown("---")
-            st.markdown("<div style='font-size: 12px; color: #9CA3AF;'><b>Tips for consultation:</b><br>Speak naturally about how you feel, time of day, what worsens or improves pain, and mood.</div>", unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+                st.markdown("---")
+                st.markdown("<div style='font-size: 12px; color: #9CA3AF;'><b>Tips for consultation:</b><br>Speak naturally about how you feel, time of day, what worsens or improves pain, and mood.</div>", unsafe_allow_html=True)
 
         with col_chat:
             render_chat_interface(dm)
@@ -456,42 +492,43 @@ def main():
     # TAB 2: Direct Clinical Repertorization Engine
     # =========================================================================
     with tab2:
-        st.markdown('<div class="stGlassCard">', unsafe_allow_html=True)
-        st.markdown("<h3>🎯 Instant Clinical Repertorization</h3>", unsafe_allow_html=True)
-        st.markdown("Input patient clinical narrative directly to extract 7 dimensions, retrieve matching rubrics across Kent's 74,513 rubrics, and compute remedy totality.")
-
-        example_cases = {
-            "Select an example or type below...": "",
-            "Case 1: Severe anxiety in morning, worse alone": "Doctor, I feel terribly anxious and depressed every morning, worse when alone. I have no fever and no nausea.",
-            "Case 2: Forehead splitting headache from sun": "Patient reports severe splitting throbbing headache right in the forehead, aggravated by sun exposure and bright light, relieved by cold application and rest in dark room.",
-            "Case 3: Absent-minded & forgetful in morning": "Patient complains of extreme absent-mindedness and difficulty concentrating, especially in the morning after waking up, with trembling hands.",
-        }
-
-        selected_example = st.selectbox("Pre-load Clinical Vignette:", list(example_cases.keys()))
-        default_text = example_cases.get(selected_example, "")
-
-        user_case_text = st.text_area(
-            "Patient Clinical Narrative:",
-            value=default_text or "Doctor, I feel terribly anxious and depressed every morning, worse when alone. I have no fever and no nausea.",
-            height=120,
-        )
-
-        col_opt1, col_opt2, col_opt3 = st.columns([1, 1, 1])
-        with col_opt1:
-            top_k_rubrics = st.slider("Rubrics per query:", 1, 5, 3)
-        with col_opt2:
-            top_remedies_count = st.slider("Top remedies to rank:", 5, 20, 10)
-        with col_opt3:
-            section_choice = st.selectbox(
-                "Filter Chapter:",
-                ["All Chapters (74,513 rubrics)", "MIND (1)", "HEAD (3)", "EYE (4)", "STOMACH (15)", "EXTREMITIES (31)"]
+        with st.container(border=True):
+            st.markdown(
+                "<h3 style='margin:0 0 8px 0;'><span class='material-symbols-outlined' style='vertical-align:middle; color:#10B981; margin-right:6px;'>analytics</span> Instant Clinical Repertorization</h3>",
+                unsafe_allow_html=True,
             )
-            sec_id = None
-            if "(" in section_choice:
-                sec_id = int(section_choice.split("(")[-1].replace(")", ""))
+            st.markdown("Input patient clinical narrative directly to extract 7 dimensions, retrieve matching rubrics across Kent's 74,513 rubrics, and compute remedy totality.")
 
-        run_btn = st.button("🚀 Analyze & Repertorize Case", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+            example_cases = {
+                "Select an example or type below...": "",
+                "Case 1: Severe anxiety in morning, worse alone": "Doctor, I feel terribly anxious and depressed every morning, worse when alone. I have no fever and no nausea.",
+                "Case 2: Forehead splitting headache from sun": "Patient reports severe splitting throbbing headache right in the forehead, aggravated by sun exposure and bright light, relieved by cold application and rest in dark room.",
+                "Case 3: Absent-minded & forgetful in morning": "Patient complains of extreme absent-mindedness and difficulty concentrating, especially in the morning after waking up, with trembling hands.",
+            }
+
+            selected_example = st.selectbox("Pre-load Clinical Vignette:", list(example_cases.keys()))
+            default_text = example_cases.get(selected_example, "")
+
+            user_case_text = st.text_area(
+                "Patient Clinical Narrative:",
+                value=default_text or "Doctor, I feel terribly anxious and depressed every morning, worse when alone. I have no fever and no nausea.",
+                height=120,
+            )
+
+            col_opt1, col_opt2, col_opt3 = st.columns([1, 1, 1])
+            with col_opt1:
+                top_k_rubrics = st.slider("Rubrics per query:", 1, 5, 3)
+            with col_opt2:
+                top_remedies_count = st.slider("Top remedies to rank:", 5, 20, 10)
+            with col_opt3:
+                sections = db.get_sections()
+                sec_options = ["All Chapters (74,513 rubrics)"] + [f"{s['id']}: {s['name']}" for s in sections]
+                section_choice = st.selectbox("Filter Chapter:", sec_options, index=0)
+                sec_id = None
+                if section_choice != "All Chapters (74,513 rubrics)":
+                    sec_id = int(section_choice.split(":")[0])
+
+            run_btn = st.button("Analyze & Repertorize Case", icon=":material/play_arrow:", use_container_width=True)
 
         if run_btn and user_case_text.strip():
             with st.spinner("Extracting 7-dimensions via LLaMA 3, retrieving rubrics from ChromaDB, and computing totality..."):
@@ -507,24 +544,26 @@ def main():
     # TAB 3: Kent's Rubric Explorer (74,513 Rubrics)
     # =========================================================================
     with tab3:
-        st.markdown('<div class="stGlassCard">', unsafe_allow_html=True)
-        st.markdown("<h3>🔍 Kent's Repertory Dense & Lexical Search</h3>", unsafe_allow_html=True)
-        st.markdown("Query all **74,513 digitized rubrics** using semantic vectors or exact text search.")
+        with st.container(border=True):
+            st.markdown(
+                "<h3 style='margin:0 0 8px 0;'><span class='material-symbols-outlined' style='vertical-align:middle; color:#10B981; margin-right:6px;'>search</span> Kent's Repertory Dense & Lexical Search</h3>",
+                unsafe_allow_html=True,
+            )
+            st.markdown("Query all **74,513 digitized rubrics** using semantic vectors or exact text search.")
 
-        col_search, col_sec = st.columns([3, 1])
-        with col_search:
-            search_query = st.text_input("Search Rubric (e.g. 'headache sun', 'anxiety dark', 'restless sleep'):", value="headache sun")
-        with col_sec:
-            sections = db.get_sections()
-            sec_options = ["All Chapters"] + [f"{s['id']}: {s['name']}" for s in sections]
-            selected_sec_str = st.selectbox("Section / Chapter:", sec_options)
-            chosen_sec_id = None
-            if selected_sec_str != "All Chapters":
-                chosen_sec_id = int(selected_sec_str.split(":")[0])
+            col_search, col_sec = st.columns([3, 1])
+            with col_search:
+                search_query = st.text_input("Search Rubric (e.g. 'headache sun', 'anxiety dark', 'restless sleep'):", value="headache sun")
+            with col_sec:
+                sections = db.get_sections()
+                sec_options = ["All Chapters"] + [f"{s['id']}: {s['name']}" for s in sections]
+                selected_sec_str = st.selectbox("Section / Chapter:", sec_options)
+                chosen_sec_id = None
+                if selected_sec_str != "All Chapters":
+                    chosen_sec_id = int(selected_sec_str.split(":")[0])
 
-        search_mode = st.radio("Search Algorithm:", ["Dense Semantic Search (all-MiniLM-L6-v2)", "Exact FTS5 Lexical Search"], horizontal=True)
-        search_clicked = st.button("Search Rubrics", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+            search_mode = st.radio("Search Algorithm:", ["Dense Semantic Search (all-MiniLM-L6-v2)", "Exact FTS5 Lexical Search"], horizontal=True)
+            search_clicked = st.button("Search Rubrics", icon=":material/search:", use_container_width=True)
 
         if (search_clicked or search_query) and search_query.strip():
             with st.spinner("Searching rubrics..."):
@@ -552,12 +591,14 @@ def main():
     # TAB 4: Materia Medica & Remedy Index
     # =========================================================================
     with tab4:
-        st.markdown('<div class="stGlassCard">', unsafe_allow_html=True)
-        st.markdown("<h3>💊 Homeopathic Remedy Dictionary</h3>", unsafe_allow_html=True)
-        st.markdown("Browse remedies cataloged in Kent's Repertory with full Latin names, abbreviations, and characteristic keynotes.")
+        with st.container(border=True):
+            st.markdown(
+                "<h3 style='margin:0 0 8px 0;'><span class='material-symbols-outlined' style='vertical-align:middle; color:#10B981; margin-right:6px;'>medication</span> Homeopathic Remedy Dictionary</h3>",
+                unsafe_allow_html=True,
+            )
+            st.markdown("Browse remedies cataloged in Kent's Repertory with full Latin names, abbreviations, and characteristic keynotes.")
 
-        rem_search = st.text_input("Filter Remedy by Name or Abbreviation (e.g. 'Lach', 'Phos', 'Nux-v', 'Ars'):", value="Lach")
-        st.markdown('</div>', unsafe_allow_html=True)
+            rem_search = st.text_input("Filter Remedy by Name or Abbreviation (e.g. 'Lach', 'Phos', 'Nux-v', 'Ars'):", value="Lach")
 
         if rem_search.strip():
             with KentDB.get_connection() as conn:
@@ -598,7 +639,7 @@ def main():
                         """,
                         unsafe_allow_html=True,
                     )
-                    with st.expander(f"🌿 Inspect Characteristic Keynotes for {name or abbr} (Grade 3)"):
+                    with st.expander(f"Inspect Characteristic Keynotes for {name or abbr} (Grade 3)", icon=":material/key:"):
                         keynotes = db.get_remedy_rubrics(r_id, min_grade=3, limit=12)
                         if not keynotes:
                             st.write("No Grade 3 keynote rubrics cataloged for this remedy.")
