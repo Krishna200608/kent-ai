@@ -1,0 +1,42 @@
+{
+  "export_schema_version": "1.1",
+  "database_schema_version": "1.0",
+  "source_file": "kent_expanded_repertory.pdf",
+  "source_pdf_pages": 1469,
+  "counts": {
+    "rubrics": 74513,
+    "pages": 1469,
+    "sections": 37,
+    "remedies": 679,
+    "remedy_aliases": 3,
+    "rubric_remedies": 507179,
+    "cross_references": 1923,
+    "rubric_issues": 7435,
+    "rubric_source_lines": 131126
+  },
+  "status": "machine_ocr_unreviewed",
+  "coverage_complete": true,
+  "grade_policy": "grade is NULL; grade_candidate uses source ordinal (1 capitals, 2 initial capitals/italic candidate, 3 lowercase/Roman candidate). Case-only candidates are unverified, not repertorization scores.",
+  "files": {
+    "rubrics.jsonl.gz": {
+      "bytes": 20256183,
+      "sha256": "15974c36551a54b7d0cb3f5d4772b50bf9ee01c158deb7ee22b899b9ecc53d86"
+    },
+    "pages.jsonl.gz": {
+      "bytes": 2030971,
+      "sha256": "bc4eecb457f28925ebfded00a2197fc479e17f7511e1a0fa0ce32d16083fc963"
+    },
+    "tree.json": {
+      "bytes": 16695805,
+      "sha256": "3bf6ee60b94e08dabe9ca2f11622d53afaea86319d9c84e25b6a7a916a48b29a"
+    },
+    "remedies.json": {
+      "bytes": 72997,
+      "sha256": "5ddfeb8545fa72c666ab6ce73c717644b6fb567f0ae4b51fda8a8607d1c188f8"
+    },
+    "remedy_aliases.json": {
+      "bytes": 382,
+      "sha256": "3edf3c9ff1494d84ed3a5c204b322550f20a4de396f2db2659cf0fe65c19d8c2"
+    }
+  }
+}

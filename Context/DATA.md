@@ -9,11 +9,12 @@
 
 | Property | Value |
 |---|---|
-| File | `data/raw/repertory.sqlite` (hardlink to `kent_public_edition/repertory.sqlite`) |
-| Size | 112 MB |
+| File | `data/raw/repertory.sqlite` (and `data/raw/kent_public_edition/repertory.sqlite`) |
+| Size | 112 MB (118,095,872 bytes) |
 | Format | SQLite 3 with FTS5 virtual tables |
 | Access | Read-only via `src.data.kent_db.get_connection()` |
-| Schema DDL | `kent_public_edition/schema.sql` |
+| Schema DDL | `data/raw/kent_public_edition/schema.sql` |
+| Upstream Bundle | `data/raw/kent_public_edition/` |
 
 ---
 

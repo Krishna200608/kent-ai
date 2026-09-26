@@ -1,0 +1,23 @@
+[
+  {
+    "pdf_page": 1,
+    "text": "KENT'S\nREPERTORY\nOF THE\nHOMOEOPATHIC MATERIA MEDICA\nEXPANDED\n\nDR. JAMES TYLER KENT\n\n[Library stamp]\nA. R. H. LIBRA[illegible]\nAccn. R. No. [blank]\nSub. Sr. No. [blank]",
+    "status": "manual_visual_transcription",
+    "notes": [
+      "The large outlined title is visually legible although automated OCR omitted part of it.",
+      "Title and author transcribed from the supplied scan; no external edition substituted.",
+      "The library stamp is partly faded. Its missing end is marked [illegible]; no library name completion was inferred.",
+      "The scan also shows ornamental rules and a publisher emblem, which are non-textual."
+    ]
+  },
+  {
+    "pdf_page": 2,
+    "text": "Printed in India\n\n© Copyright with Publishers\n\nAll rights reserved. No part of this work may be reproduced or transmitted in any form by any means, electronic or mechanical, including photo-copying and recording, or by any information or retrieval system, except as may be expressly permitted by the publisher in writing.\n\nPrice: Rs. 450.00\n\nFirst Edition : 1994\nSecond Edition 1995\nThird edition: 1996\n\nReprint Edition : 1999\n\n[illegible]t. Ltd.\n[illegible]Mandi,\n[illegible]055 (INDIA)",
+    "status": "manual_visual_transcription_with_illegible_source",
+    "notes": [
+      "Publisher name and address at the bottom are partly absent or obscured in the supplied scan. Only the visible endings are preserved; the missing publisher/address has not been reconstructed from outside knowledge.",
+      "Faint overprinted markings near the price/edition lines are illegible and are not treated as printed publication metadata.",
+      "Line breaks within the rights paragraph are normalized; original wording retained."
+    ]
+  }
+]

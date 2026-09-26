@@ -50,6 +50,9 @@ def get_db_path(explicit_path: Optional[Union[str, Path]] = None) -> Path:
         candidate_raw = directory / "data" / "raw" / "repertory.sqlite"
         if candidate_raw.is_file():
             return candidate_raw.resolve()
+        candidate_raw_bundle = directory / "data" / "raw" / "kent_public_edition" / "repertory.sqlite"
+        if candidate_raw_bundle.is_file():
+            return candidate_raw_bundle.resolve()
         candidate_public = directory / "kent_public_edition" / "repertory.sqlite"
         if candidate_public.is_file():
             return candidate_public.resolve()

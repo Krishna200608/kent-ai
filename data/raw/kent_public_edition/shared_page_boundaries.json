@@ -1,0 +1,130 @@
+[
+  {
+    "pdf_page": 331,
+    "printed_page": 285,
+    "previous_section": "VISION",
+    "next_section": "EAR",
+    "split_y_source_pixels": 780,
+    "source_page_height": 2478,
+    "split_y_fraction": 0.31477,
+    "reading_order": [
+      "top_left",
+      "top_right",
+      "bottom_left",
+      "bottom_right"
+    ],
+    "note": "Manually chosen whitespace split above large centered chapter heading. Running header may already name next section."
+  },
+  {
+    "pdf_page": 476,
+    "printed_page": 430,
+    "previous_section": "MOUTH",
+    "next_section": "TEETH",
+    "split_y_source_pixels": 1710,
+    "source_page_height": 2478,
+    "split_y_fraction": 0.690073,
+    "reading_order": [
+      "top_left",
+      "top_right",
+      "bottom_left",
+      "bottom_right"
+    ],
+    "note": "Manually chosen whitespace split above large centered chapter heading. Running header may already name next section."
+  },
+  {
+    "pdf_page": 681,
+    "printed_page": 635,
+    "previous_section": "RECTUM",
+    "next_section": "STOOL",
+    "split_y_source_pixels": 750,
+    "source_page_height": 2478,
+    "split_y_fraction": 0.302663,
+    "reading_order": [
+      "top_left",
+      "top_right",
+      "bottom_left",
+      "bottom_right"
+    ],
+    "note": "Manually chosen whitespace split above large centered chapter heading. Running header may already name next section."
+  },
+  {
+    "pdf_page": 708,
+    "printed_page": 662,
+    "previous_section": "BLADDER",
+    "next_section": "KIDNEYS",
+    "split_y_source_pixels": 1000,
+    "source_page_height": 2478,
+    "split_y_fraction": 0.403551,
+    "reading_order": [
+      "top_left",
+      "top_right",
+      "bottom_left",
+      "bottom_right"
+    ],
+    "note": "Manually chosen whitespace split above large centered chapter heading. Running header may already name next section."
+  },
+  {
+    "pdf_page": 713,
+    "printed_page": 667,
+    "previous_section": "KIDNEYS",
+    "next_section": "PROSTATE GLAND",
+    "split_y_source_pixels": 620,
+    "source_page_height": 2478,
+    "split_y_fraction": 0.250202,
+    "reading_order": [
+      "top_left",
+      "top_right",
+      "bottom_left",
+      "bottom_right"
+    ],
+    "note": "Manually chosen whitespace split above large centered chapter heading. Running header may already name next section."
+  },
+  {
+    "pdf_page": 726,
+    "printed_page": 680,
+    "previous_section": "URETHRA",
+    "next_section": "URINE",
+    "split_y_source_pixels": 1160,
+    "source_page_height": 2478,
+    "split_y_fraction": 0.468119,
+    "reading_order": [
+      "top_left",
+      "top_right",
+      "bottom_left",
+      "bottom_right"
+    ],
+    "note": "Manually chosen whitespace split above large centered chapter heading. Running header may already name next section."
+  },
+  {
+    "pdf_page": 760,
+    "printed_page": 714,
+    "previous_section": "GENITALIA-MALE",
+    "next_section": "GENITALIA-FEMALE",
+    "split_y_source_pixels": 1630,
+    "source_page_height": 2478,
+    "split_y_fraction": 0.657789,
+    "reading_order": [
+      "top_left",
+      "top_right",
+      "bottom_left",
+      "bottom_right"
+    ],
+    "note": "Manually chosen whitespace split above large centered chapter heading. Running header may already name next section."
+  },
+  {
+    "pdf_page": 808,
+    "printed_page": 762,
+    "previous_section": "LARYNX AND TRACHEA",
+    "next_section": "RESPIRATION",
+    "split_y_source_pixels": 940,
+    "source_page_height": 2478,
+    "split_y_fraction": 0.379338,
+    "reading_order": [
+      "top_left",
+      "top_right",
+      "bottom_left",
+      "bottom_right"
+    ],
+    "note": "Manually chosen whitespace split above large centered chapter heading. Running header may already name next section."
+  }
+]

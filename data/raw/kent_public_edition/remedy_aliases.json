@@ -1,0 +1,17 @@
+{
+  "ir-v": {
+    "remedy_id": 355,
+    "status": "printed_alias",
+    "note": ""
+  },
+  "kali-br": {
+    "remedy_id": 368,
+    "status": "inferred_source_typo_alias",
+    "note": "The directory visibly prints Kasli-br.; kali-br is supplied only as an explicitly inferred spelling alias."
+  },
+  "lact-v": {
+    "remedy_id": 391,
+    "status": "printed_alias",
+    "note": ""
+  }
+}

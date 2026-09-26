@@ -51,9 +51,10 @@ data/models/
 *.gz
 *.tar
 *.zip
-kent_public_edition/*.sqlite
-kent_public_edition/*.gz
-kent_public_edition/*.txt
+data/raw/kent_public_edition/*.txt
+data/raw/kent_public_edition/tree.json
+/kent_public_edition/
+
 
 # Checkpoints, logs, model weights
 checkpoints/

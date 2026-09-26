@@ -1,0 +1,537 @@
+{
+  "status": "complete_page_coverage_machine_transcription_not_fully_proofread",
+  "counts": {
+    "pages": 1469,
+    "sections": 37,
+    "rubrics": 74513,
+    "lines": 137062,
+    "remedies": 679,
+    "rubric_remedies": 507179,
+    "cross_references": 1923,
+    "issues": 7510,
+    "matched_remedy_memberships": 458354
+  },
+  "coverage": {
+    "expected_pdf_pages": 1469,
+    "processed_pdf_pages": 1469,
+    "front_matter_and_directory_pages": 46,
+    "repertory_pages": 1423,
+    "sections": 37,
+    "visually_checked_section_starts": 37,
+    "shared_section_pages": [
+      331,
+      476,
+      681,
+      708,
+      713,
+      726,
+      760,
+      808
+    ],
+    "ocr_versions": {
+      "2": 1469
+    }
+  },
+  "checks": {
+    "all_1469_pages_present_once": true,
+    "all_pages_current_ocr_version": true,
+    "all_repertory_pages_have_ocr_words": true,
+    "sqlite_integrity": "ok",
+    "foreign_key_violations": [],
+    "parent_section_mismatches": 0,
+    "parent_depth_not_less_than_child": 0,
+    "empty_sections": [],
+    "cyclic_rubric_paths": []
+  },
+  "body_ocr": {
+    "total_words": 901558,
+    "median_words_per_page": 633,
+    "pages_with_mean_confidence_below_60": [
+      {
+        "pdf_page": 1,
+        "mean_word_confidence": 54.62
+      },
+      {
+        "pdf_page": 40,
+        "mean_word_confidence": 57.69
+      },
+      {
+        "pdf_page": 231,
+        "mean_word_confidence": 58.45
+      },
+      {
+        "pdf_page": 273,
+        "mean_word_confidence": 59.17
+      },
+      {
+        "pdf_page": 276,
+        "mean_word_confidence": 57.96
+      },
+      {
+        "pdf_page": 280,
+        "mean_word_confidence": 57.33
+      },
+      {
+        "pdf_page": 281,
+        "mean_word_confidence": 59.46
+      },
+      {
+        "pdf_page": 285,
+        "mean_word_confidence": 56.36
+      },
+      {
+        "pdf_page": 383,
+        "mean_word_confidence": 38.56
+      },
+      {
+        "pdf_page": 384,
+        "mean_word_confidence": 50.08
+      },
+      {
+        "pdf_page": 385,
+        "mean_word_confidence": 52.31
+      },
+      {
+        "pdf_page": 386,
+        "mean_word_confidence": 59.52
+      },
+      {
+        "pdf_page": 388,
+        "mean_word_confidence": 54.29
+      },
+      {
+        "pdf_page": 389,
+        "mean_word_confidence": 51.45
+      },
+      {
+        "pdf_page": 390,
+        "mean_word_confidence": 59.4
+      },
+      {
+        "pdf_page": 391,
+        "mean_word_confidence": 59.37
+      },
+      {
+        "pdf_page": 392,
+        "mean_word_confidence": 52.87
+      },
+      {
+        "pdf_page": 393,
+        "mean_word_confidence": 50.68
+      },
+      {
+        "pdf_page": 394,
+        "mean_word_confidence": 59.7
+      },
+      {
+        "pdf_page": 395,
+        "mean_word_confidence": 56.44
+      },
+      {
+        "pdf_page": 396,
+        "mean_word_confidence": 57.24
+      },
+      {
+        "pdf_page": 407,
+        "mean_word_confidence": 57.94
+      },
+      {
+        "pdf_page": 491,
+        "mean_word_confidence": 59.07
+      },
+      {
+        "pdf_page": 499,
+        "mean_word_confidence": 59.93
+      },
+      {
+        "pdf_page": 506,
+        "mean_word_confidence": 59.72
+      },
+      {
+        "pdf_page": 560,
+        "mean_word_confidence": 59.64
+      },
+      {
+        "pdf_page": 564,
+        "mean_word_confidence": 55.16
+      },
+      {
+        "pdf_page": 569,
+        "mean_word_confidence": 57.33
+      },
+      {
+        "pdf_page": 572,
+        "mean_word_confidence": 56.05
+      },
+      {
+        "pdf_page": 690,
+        "mean_word_confidence": 51.36
+      },
+      {
+        "pdf_page": 743,
+        "mean_word_confidence": 58.45
+      },
+      {
+        "pdf_page": 750,
+        "mean_word_confidence": 58.23
+      },
+      {
+        "pdf_page": 823,
+        "mean_word_confidence": 55.4
+      },
+      {
+        "pdf_page": 827,
+        "mean_word_confidence": 55.39
+      },
+      {
+        "pdf_page": 869,
+        "mean_word_confidence": 55.03
+      },
+      {
+        "pdf_page": 896,
+        "mean_word_confidence": 59.61
+      },
+      {
+        "pdf_page": 898,
+        "mean_word_confidence": 58.18
+      },
+      {
+        "pdf_page": 899,
+        "mean_word_confidence": 57.3
+      },
+      {
+        "pdf_page": 901,
+        "mean_word_confidence": 57.32
+      },
+      {
+        "pdf_page": 903,
+        "mean_word_confidence": 55.05
+      },
+      {
+        "pdf_page": 905,
+        "mean_word_confidence": 58.9
+      },
+      {
+        "pdf_page": 909,
+        "mean_word_confidence": 59.36
+      },
+      {
+        "pdf_page": 912,
+        "mean_word_confidence": 53.48
+      },
+      {
+        "pdf_page": 917,
+        "mean_word_confidence": 57.83
+      },
+      {
+        "pdf_page": 931,
+        "mean_word_confidence": 57.71
+      },
+      {
+        "pdf_page": 1026,
+        "mean_word_confidence": 59.38
+      },
+      {
+        "pdf_page": 1027,
+        "mean_word_confidence": 58.37
+      },
+      {
+        "pdf_page": 1031,
+        "mean_word_confidence": 59.88
+      },
+      {
+        "pdf_page": 1073,
+        "mean_word_confidence": 59.99
+      },
+      {
+        "pdf_page": 1089,
+        "mean_word_confidence": 56.35
+      },
+      {
+        "pdf_page": 1109,
+        "mean_word_confidence": 59.19
+      },
+      {
+        "pdf_page": 1138,
+        "mean_word_confidence": 59.39
+      },
+      {
+        "pdf_page": 1140,
+        "mean_word_confidence": 55.31
+      },
+      {
+        "pdf_page": 1144,
+        "mean_word_confidence": 51.06
+      },
+      {
+        "pdf_page": 1145,
+        "mean_word_confidence": 51.95
+      },
+      {
+        "pdf_page": 1146,
+        "mean_word_confidence": 57.92
+      },
+      {
+        "pdf_page": 1148,
+        "mean_word_confidence": 59.89
+      },
+      {
+        "pdf_page": 1149,
+        "mean_word_confidence": 58.37
+      },
+      {
+        "pdf_page": 1152,
+        "mean_word_confidence": 59.44
+      },
+      {
+        "pdf_page": 1157,
+        "mean_word_confidence": 59.06
+      },
+      {
+        "pdf_page": 1200,
+        "mean_word_confidence": 55.22
+      },
+      {
+        "pdf_page": 1202,
+        "mean_word_confidence": 59.36
+      },
+      {
+        "pdf_page": 1266,
+        "mean_word_confidence": 51.69
+      },
+      {
+        "pdf_page": 1267,
+        "mean_word_confidence": 53.5
+      },
+      {
+        "pdf_page": 1271,
+        "mean_word_confidence": 59.11
+      },
+      {
+        "pdf_page": 1273,
+        "mean_word_confidence": 59.64
+      },
+      {
+        "pdf_page": 1275,
+        "mean_word_confidence": 56.57
+      },
+      {
+        "pdf_page": 1366,
+        "mean_word_confidence": 59.89
+      }
+    ],
+    "confidence_interpretation": "Tesseract word confidence is an engine heuristic, not a calibrated accuracy percentage."
+  },
+  "hierarchy": {
+    "status": "inferred_with_review_flags",
+    "depth_counts": {
+      "0": 5073,
+      "1": 22132,
+      "2": 25531,
+      "3": 15753,
+      "4": 5170,
+      "5": 783,
+      "6": 68,
+      "7": 3
+    },
+    "unassigned_body_lines": 6,
+    "issue_counts": {
+      "context_inference_requires_review": 7,
+      "dash_depth_from_indentation": 383,
+      "expected_blank_page": 1,
+      "long_label_requires_review": 29,
+      "low_page_ocr_confidence": 68,
+      "missing_immediate_parent": 1264,
+      "opposing_qualifier_parentage_requires_review": 278,
+      "unassigned_body_line": 6,
+      "unresolved_remedy_span": 5474
+    },
+    "limitations": "Dash depth and repeated headings support navigation but condensed qualifiers can imply additional semantic groupings. Flagged and unflagged edges may need proofreading."
+  },
+  "remedy_matching": {
+    "total_occurrences": 507179,
+    "dictionary_matched": 458354,
+    "unmatched_preserved": 48825,
+    "verified_grades": 0,
+    "grade_candidates": "Source ordinal inferred from OCR case only; not validated typography or conventional weights.",
+    "frequent_unmatched": [
+      {
+        "normalized": "co",
+        "occurrences": 1417
+      },
+      {
+        "normalized": "i",
+        "occurrences": 1134
+      },
+      {
+        "normalized": "thus-t",
+        "occurrences": 954
+      },
+      {
+        "normalized": "a",
+        "occurrences": 722
+      },
+      {
+        "normalized": "kali-br",
+        "occurrences": 595
+      },
+      {
+        "normalized": "oo",
+        "occurrences": 568
+      },
+      {
+        "normalized": "thod",
+        "occurrences": 560
+      },
+      {
+        "normalized": "coce",
+        "occurrences": 547
+      },
+      {
+        "normalized": "lye",
+        "occurrences": 511
+      },
+      {
+        "normalized": "cale",
+        "occurrences": 495
+      },
+      {
+        "normalized": "pib",
+        "occurrences": 472
+      },
+      {
+        "normalized": "am",
+        "occurrences": 344
+      },
+      {
+        "normalized": "thyj",
+        "occurrences": 317
+      },
+      {
+        "normalized": "iyc",
+        "occurrences": 316
+      },
+      {
+        "normalized": "theum",
+        "occurrences": 305
+      },
+      {
+        "normalized": "p",
+        "occurrences": 289
+      },
+      {
+        "normalized": "ee",
+        "occurrences": 277
+      },
+      {
+        "normalized": "rhus",
+        "occurrences": 269
+      },
+      {
+        "normalized": "lo",
+        "occurrences": 264
+      },
+      {
+        "normalized": "mere",
+        "occurrences": 243
+      },
+      {
+        "normalized": "v",
+        "occurrences": 242
+      },
+      {
+        "normalized": "to",
+        "occurrences": 241
+      },
+      {
+        "normalized": "ce",
+        "occurrences": 227
+      },
+      {
+        "normalized": "zine",
+        "occurrences": 221
+      },
+      {
+        "normalized": "thus-v",
+        "occurrences": 208
+      },
+      {
+        "normalized": "x-ac",
+        "occurrences": 208
+      },
+      {
+        "normalized": "kali",
+        "occurrences": 203
+      },
+      {
+        "normalized": "cl",
+        "occurrences": 201
+      },
+      {
+        "normalized": "t",
+        "occurrences": 200
+      },
+      {
+        "normalized": "yc",
+        "occurrences": 190
+      },
+      {
+        "normalized": "dule",
+        "occurrences": 175
+      },
+      {
+        "normalized": "d",
+        "occurrences": 173
+      },
+      {
+        "normalized": "cale-p",
+        "occurrences": 166
+      },
+      {
+        "normalized": "nux",
+        "occurrences": 148
+      },
+      {
+        "normalized": "o",
+        "occurrences": 145
+      },
+      {
+        "normalized": "or",
+        "occurrences": 144
+      },
+      {
+        "normalized": "carb",
+        "occurrences": 143
+      },
+      {
+        "normalized": "nat",
+        "occurrences": 142
+      },
+      {
+        "normalized": "ant",
+        "occurrences": 139
+      },
+      {
+        "normalized": "e",
+        "occurrences": 134
+      }
+    ]
+  },
+  "source": {
+    "bytes": 860165839,
+    "sha256": "f1b690df708c8638b50976ea6ee8976a345644c17c433ad880f917f35f28e37c",
+    "file": "kent_expanded_repertory.pdf"
+  },
+  "local_processing": true,
+  "review_scope": "All page geometry and all section starts checked; remedy directory, bibliography, cover and publication page visually transcribed. Neighboring-page text cropped from four front-matter pages. Selected rubric/continuation cases audited. Body text and remedy grades have not been exhaustively proofread.",
+  "sample_parser_audit": {
+    "status": "FINAL_FULL_DATABASE_RECONCILIATION",
+    "sample_count": 30,
+    "counts": {
+      "pass_printed_structure": 29,
+      "pass_with_flagged_context_inference": 1
+    },
+    "interpretation": "This audit checks visible printed dash depth, rubric/continuation/carry classification, and immediate source ancestry for30 selected cases across7 pages. A separate wrapped-label regression check is also included. It is not an exhaustive audit or certification of OCR text, remedy transcription, or every normalized semantic path. One case uses an explicitly flagged source-derived midnight context inference. Composite source labels such as rising,after followed by before,agg remain semantically ambiguous despite correct printed ancestry.",
+    "note": "The structural sample audit applies to the same content; machine-local audit paths and development history are omitted."
+  }
+}

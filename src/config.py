@@ -15,7 +15,11 @@ def get_project_root() -> Path:
     """
     current = Path(__file__).resolve().parent
     for parent in [current] + list(current.parents):
-        if (parent / "pyproject.toml").is_file() or (parent / "kent_public_edition").is_dir():
+        if (
+            (parent / "pyproject.toml").is_file()
+            or (parent / "data" / "raw" / "kent_public_edition").is_dir()
+            or (parent / "kent_public_edition").is_dir()
+        ):
             return parent
     return Path.cwd()
 

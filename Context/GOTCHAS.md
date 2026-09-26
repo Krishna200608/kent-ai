@@ -65,7 +65,7 @@ The project lives at `d:\Research Project\kent-ai` — note the space in "Resear
 
 ### 3.4 Hardlink vs. Symlink
 
-`data/raw/repertory.sqlite` is a **hardlink** (not a symlink) to `kent_public_edition/repertory.sqlite`. Both paths refer to the same inode. Deleting either path does NOT delete the data (the other remains). There is also a directory junction at `d:\Research Project\Kent` → `d:\Research Project\kent-ai`.
+`data/raw/repertory.sqlite` and `data/raw/kent_public_edition/repertory.sqlite` are hardlinked. Both paths refer to the same inode. The upstream public edition bundle is permanently organized under `data/raw/kent_public_edition/`. There is also a directory junction at `d:\Research Project\Kent` → `d:\Research Project\kent-ai`.
 
 ---
 

@@ -1,0 +1,576 @@
+[
+  {
+    "pdf_page": 5,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 6,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 7,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      335,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": true,
+    "notes": [
+      "Readable neighboring-page fragment lies to the left of the book gutter and is excluded. Target-page heading, text, and footer remain inside the crop."
+    ]
+  },
+  {
+    "pdf_page": 8,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 9,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      335,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": true,
+    "notes": [
+      "Readable neighboring-page fragment lies to the left of the book gutter and is excluded. Target-page heading, text, and footer remain inside the crop."
+    ]
+  },
+  {
+    "pdf_page": 10,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 11,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      240,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": true,
+    "notes": [
+      "Readable neighboring-page fragment lies to the left of the book gutter and is excluded. Target-page heading, text, and footer remain inside the crop."
+    ]
+  },
+  {
+    "pdf_page": 12,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 13,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      280,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": true,
+    "notes": [
+      "Readable neighboring-page fragment lies to the left of the book gutter and is excluded. Target-page heading, text, and footer remain inside the crop."
+    ]
+  },
+  {
+    "pdf_page": 14,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 15,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 16,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 17,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 18,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 19,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 20,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 21,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 22,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 23,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 24,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 25,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 26,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 27,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 28,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 29,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 30,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 31,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 32,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 33,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 34,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 35,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 36,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 37,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Outer scan frame and paper blemishes may remain; these are not neighboring-page content."
+    ]
+  },
+  {
+    "pdf_page": 38,
+    "source_width": 1785,
+    "source_height": 2478,
+    "crop_box": [
+      0,
+      0,
+      1785,
+      2478
+    ],
+    "status": "visually_reviewed",
+    "adjacent_page_text_visible": false,
+    "notes": [
+      "No readable neighboring-page text visible in the full-page visual inspection; full source extent retained to avoid clipping own text near the page frame.",
+      "Page is blank."
+    ]
+  }
+]

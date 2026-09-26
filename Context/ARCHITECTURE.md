@@ -18,18 +18,17 @@ kent-ai/
 │
 ├── data/
 │   ├── raw/
-│   │   └── repertory.sqlite       # Hardlink → kent_public_edition/repertory.sqlite (112 MB)
-│   ├── processed/                 # Will contain: mind_cases.jsonl, train/val/test.jsonl
-│   └── embeddings/kent_rubrics/   # Will contain: ChromaDB persistent HNSW index
-│
-├── kent_public_edition/           # Upstream digitized repertory (read-only reference)
-│   ├── repertory.sqlite           # Primary data source (schema in schema.sql)
-│   ├── schema.sql                 # DDL for all tables, views, FTS indexes
-│   ├── viewer.py                  # Standalone local browser (not used by kent-ai)
-│   ├── query.py                   # CLI query tool (not used by kent-ai)
-│   ├── sections.json              # Section metadata export
-│   ├── remedies.json              # Remedy dictionary export
-│   └── tree.json                  # Full rubric tree export (16 MB)
+│   │   ├── repertory.sqlite               # Primary data source (112 MB)
+│   │   └── kent_public_edition/           # Upstream digitized repertory bundle
+│   │       ├── repertory.sqlite           # Primary database
+│   │       ├── schema.sql                 # DDL for all tables, views, FTS indexes
+│   │       ├── viewer.py                  # Standalone local browser
+│   │       ├── query.py                   # CLI query tool
+│   │       ├── sections.json              # Section metadata export
+│   │       ├── remedies.json              # Remedy dictionary export
+│   │       └── manifest.json              # Upstream bundle manifest
+│   ├── processed/                         # Generated artifacts: mind_cases.jsonl, train/val/test.jsonl
+│   └── embeddings/kent_rubrics/           # ChromaDB persistent HNSW index (Phase 2)
 │
 ├── src/
 │   ├── __init__.py                # Package root; exports __version__ = "0.1.0"
