@@ -92,7 +92,7 @@ tail -f generation.log
 
 ## Phase 2 — ChromaDB Rubric Index ✅
 
-**Status**: Complete (Core Modules Implemented & Tested; full 74k index build ready)
+**Status**: Complete (All 74,513 Rubrics Indexed & Semantic Search Verified)
 **Date**: 2026-09-26
 **Agent**: Antigravity (Gemini 3.8 Flash)
 **Target**: Dense vector semantic retrieval over Kent's Repertory rubrics using `all-MiniLM-L6-v2` and ChromaDB HNSW cosine index
@@ -104,16 +104,19 @@ tail -f generation.log
 | `RubricEmbedder` | ✅ Done | `src/search/embedder.py` (sentence-transformers lazy load, 384-dim unit normalized vectors, mock fallback) |
 | `RubricVectorStore` | ✅ Done | `src/search/vector_store.py` (ChromaDB persistent HNSW cosine index, section filtering, batch upsert) |
 | Embeddings CLI | ✅ Done | `scripts/build_embeddings.py` (batch indexer with `--limit`, `--section`, and query test validation) |
+| Full Index Build | ✅ Done | `data/embeddings/kent_rubrics/` (74,513 rubrics indexed in 931s @ 80.0 rubrics/sec) |
 | Unit Tests | ✅ Done | `tests/test_vector_store.py` (6 unit tests passing for dimension, normalization, ranking, filtering, thresholds) |
 
 ### Verification & Testing
 
 ```bash
+python scripts/build_embeddings.py --batch-size 256
+# Successfully indexed 74,513 rubrics in 931.14s (80.0 rubrics/sec)
+# Total collection count: 74,513 ✅
+# Query 'splitting headache from sun' returns HEAD > PAIN rubrics in top-5 ✅
+
 pytest tests/test_vector_store.py -v
 # Output: 6 passed in 0.08s ✅
-
-pytest tests/ -v
-# Output: 35 passed in 3.51s ✅
 ```
 
 ---
