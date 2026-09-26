@@ -145,6 +145,10 @@ Importing `sentence_transformers` or `torch` takes 1.5–3.0 seconds on Windows 
 ChromaDB SQLite backend will fail with "too many SQL variables" if upserting thousands of documents at once.
 - **Rule**: Always chunk documents and embeddings into batches (e.g. `batch_size=500`) when calling `collection.upsert()`.
 
+### 7.4 EphemeralClient Collection Isolation in Pytest
+`chromadb.EphemeralClient()` creates an in-process in-memory store. If multiple test fixtures or files use the default collection name (`kent_rubrics`), documents added in one test file will persist into subsequent tests within the same pytest session.
+- **Rule**: Test fixtures must supply an isolated, unique collection name using `uuid.uuid4().hex[:8]` (e.g. `collection_name=f"test_rubrics_{uuid.uuid4().hex[:8]}"`).
+
 ---
 
 _End of file._

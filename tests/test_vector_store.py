@@ -12,9 +12,13 @@ def mock_embedder():
     return RubricEmbedder(mock_mode=True)
 
 
+import uuid
+
+
 @pytest.fixture
 def mock_vector_store(mock_embedder):
     return RubricVectorStore(
+        collection_name=f"test_rubrics_{uuid.uuid4().hex[:8]}",
         embedder=mock_embedder,
         in_memory=True,
     )

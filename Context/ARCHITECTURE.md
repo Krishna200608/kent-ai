@@ -44,12 +44,12 @@ kent-ai/
 │   ├── models/
 │   │   ├── symptom_ner.py         # Stub: ClinicalBERT NER wrapper (Phase 3)
 │   │   ├── trainer.py             # Stub: Training loop (Phase 3)
-│   │   └── resolver.py            # Stub: LLaMA post-processor (Phase 4)
+│   │   └── resolver.py            # ★ CORE: LLaMA post-processor & negation resolver (Phase 4) — implemented
 │   │
 │   ├── search/
 │   │   ├── embedder.py            # ★ CORE: Sentence-transformers embedder (Phase 2) — implemented
 │   │   ├── vector_store.py        # ★ CORE: ChromaDB wrapper with HNSW cosine index (Phase 2) — implemented
-│   │   └── ranker.py              # Stub: Remedy intersection ranker (Phase 5)
+│   │   └── ranker.py              # ★ CORE: Remedy intersection & grade ranker (Phase 5) — implemented
 │   │
 │   ├── chatbot/
 │   │   ├── state_machine.py       # Stub: FSM with IntakeState enum (Phase 6)
@@ -57,8 +57,8 @@ kent-ai/
 │   │   └── prompts.py             # Prompt templates (case gen, resolver, chatbot) — active
 │   │
 │   ├── pipeline/
-│   │   ├── orchestrator.py        # Stub: End-to-end transcript→report (Phase 5)
-│   │   └── report_generator.py    # Stub: JSON + Markdown reports (Phase 5)
+│   │   ├── orchestrator.py        # ★ CORE: End-to-end transcript→report orchestrator (Phase 5) — implemented
+│   │   └── report_generator.py    # ★ CORE: JSON + Markdown reports (Phase 5) — implemented
 │   │
 │   └── dashboard/
 │       ├── app.py                 # Stub: Streamlit entry point (Phase 7)
