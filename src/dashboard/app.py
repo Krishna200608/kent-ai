@@ -10,7 +10,15 @@ A state-of-the-art clinical interface built to Google Stitch UI/UX design standa
 from __future__ import annotations
 
 import logging
+import sys
+from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+# Ensure project repository root is always in sys.path
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
