@@ -283,5 +283,33 @@ Each line in `mind_cases.jsonl`, `train.jsonl`, `val.jsonl`, and `test.jsonl` is
 
 ---
 
+## ChromaDB Rubric Vector Store (`data/embeddings/kent_rubrics/`)
+
+Dense vector index constructed in Phase 2 for semantic retrieval over Kent's Repertory rubrics.
+
+| Property | Value |
+|---|---|
+| Collection Name | `kent_rubrics` |
+| Embedding Model | `sentence-transformers/all-MiniLM-L6-v2` |
+| Vector Dimension | 384 (unit L2-normalized) |
+| Distance Metric | Cosine similarity (`metadata: {"hnsw:space": "cosine"}`) |
+| Document Content | Full hierarchical rubric path (e.g. `MIND > ABSENT-MINDED > morning`) |
+
+### Document Metadata Schema
+
+```json
+{
+  "rubric_id": 4,
+  "section_id": 1,
+  "section_name": "MIND",
+  "depth": 1,
+  "path": "MIND > ABSENT-MINDED > morning",
+  "label": "morning",
+  "remedy_count": 8
+}
+```
+
+---
+
 _End of file._
 

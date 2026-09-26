@@ -130,4 +130,21 @@ When converting token BIO tags to HuggingFace tokenizer subwords:
 
 ---
 
+## 7. ChromaDB & Vector Store Gotchas
+
+### 7.1 ChromaDB Cosine Distance vs. Similarity
+ChromaDB's HNSW index with `"hnsw:space": "cosine"` returns *cosine distance* $d \in [0, 2]$, where $d = 1 - \cos(\theta)$.
+- **Gotcha**: A score of `0.0` is an exact match (distance 0), while `1.0` is orthogonal.
+- **Conversion**: Always convert distance to similarity using $\text{sim} = \max(0.0, \min(1.0, 1.0 - d))$ before presenting scores or filtering by threshold.
+
+### 7.2 Heavy PyTorch / Transformer Import Penalty
+Importing `sentence_transformers` or `torch` takes 1.5–3.0 seconds on Windows and loads heavy native DLLs.
+- **Rule**: `RubricEmbedder` uses lazy loading — the model is only loaded when `_get_model()` is called, not on module import. CLI and unit tests should keep mock mode options for rapid verification without cold-start latency.
+
+### 7.3 ChromaDB Batch Size Limits
+ChromaDB SQLite backend will fail with "too many SQL variables" if upserting thousands of documents at once.
+- **Rule**: Always chunk documents and embeddings into batches (e.g. `batch_size=500`) when calling `collection.upsert()`.
+
+---
+
 _End of file._

@@ -47,8 +47,8 @@ kent-ai/
 │   │   └── resolver.py            # Stub: LLaMA post-processor (Phase 4)
 │   │
 │   ├── search/
-│   │   ├── embedder.py            # Stub: Sentence-transformers embedder (Phase 2)
-│   │   ├── vector_store.py        # Stub: ChromaDB wrapper (Phase 2)
+│   │   ├── embedder.py            # ★ CORE: Sentence-transformers embedder (Phase 2) — implemented
+│   │   ├── vector_store.py        # ★ CORE: ChromaDB wrapper with HNSW cosine index (Phase 2) — implemented
 │   │   └── ranker.py              # Stub: Remedy intersection ranker (Phase 5)
 │   │
 │   ├── chatbot/
