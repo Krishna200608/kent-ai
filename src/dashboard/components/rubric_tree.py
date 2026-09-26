@@ -5,6 +5,7 @@ from __future__ import annotations
 import streamlit as st
 from typing import Any, Dict, List
 
+from src.dashboard.components.icons import get_icon
 from src.data.kent_db import KentDB
 
 
@@ -23,8 +24,9 @@ def render_rubric_card(rubric: Dict[str, Any], db: KentDB) -> None:
         f"""
         <div class="stGlassCard" style="padding: 16px; margin-bottom: 12px;">
             {sim_badge}
-            <div style="font-size: 11px; color: #9CA3AF; text-transform: uppercase;">
-                <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; margin-right:4px; color:#06B6D4;">bookmark</span> Rubric #{r_id}
+            <div style="font-size: 11px; color: #9CA3AF; text-transform: uppercase; display: flex; align-items: center; gap: 4px;">
+                {get_icon('bookmark', color='#06B6D4', size=14)}
+                <span>Rubric #{r_id}</span>
             </div>
             <div style="font-weight: 700; font-size: 15px; color: #F9FAFB; margin: 4px 0 8px 0;">{path}</div>
             <div style="font-size: 12px; color: #06B6D4;">Remedies in Kent's Repertory: <b>{remedy_count}</b></div>

@@ -26,6 +26,7 @@ import streamlit as st
 
 from src.chatbot.dialogue_manager import DialogueManager
 from src.dashboard.components.chat_viewer import render_chat_interface, render_slot_badges
+from src.dashboard.components.icons import get_icon
 from src.dashboard.components.rubric_tree import render_rubric_card
 from src.dashboard.styles import inject_custom_css
 from src.data.kent_db import KentDB
@@ -81,29 +82,31 @@ def initialize_session():
 def render_header():
     """Render top brand navigation bar with glowing clinical indicators."""
     st.markdown(
-        """
+        f"""
         <div class="brand-header">
-            <div class="brand-title">
-                <span class="material-symbols-outlined" style="color: #10B981; font-size: 28px; vertical-align: middle;">local_florist</span>
-                Kent-AI Clinical Assistant
-                <span style="font-size: 13px; font-weight: 400; color: #9CA3AF; margin-left: 10px;">
-                    Classical Homeopathic Repertorization & AI Intake
-                </span>
+            <div class="brand-left">
+                <div class="brand-icon-box">
+                    {get_icon('local_florist', size=26, color='#10B981')}
+                </div>
+                <div>
+                    <div class="brand-title">Kent-AI Clinical Assistant</div>
+                    <div class="brand-subtitle">Classical Homeopathic Repertorization & AI Intake</div>
+                </div>
             </div>
-            <div style="display: flex; gap: 10px; align-items: center;">
+            <div class="brand-pills">
                 <span class="status-pill">
                     <span class="status-dot"></span>
-                    <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">memory</span>
-                    LLM: llama3:8b
+                    {get_icon('memory', size=14, color='#10B981')}
+                    <span>LLM: llama3:8b</span>
                 </span>
-                <span class="status-pill" style="border-color: rgba(6, 182, 212, 0.3); color: #22D3EE;">
-                    <span class="status-dot" style="background: #06B6D4; box-shadow: 0 0 8px #06B6D4;"></span> 
-                    <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">database</span>
-                    Vector Store: 74,513 Rubrics
+                <span class="status-pill status-pill-info">
+                    <span class="status-dot status-dot-cyan"></span>
+                    {get_icon('database', size=14, color='#06B6D4')}
+                    <span>Vector Store: 74,513 Rubrics</span>
                 </span>
-                <span class="status-pill" style="border-color: rgba(139, 92, 246, 0.3); color: #A78BFA;">
-                    <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">menu_book</span>
-                    Repertory: 37 Chapters
+                <span class="status-pill status-pill-purple">
+                    {get_icon('menu_book', size=14, color='#A78BFA')}
+                    <span>Repertory: 37 Chapters</span>
                 </span>
             </div>
         </div>
@@ -279,17 +282,21 @@ def render_report_view(report: PatientReport, db: KentDB):
     col_rep_head, col_rep_dl = st.columns([3, 1])
     with col_rep_head:
         st.markdown(
-            f"<h3><span class='material-symbols-outlined' style='vertical-align:middle; color:#10B981; margin-right:6px;'>clinical_notes</span> Case Analysis Report — <code>{report.patient_id}</code></h3>",
+            f"""
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                {get_icon('clinical_notes', size=24, color='#10B981')}
+                <h3 style="margin: 0;">Case Analysis Report — <code>{report.patient_id}</code></h3>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
         st.markdown(f"> *\"{report.transcript}\"*")
     with col_rep_dl:
         st.download_button(
-            "Export Clinical Report (MD)",
+            "Export Report (MD)",
             data=report.to_markdown(),
             file_name=f"{report.patient_id}_repertorization.md",
             mime="text/markdown",
-            icon=":material/download:",
             use_container_width=True,
         )
         st.download_button(
@@ -297,13 +304,17 @@ def render_report_view(report: PatientReport, db: KentDB):
             data=report.to_json(),
             file_name=f"{report.patient_id}_data.json",
             mime="application/json",
-            icon=":material/data_object:",
             use_container_width=True,
         )
     st.markdown("---")
     
     st.markdown(
-        "<h4><span class='material-symbols-outlined' style='vertical-align:middle; color:#06B6D4; margin-right:6px;'>account_tree</span> 1. 7-Dimension Clinical Parsing</h4>",
+        f"""
+        <div style="display: flex; align-items: center; gap: 8px; margin: 12px 0 8px 0;">
+            {get_icon('account_tree', size=20, color='#06B6D4')}
+            <h4 style="margin: 0;">1. 7-Dimension Clinical Parsing</h4>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
     render_dimensions_grid(report.dimensions)
@@ -315,8 +326,9 @@ def render_report_view(report: PatientReport, db: KentDB):
         st.markdown(
             f"""
             <div class="hero-simillimum">
-                <div style="font-size: 13px; text-transform: uppercase; color: #34D399; font-weight: 700; letter-spacing: 0.05em;">
-                    <span class="material-symbols-outlined" style="vertical-align:middle; margin-right:4px;">verified</span> Primary Simillimum Indication
+                <div style="font-size: 13px; text-transform: uppercase; color: #34D399; font-weight: 700; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;">
+                    {get_icon('verified', size=16, color='#34D399')}
+                    <span>Primary Simillimum Indication</span>
                 </div>
                 <div style="font-size: 26px; font-weight: 800; color: #FFFFFF; margin: 6px 0;">
                     {top_rem.get('full_name')} <span style="color: #34D399; font-size: 20px;">({top_rem.get('abbreviation')})</span>
@@ -332,13 +344,23 @@ def render_report_view(report: PatientReport, db: KentDB):
         col1, col2 = st.columns([3, 2])
         with col1:
             st.markdown(
-                "<h4><span class='material-symbols-outlined' style='vertical-align:middle; color:#10B981; margin-right:6px;'>bar_chart</span> 2. Remedy Totality Ranking</h4>",
+                f"""
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    {get_icon('bar_chart', size=20, color='#10B981')}
+                    <h4 style="margin: 0;">2. Remedy Totality Ranking</h4>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
             render_repertorization_chart(remedies)
         with col2:
             st.markdown(
-                "<h4><span class='material-symbols-outlined' style='vertical-align:middle; color:#A78BFA; margin-right:6px;'>table_chart</span> 3. Top Remedy Breakdown</h4>",
+                f"""
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    {get_icon('table_chart', size=20, color='#A78BFA')}
+                    <h4 style="margin: 0;">3. Top Remedy Breakdown</h4>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
             table_data = []
@@ -353,13 +375,23 @@ def render_report_view(report: PatientReport, db: KentDB):
             st.dataframe(pd.DataFrame(table_data), use_container_width=True, hide_index=True)
 
         st.markdown(
-            "<h4><span class='material-symbols-outlined' style='vertical-align:middle; color:#FBBF24; margin-right:6px;'>grid_on</span> 4. Classical Repertorization Totality Matrix (Remedies × Rubrics)</h4>",
+            f"""
+            <div style="display: flex; align-items: center; gap: 8px; margin: 16px 0 8px 0;">
+                {get_icon('grid_on', size=20, color='#FBBF24')}
+                <h4 style="margin: 0;">4. Classical Repertorization Totality Matrix (Remedies × Rubrics)</h4>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
         render_totality_matrix(report, db)
 
     st.markdown(
-        "<h4><span class='material-symbols-outlined' style='vertical-align:middle; color:#34D399; margin-right:6px;'>format_list_bulleted</span> 5. Matched Kent Repertory Rubrics</h4>",
+        f"""
+        <div style="display: flex; align-items: center; gap: 8px; margin: 16px 0 8px 0;">
+            {get_icon('format_list_bulleted', size=20, color='#34D399')}
+            <h4 style="margin: 0;">5. Matched Kent Repertory Rubrics</h4>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
     for r in report.matched_rubrics:
@@ -371,10 +403,10 @@ def render_sidebar():
     """Render Google Stitch clinical telemetry and quick-case loader."""
     with st.sidebar:
         st.markdown(
-            """
+            f"""
             <div style='text-align: center; margin-bottom: 20px;'>
-                <div style='margin-bottom: 6px;'>
-                    <span class="material-symbols-outlined" style="font-size: 42px; color: #10B981;">local_florist</span>
+                <div style='margin-bottom: 8px; display: inline-flex; justify-content: center; align-items: center; width: 64px; height: 64px; border-radius: 16px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3);'>
+                    {get_icon('local_florist', size=38, color='#10B981')}
                 </div>
                 <div style='font-size: 18px; font-weight: 800; color: #10B981;'>Kent-AI Clinical Suite</div>
                 <div style='font-size: 11px; color: #9CA3AF;'>Classical Homeopathy + Generative AI</div>
@@ -384,7 +416,12 @@ def render_sidebar():
         )
 
         st.markdown(
-            "### <span class='material-symbols-outlined' style='vertical-align:middle; color:#06B6D4; margin-right:4px;'>sensors</span> System Telemetry",
+            f"""
+            <div style='display: flex; align-items: center; gap: 6px; margin: 16px 0 8px 0;'>
+                {get_icon('sensors', size=18, color='#06B6D4')}
+                <span style='font-size: 15px; font-weight: 700; color: #F9FAFB;'>System Telemetry</span>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
         st.markdown(
@@ -407,7 +444,12 @@ def render_sidebar():
 
         st.markdown("---")
         st.markdown(
-            "### <span class='material-symbols-outlined' style='vertical-align:middle; color:#FBBF24; margin-right:4px;'>scale</span> Totality Weights (Kentian)",
+            f"""
+            <div style='display: flex; align-items: center; gap: 6px; margin: 12px 0 8px 0;'>
+                {get_icon('scale', size=18, color='#FBBF24')}
+                <span style='font-size: 15px; font-weight: 700; color: #F9FAFB;'>Totality Weights (Kentian)</span>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
         st.markdown(
@@ -458,10 +500,15 @@ def main():
         with col_ctrl:
             with st.container(border=True):
                 st.markdown(
-                    "<h4 style='margin:0 0 12px 0;'><span class='material-symbols-outlined' style='vertical-align:middle; color:#10B981; margin-right:6px;'>tune</span> Intake Controls</h4>",
+                    f"""
+                    <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 14px;'>
+                        {get_icon('tune', size=20, color='#10B981')}
+                        <span style='font-size: 16px; font-weight: 700; color: #F9FAFB;'>Intake Controls</span>
+                    </div>
+                    """,
                     unsafe_allow_html=True,
                 )
-                if st.button("Generate Full Report Now", icon=":material/assignment:", use_container_width=True):
+                if st.button("Generate Full Repertorization", type="primary", use_container_width=True):
                     transcript = dm.get_full_transcript()
                     if transcript.strip():
                         with st.spinner("Analyzing totality and ranking remedies..."):
@@ -471,7 +518,7 @@ def main():
                     else:
                         st.warning("Please chat with Kent-AI first before generating report.")
 
-                if st.button("Reset Consultation", icon=":material/refresh:", use_container_width=True):
+                if st.button("Reset Consultation", type="secondary", use_container_width=True):
                     dm.reset()
                     dm.get_greeting()
                     st.session_state.current_report = None
@@ -494,7 +541,12 @@ def main():
     with tab2:
         with st.container(border=True):
             st.markdown(
-                "<h3 style='margin:0 0 8px 0;'><span class='material-symbols-outlined' style='vertical-align:middle; color:#10B981; margin-right:6px;'>analytics</span> Instant Clinical Repertorization</h3>",
+                f"""
+                <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 8px;'>
+                    {get_icon('analytics', size=22, color='#10B981')}
+                    <h3 style='margin: 0;'>Instant Clinical Repertorization</h3>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
             st.markdown("Input patient clinical narrative directly to extract 7 dimensions, retrieve matching rubrics across Kent's 74,513 rubrics, and compute remedy totality.")
@@ -528,7 +580,7 @@ def main():
                 if section_choice != "All Chapters (74,513 rubrics)":
                     sec_id = int(section_choice.split(":")[0])
 
-            run_btn = st.button("Analyze & Repertorize Case", icon=":material/play_arrow:", use_container_width=True)
+            run_btn = st.button("Analyze & Repertorize Case", type="primary", use_container_width=True)
 
         if run_btn and user_case_text.strip():
             with st.spinner("Extracting 7-dimensions via LLaMA 3, retrieving rubrics from ChromaDB, and computing totality..."):
@@ -546,7 +598,12 @@ def main():
     with tab3:
         with st.container(border=True):
             st.markdown(
-                "<h3 style='margin:0 0 8px 0;'><span class='material-symbols-outlined' style='vertical-align:middle; color:#10B981; margin-right:6px;'>search</span> Kent's Repertory Dense & Lexical Search</h3>",
+                f"""
+                <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 8px;'>
+                    {get_icon('search', size=22, color='#10B981')}
+                    <h3 style='margin: 0;'>Kent's Repertory Dense & Lexical Search</h3>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
             st.markdown("Query all **74,513 digitized rubrics** using semantic vectors or exact text search.")
@@ -563,7 +620,7 @@ def main():
                     chosen_sec_id = int(selected_sec_str.split(":")[0])
 
             search_mode = st.radio("Search Algorithm:", ["Dense Semantic Search (all-MiniLM-L6-v2)", "Exact FTS5 Lexical Search"], horizontal=True)
-            search_clicked = st.button("Search Rubrics", icon=":material/search:", use_container_width=True)
+            search_clicked = st.button("Search Rubrics", type="primary", use_container_width=True)
 
         if (search_clicked or search_query) and search_query.strip():
             with st.spinner("Searching rubrics..."):
@@ -593,7 +650,12 @@ def main():
     with tab4:
         with st.container(border=True):
             st.markdown(
-                "<h3 style='margin:0 0 8px 0;'><span class='material-symbols-outlined' style='vertical-align:middle; color:#10B981; margin-right:6px;'>medication</span> Homeopathic Remedy Dictionary</h3>",
+                f"""
+                <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 8px;'>
+                    {get_icon('medication', size=22, color='#10B981')}
+                    <h3 style='margin: 0;'>Homeopathic Remedy Dictionary</h3>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
             st.markdown("Browse remedies cataloged in Kent's Repertory with full Latin names, abbreviations, and characteristic keynotes.")
@@ -601,17 +663,17 @@ def main():
             rem_search = st.text_input("Filter Remedy by Name or Abbreviation (e.g. 'Lach', 'Phos', 'Nux-v', 'Ars'):", value="Lach")
 
         if rem_search.strip():
-            with KentDB.get_connection() as conn:
+            with db.connect() as conn:
                 cur = conn.cursor()
                 query = """
                     SELECT 
                         r.id,
                         r.abbreviation,
                         r.full_name,
-                        r.common_name,
+                        r.normalized,
                         (SELECT COUNT(*) FROM rubric_remedies rr WHERE rr.remedy_id = r.id) as total_rubrics
                     FROM remedies r
-                    WHERE r.abbreviation LIKE ? OR r.full_name LIKE ? OR r.common_name LIKE ?
+                    WHERE r.abbreviation LIKE ? OR r.full_name LIKE ? OR r.normalized LIKE ?
                     ORDER BY total_rubrics DESC
                     LIMIT 15
                 """
@@ -621,7 +683,7 @@ def main():
 
             if remedy_rows:
                 for row in remedy_rows:
-                    r_id, abbr, name, common, count = row["id"], row["abbreviation"], row["full_name"], row["common_name"], row["total_rubrics"]
+                    r_id, abbr, name, norm, count = row["id"], row["abbreviation"], row["full_name"], row["normalized"], row["total_rubrics"]
                     st.markdown(
                         f"""
                         <div class="stGlassCard" style="padding: 16px; margin-bottom: 8px;">
@@ -629,7 +691,7 @@ def main():
                                 <div>
                                     <span style="font-size: 20px; font-weight: 800; color: #FFFFFF;">{name or abbr}</span>
                                     <span style="color: #34D399; font-weight: 700; margin-left: 8px;">({abbr})</span>
-                                    <div style="font-size: 13px; color: #9CA3AF; margin-top: 4px;">Common name: {common or 'Not specified'}</div>
+                                    <div style="font-size: 13px; color: #9CA3AF; margin-top: 4px;">Standardized: <code>{norm or abbr}</code></div>
                                 </div>
                                 <div style="text-align: right;">
                                     <span class="status-pill">{count} rubrics</span>
@@ -655,4 +717,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
