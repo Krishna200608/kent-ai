@@ -61,14 +61,11 @@ kent-ai/
 │   │   └── report_generator.py    # ★ CORE: JSON + Markdown reports (Phase 5) — implemented
 │   │
 │   └── dashboard/
-│       ├── app.py                 # Stub: Streamlit entry point (Phase 7)
-│       ├── pages/
-│       │   ├── patient_report.py  # Stub (Phase 7)
-│       │   ├── rubric_explorer.py # Stub (Phase 7)
-│       │   └── remedy_lookup.py   # Stub (Phase 7)
+│       ├── app.py                 # ★ CORE: Streamlit 4-workspace clinical portal with Totality Matrix (Phase 7) — implemented
+│       ├── styles.py              # ★ CORE: Google Stitch CSS injection, pulse glow, cards, custom scrollbar (Phase 7) — implemented
 │       └── components/
-│           ├── rubric_tree.py     # Stub (Phase 7)
-│           └── chat_viewer.py     # Stub (Phase 7)
+│           ├── rubric_tree.py     # ★ CORE: Rubric cards with expandable 3-grade remedy inspector (Phase 7) — implemented
+│           └── chat_viewer.py     # ★ CORE: Multi-turn chat HUD with live slot pills & suggestion chips (Phase 7) — implemented
 │
 ├── scripts/
 │   ├── generate_cases.py          # CLI: synthetic case gen (Phase 1)

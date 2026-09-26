@@ -163,6 +163,15 @@ class KentDB:
         """Fetch all remedies associated with a rubric."""
         return get_remedies(rubric_id, self.db_path)
 
+    def get_remedy_rubrics(
+        self,
+        remedy_id: int,
+        min_grade: Optional[int] = None,
+        limit: int = 25,
+    ) -> List[Dict[str, Any]]:
+        """Fetch top rubrics containing this remedy, ordered by grade."""
+        return get_remedy_rubrics(remedy_id, min_grade, limit, self.db_path)
+
     def get_mind_rubrics(
         self, limit: Optional[int] = None, offset: int = 0
     ) -> List[Dict[str, Any]]:
@@ -358,6 +367,49 @@ def get_remedies(
     with get_connection(db_path) as conn:
         cursor = conn.cursor()
         cursor.execute(sql, (int(rubric_id),))
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def get_remedy_rubrics(
+    remedy_id: int,
+    min_grade: Optional[int] = None,
+    limit: int = 25,
+    db_path: Optional[Union[str, Path]] = None,
+) -> List[Dict[str, Any]]:
+    """Fetch top repertory rubrics containing this remedy.
+    
+    Args:
+        remedy_id: Remedy primary key ID.
+        min_grade: Optional minimum grade filter (e.g., 3 for bold keynotes only).
+        limit: Maximum number of rubrics to return.
+        db_path: Optional path to SQLite database.
+        
+    Returns:
+        List of dictionaries with rubric details and remedy grade.
+    """
+    sql = """
+        SELECT 
+            rr.rubric_id,
+            rr.remedy_id,
+            COALESCE(rr.grade, rr.grade_candidate, 1) AS grade,
+            r.path,
+            r.label,
+            s.name AS section_name
+        FROM rubric_remedies rr
+        JOIN rubrics r ON rr.rubric_id = r.id
+        LEFT JOIN sections s ON r.section_id = s.id
+        WHERE rr.remedy_id = ?
+    """
+    params: List[Any] = [int(remedy_id)]
+    if min_grade is not None:
+        sql += " AND COALESCE(rr.grade, rr.grade_candidate, 1) >= ?"
+        params.append(int(min_grade))
+    sql += " ORDER BY grade DESC, r.path ASC LIMIT ?"
+    params.append(int(limit))
+    
+    with get_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute(sql, params)
         return [dict(row) for row in cursor.fetchall()]
 
 
