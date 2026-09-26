@@ -178,9 +178,32 @@ pytest tests/ -v
 
 ---
 
-## Phase 6 — Conversational Chatbot ⬜
+## Phase 6 — Conversational Chatbot ✅
 
-**Status**: Not started
+**Status**: Complete (10-State FSM, Friendly Dialogue Manager, and Interactive CLI operational)
+**Date**: 2026-09-26
+**Agent**: Antigravity (Gemini 3.8 Flash)
+**Target**: Warm, empathetic conversational intake agent with adaptive 7-dimension slot tracking and automatic handover to repertorization pipeline
+
+### Deliverables
+
+| Task | Status | Key File(s) |
+|---|---|---|
+| Conversational Persona & Prompts | ✅ Done | `src/chatbot/prompts.py` (`CHATBOT_SYSTEM_PROMPT` warm bedside manner, `CHATBOT_TURN_PROMPT`) |
+| 10-State Intake FSM | ✅ Done | `src/chatbot/state_machine.py` (`IntakeState` enum, adaptive slot skipping, confirmation detection) |
+| Multi-turn Dialogue Manager | ✅ Done | `src/chatbot/dialogue_manager.py` (Slot tracker for 7 dimensions, history management, LLaMA 3 integration, automatic pipeline handover) |
+| Interactive Terminal CLI | ✅ Done | `scripts/chat_intake.py` (Live consultation with state/slot indicators and automatic final report display) |
+| Unit Tests | ✅ Done | `tests/test_state_machine.py` (6 tests), `tests/test_dialogue_manager.py` (4 tests) |
+
+### Verification & Testing
+
+```bash
+pytest tests/test_state_machine.py tests/test_dialogue_manager.py -v
+# Output: 10 passed in 1.87s ✅
+
+pytest tests/ -v
+# Output: 54 passed in 1.95s ✅
+```
 
 ---
 

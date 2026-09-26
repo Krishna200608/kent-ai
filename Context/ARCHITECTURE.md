@@ -52,8 +52,8 @@ kent-ai/
 │   │   └── ranker.py              # ★ CORE: Remedy intersection & grade ranker (Phase 5) — implemented
 │   │
 │   ├── chatbot/
-│   │   ├── state_machine.py       # Stub: FSM with IntakeState enum (Phase 6)
-│   │   ├── dialogue_manager.py    # Stub: Turn + slot manager (Phase 6)
+│   │   ├── state_machine.py       # ★ CORE: FSM with IntakeState enum & adaptive slot skipping (Phase 6) — implemented
+│   │   ├── dialogue_manager.py    # ★ CORE: Multi-turn dialogue manager with LLaMA 3 (Phase 6) — implemented
 │   │   └── prompts.py             # Prompt templates (case gen, resolver, chatbot) — active
 │   │
 │   ├── pipeline/
