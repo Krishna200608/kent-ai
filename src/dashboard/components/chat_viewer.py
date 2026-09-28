@@ -1,23 +1,17 @@
-"""Chat viewer component for interactive clinical intake (Phase 7)."""
+"""Chat viewer component for interactive clinical intake (Phase 2 & 7)."""
 
 from __future__ import annotations
 
-import streamlit as st
 from typing import Any, Dict, List, Optional
+import streamlit as st
 
 from src.chatbot.dialogue_manager import DialogueManager
 from src.dashboard.components.icons import get_icon
-
-
-KENT_DIMENSIONS = [
-    ("Location", "Location", "location", "badge-loc", "LOC"),
-    ("Sensation", "Sensation", "sensation", "badge-sen", "SEN"),
-    ("Worse from", "Worse from", "modality_agg", "badge-agg", "MOD_AGG"),
-    ("Better from", "Better from", "modality_amel", "badge-amel", "MOD_AMEL"),
-    ("Concomitants", "Concomitants", "concomitant", "badge-conc", "CONC"),
-    ("Temperature", "Temperature", "temporal", "badge-temp", "TEMP"),
-    ("Mental", "Mental", "mental", "badge-ment", "MENT"),
-]
+from src.dashboard.dimensions import (
+    DIMENSION_MAP,
+    KENT_DIMENSIONS_ORDERED,
+    pluralize,
+)
 
 
 def get_current_step_label(dm: DialogueManager) -> str:
@@ -37,27 +31,28 @@ def get_current_step_label(dm: DialogueManager) -> str:
 
 
 def render_slot_badges_html(slots: Dict[str, List[str]], dm: Optional[DialogueManager] = None) -> str:
-    """Render the 7-segment Live Symptom Dimension HUD in plain language with empty/filled states."""
+    """Render the 7-segment Live Symptom Dimension HUD in plain language with empty/filled states and tooltips."""
     segments_html = []
 
-    for disp_name, label, key, badge_class, code in KENT_DIMENSIONS:
-        items = slots.get(key, [])
-        is_filled = bool(items) or (dm is not None and (key in dm.state_machine.filled_slots or dm.detected_dimensions.get(key, False)))
+    for dim in KENT_DIMENSIONS_ORDERED:
+        items = slots.get(dim.key, [])
+        is_filled = bool(items) or (dm is not None and (dim.key in dm.state_machine.filled_slots or dm.detected_dimensions.get(dim.key, False)))
         if is_filled:
             snippet = items[0] if items else "Recorded"
             if len(snippet) > 18:
                 snippet = snippet[:16] + ".."
-            title_text = f"{label} ({code}): {', '.join(items) if items else 'Recorded'}"
+            title_text = f"{dim.label} ({dim.code}): {dim.captures}&#10;Example: &quot;{dim.example}&quot;&#10;Current value: {', '.join(items) if items else 'Recorded'}"
             segments_html.append(
-                f'<div class="hud-segment hud-segment-filled {badge_class}" title="{title_text}" data-code="{code}">'
-                f'<div class="hud-dim-title">● {disp_name}</div>'
+                f'<div class="hud-segment hud-segment-filled {dim.badge_class}" title="{title_text}" data-code="{dim.code}">'
+                f'<div class="hud-dim-title">● {dim.label}</div>'
                 f'<div class="hud-dim-sub">{snippet}</div>'
                 f'</div>'
             )
         else:
+            title_text = f"{dim.label} ({dim.code}): {dim.captures}&#10;Example: &quot;{dim.example}&quot;&#10;Status: Not asked yet"
             segments_html.append(
-                f'<div class="hud-segment hud-segment-unfilled" title="{label} ({code}): Not asked yet" data-code="{code}">'
-                f'<div class="hud-dim-title">{disp_name}</div>'
+                f'<div class="hud-segment hud-segment-unfilled" title="{title_text}" data-code="{dim.code}">'
+                f'<div class="hud-dim-title">{dim.label}</div>'
                 f'<div class="hud-dim-sub">Not asked yet</div>'
                 f'</div>'
             )
@@ -65,11 +60,12 @@ def render_slot_badges_html(slots: Dict[str, List[str]], dm: Optional[DialogueMa
     grid_markup = f'<div class="hud-segments-grid">{"".join(segments_html)}</div>'
 
     extracted_chips = []
-    for disp_name, label, key, badge_class, code in KENT_DIMENSIONS:
-        for item in slots.get(key, []):
+    for dim in KENT_DIMENSIONS_ORDERED:
+        for item in slots.get(dim.key, []):
+            chip_title = f"{dim.label} ({dim.code}): {dim.captures}&#10;Value: {item}&#10;Example: &quot;{dim.example}&quot;"
             extracted_chips.append(
-                f'<span class="badge {badge_class}" title="Dimension: {label} ({code}) | Value: {item}">'
-                f'<b>{disp_name}:</b> {item} '
+                f'<span class="badge {dim.badge_class}" title="{chip_title}">'
+                f'<b>{dim.label}:</b> {item} '
                 f'</span>'
             )
 
@@ -121,8 +117,8 @@ def render_quick_reply_chips(dm: DialogueManager, in_container: bool = False) ->
 def render_chat_interface(dm: DialogueManager) -> None:
     """Render multi-turn conversation, compact step indicator, and 7-segment live HUD."""
     filled_count = sum(
-        1 for _, _, k, _, _ in KENT_DIMENSIONS
-        if (k in dm.state_machine.filled_slots) or bool(dm.extracted_slots.get(k))
+        1 for dim in KENT_DIMENSIONS_ORDERED
+        if (dim.key in dm.state_machine.filled_slots) or bool(dm.extracted_slots.get(dim.key))
     )
     step_badge = get_current_step_label(dm)
 
@@ -148,21 +144,21 @@ def render_chat_interface(dm: DialogueManager) -> None:
     if any_captured:
         with st.expander("Manage Captured Symptoms (Edit / Remove)", expanded=False):
             st.markdown("<div style='font-size: 12px; color: #9CA3AF; margin-bottom: 8px;'>Clinicians can review or delete extracted clinical tokens:</div>", unsafe_allow_html=True)
-            for disp_name, label, key, badge_class, _ in KENT_DIMENSIONS:
-                items = dm.extracted_slots.get(key, [])
+            for dim in KENT_DIMENSIONS_ORDERED:
+                items = dm.extracted_slots.get(dim.key, [])
                 if items:
                     for idx, item in enumerate(list(items)):
                         c_tok, c_act = st.columns([5, 1])
                         with c_tok:
-                            st.markdown(f"<span class='badge {badge_class}'><b>{disp_name}:</b> {item}</span>", unsafe_allow_html=True)
+                            st.markdown(f"<span class='badge {dim.badge_class}'><b>{dim.label}:</b> {item}</span>", unsafe_allow_html=True)
                         with c_act:
-                            if st.button("✕", key=f"hud_del_{key}_{idx}_{item}", help=f"Remove {item}"):
-                                dm.extracted_slots[key].remove(item)
-                                if not dm.extracted_slots[key] and key in dm.state_machine.filled_slots:
-                                    dm.state_machine.filled_slots.remove(key)
+                            if st.button("✕", key=f"hud_del_{dim.key}_{idx}_{item}", help=f"Remove {item}"):
+                                dm.extracted_slots[dim.key].remove(item)
+                                if not dm.extracted_slots[dim.key] and dim.key in dm.state_machine.filled_slots:
+                                    dm.state_machine.filled_slots.remove(dim.key)
                                 st.rerun()
 
-    # Console Subheader (without clutter note)
+    # Console Subheader
     st.markdown(
         f"""
         <div style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0 8px 2px;">
@@ -174,53 +170,45 @@ def render_chat_interface(dm: DialogueManager) -> None:
         unsafe_allow_html=True,
     )
 
-    # Dynamic scrollable chat box container (sizes to content with max-height 520px)
-    chat_container = st.container(border=True)
-    selected_chip: Optional[str] = None
-
-    with chat_container:
-        if not dm.history:
-            st.markdown(
-                f"""
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; color: #9CA3AF; padding: 24px 20px; text-align: center;">
-                    <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
-                        {get_icon('chat', size=24, color='#10B981')}
+    # Chat panel with internal scroll area and pinned chat input
+    with st.container(border=True):
+        scroll_area = st.container(height=450)
+        with scroll_area:
+            if not dm.history:
+                st.markdown(
+                    f"""
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; color: #9CA3AF; padding: 24px 20px; text-align: center;">
+                        <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
+                            {get_icon('chat', size=24, color='#10B981')}
+                        </div>
+                        <div style="font-weight: 700; font-size: 15px; color: #F9FAFB;">Consultation Active (MIND Chapter Focus)</div>
+                        <div style="font-size: 13px; color: #9CA3AF; max-width: 440px; margin-top: 4px; line-height: 1.5;">
+                            Speak naturally with Kent-AI about how you feel. The intake engine focuses on mental & emotional generals alongside somatic modalities.
+                        </div>
                     </div>
-                    <div style="font-weight: 700; font-size: 15px; color: #F9FAFB;">Consultation Active (MIND Chapter Focus)</div>
-                    <div style="font-size: 13px; color: #9CA3AF; max-width: 440px; margin-top: 4px; line-height: 1.5;">
-                        Speak naturally with Kent-AI about how you feel. The intake engine focuses on mental & emotional generals alongside somatic modalities.
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        else:
-            for msg in dm.history:
-                role = msg["role"]
-                content = msg["content"]
-                if role == "assistant":
-                    with st.chat_message("assistant", avatar="🌿"):
-                        st.markdown(content)
-                else:
-                    with st.chat_message("user", avatar="👤"):
-                        st.markdown(content)
+                    """,
+                    unsafe_allow_html=True,
+                )
+            else:
+                for msg in dm.history:
+                    role = msg["role"]
+                    content = msg["content"]
+                    if role == "assistant":
+                        with st.chat_message("assistant", avatar="🌿"):
+                            st.markdown(content)
+                    else:
+                        with st.chat_message("user", avatar="👤"):
+                            st.markdown(content)
 
-            # While container is near-empty (0-1 messages), render suggestions inside container!
-            if len(dm.history) <= 1:
-                selected_chip = render_quick_reply_chips(dm, in_container=True)
+        # Suggested responses docked right above input inside chat panel
+        selected_chip = render_quick_reply_chips(dm, in_container=False)
 
-    # When multiple messages accumulate (>1), render suggestions docked above the chat input
-    if len(dm.history) > 1:
-        docked_chip = render_quick_reply_chips(dm, in_container=False)
-        if docked_chip:
-            selected_chip = docked_chip
-
-    # Chat input with MIND-oriented placeholder
-    user_prompt = st.chat_input("Tell Kent-AI how you are feeling (e.g. 'I feel anxious and restless in the evening, worse when alone')...")
+        # Pinned chat input inside the chat panel
+        user_prompt = st.chat_input("Tell Kent-AI how you are feeling (e.g. 'I feel anxious and restless in the evening, worse when alone')...")
 
     input_to_process = selected_chip or user_prompt
     if input_to_process:
-        with chat_container:
+        with scroll_area:
             with st.chat_message("user", avatar="👤"):
                 st.markdown(input_to_process)
             with st.chat_message("assistant", avatar="🌿"):
@@ -241,4 +229,5 @@ def render_chat_interface(dm: DialogueManager) -> None:
                 bot_reply = dm.process_turn(input_to_process)
                 thinking_box.markdown(bot_reply)
         st.rerun()
+
 
