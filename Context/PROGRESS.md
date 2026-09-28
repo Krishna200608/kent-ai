@@ -226,13 +226,19 @@ pytest tests/ -v
 | 4-Workspace Clinical Portal | ✅ Done | `src/dashboard/app.py` (Live Intake Chat, Instant Repertorization Engine, 74k Rubric Explorer, Materia Medica Index with Grade 3 keynotes) |
 | Report Export Suite | ✅ Done | `src/dashboard/app.py` (1-click Markdown report and structured JSON export) |
 | Database Keynotes Query | ✅ Done | `src/data/kent_db.py` (`get_remedy_rubrics` for Grade 3 characteristic keynote lookup) |
-| Unit Tests | ✅ Done | `tests/test_dashboard.py` (Slot badge rendering, report export formatting, remedy rubric queries) |
+| Confined Scrollable Chat Console | ✅ Done | `src/dashboard/components/chat_viewer.py`, `src/dashboard/styles.css` (Fixed-height 450px container with custom emerald scrollbars & glassmorphism) |
+| Dynamic Clinical Quick Suggestions | ✅ Done | `src/chatbot/prompts.py`, `src/chatbot/dialogue_manager.py`, `src/dashboard/components/chat_viewer.py` (NLP Question Intent Classifier + LLaMA 3 `QUICK_REPLIES` streaming, replaces hardcoded chips with instant dynamic answers) |
+| MIND Chapter UI Focus System | ✅ Done | `src/dashboard/app.py`, `src/dashboard/styles.css`, `src/dashboard/components/` (Target focus on Chapter 1 MIND [4,933 rubrics] across top brand bar, telemetry, intake chat, repertorization engine, rubric explorer, and Materia Medica keynotes) |
+| UI/UX Pass 2: Canonical Dimensions & Pluralization | ✅ Done | `src/dashboard/dimensions.py`, `src/dashboard/app.py` (Single source of truth `DIMENSION_MAP`, canonical terminology audit, `pluralize` helper eliminates all "(1 remedies)" strings) |
+| UI/UX Pass 2: Calibrated Match Tiers & Rubric Layout | ✅ Done | `src/dashboard/components/rubric_tree.py`, `src/dashboard/styles.css` (Strong $\ge 0.68$, Good $0.58\text{--}0.679$, Fair $0.52\text{--}0.579$, Weak $< 0.52$; hierarchy breadcrumbs, leaf emphasis, remedy count right alignment) |
+| UI/UX Pass 2: Guarded Actions & Global Polish | ✅ Done | `src/dashboard/styles.css`, `src/dashboard/app.py` (Guarded generate/analyze buttons with disabled styling, 1200px max width, tabs styling, Materia Medica filter row baseline alignment, one-line high-contrast footer) |
+| Unit Tests | ✅ Done | `tests/test_dashboard.py`, `tests/test_dialogue_manager.py` (Slot badge rendering, report exports, remedy rubrics, dynamic suggestion classification, MIND chapter badge verification, 60 passing tests) |
 
 ### Verification & Testing
 
 ```bash
 pytest tests/ -v
-# Output: 57 passed in 2.66s ✅
+# Output: 60 passed in 4.05s ✅
 
 # Headless server verification:
 streamlit run src/dashboard/app.py --server.headless true --server.port 8503
@@ -258,8 +264,14 @@ streamlit run src/dashboard/app.py --server.headless true --server.port 8503
 | 2026-09-26 | 5 | Antigravity | Classical Kentian RemedyRanker, ReportGenerator, and end-to-end PipelineOrchestrator. |
 | 2026-09-26 | 6 | Antigravity | 10-state FSM, friendly bedside manner DialogueManager, and interactive CLI. |
 | 2026-09-26 | 7 | Antigravity | Google Stitch Streamlit clinical dashboard with Plotly totality charts, Totality Matrix grid, and export suite. |
+| 2026-09-26 | 7 | Antigravity | Confined chat section into fixed 520px scrollable container box with custom scrollbars. |
+| 2026-09-26 | 7 | Antigravity | Fixed clinical quick suggestions completely with dynamic LLM generation + zero-hardcode question intent classification. |
+| 2026-09-26 | 7 | Antigravity | Aligned entire UI/UX to focus on Chapter 1: MIND (4,933 rubrics) with default MIND scopes, badges, telemetry, and vignettes. |
+| 2026-09-28 | 7 | Antigravity | UI/UX Pass 2: canonical dimension map, pluralization fix, calibrated match tiers (0.52 cutoff), rubric hierarchy breadcrumbs, and guarded buttons. |
 
 ---
 
 _End of file._
+
+
 

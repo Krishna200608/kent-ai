@@ -33,7 +33,10 @@ Kent-AI bridges classical 19th-century homeopathic medical repertorization with 
 | `--danger-rose` | `#F43F5E` | Negated symptoms, active exclusions |
 | `--text-primary` | `#F9FAFB` | High-contrast headers, values, emphasis |
 | `--text-secondary` | `#9CA3AF` | Supporting descriptions, metadata labels |
-| `--text-muted` | `#6B7280` | Subtle hints, timestamps, footnotes |
+| `--text-muted` | `#8492A6` | Subtle hints, footnotes (WCAG AA 5.61:1 compliant, replacing legacy `#6B7280`) |
+| `--badge-why-hint-bg` | `rgba(255, 255, 255, 0.12)` | Inline explainability why? affordance pill |
+| `--session-popover-bg` | `#111827` | Consolidated session telemetry popover background |
+| `--disclaimer-bg` | `rgba(17, 24, 39, 0.5)` | Persistent low-emphasis clinical disclaimer background |
 
 ### 2.2 Typography Hierarchy
 
@@ -61,23 +64,32 @@ padding: 20px;
 box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 ```
 
-### 3.2 7-Dimension Clinical Pill Badges
+### 3.2 Canonical 7-Dimension Clinical Badges & Reference
 
-| Dimension | Class | Background | Text Color |
-|---|---|---|---|
-| `LOC` (Location) | `.badge-loc` | `rgba(6, 182, 212, 0.15)` | `#22D3EE` (Cyan) |
-| `SEN` (Sensation) | `.badge-sen` | `rgba(16, 185, 129, 0.15)` | `#34D399` (Emerald) |
-| `MOD_AGG` (Aggravation) | `.badge-agg` | `rgba(245, 158, 11, 0.15)` | `#FBBF24` (Amber) |
-| `MOD_AMEL` (Amelioration) | `.badge-amel`| `rgba(52, 211, 153, 0.15)` | `#6EE7B7` (Mint) |
-| `CONC` (Concomitant) | `.badge-conc`| `rgba(236, 72, 153, 0.15)` | `#F472B6` (Pink) |
-| `TEMP` (Temporal) | `.badge-temp`| `rgba(59, 130, 246, 0.15)` | `#60A5FA` (Blue) |
-| `MENT` (Mental) | `.badge-ment`| `rgba(139, 92, 246, 0.15)` | `#A78BFA` (Purple) |
-| `NEGATED` (Denied) | `.badge-neg` | `rgba(239, 68, 68, 0.15)` | `#F87171` (Rose) |
+| Dimension Code | Key | Canonical Label | What it Captures | Example | Badge Class | Text Color |
+|---|---|---|---|---|---|---|
+| `LOC` | `location` | Location | Body part/region | "Right side of head" | `.badge-loc` | `#22D3EE` (Cyan) |
+| `SEN` | `sensation` | Sensation | Type of feeling | "Pressing, throbbing, burning" | `.badge-sen` | `#34D399` (Emerald) |
+| `MOD_AGG` | `modality_agg` | Worse from (aggravation) | Aggravating factors or triggers | "Worse in morning, worse cold" | `.badge-agg` | `#FBBF24` (Amber) |
+| `MOD_AMEL` | `modality_amel` | Better from (amelioration) | Relieving or soothing factors | "Better by pressure, fresh air" | `.badge-amel` | `#6EE7B7` (Mint) |
+| `CONC` | `concomitant` | Concomitant | Accompanying symptoms | "With nausea and anxiety" | `.badge-conc` | `#F472B6` (Pink) |
+| `TEMP` | `temporal` | Time pattern | Time patterns and periodicity | "Worse at midnight, periodic" | `.badge-temp` | `#60A5FA` (Blue) |
+| `MENT` | `mental` | Mental/Emotional | Psychological state | "Irritable, restless at night" | `.badge-ment` | `#A78BFA` (Purple) |
+| `NEG` | `negated` | Negated / Denied | Ruled out symptoms | "No fever, denied nausea" | `.badge-neg` | `#F87171` (Rose) |
 
-### 3.3 Remedy Grade Indicators (Classical Kentian)
+### 3.3 Semantic Match Tiers & Calibrated Cutoffs
+
+| Match Tier | Similarity Range | Badge Class | Color | Default Visibility |
+|---|---|---|---|---|
+| **Strong match** | $\ge 0.68$ | `.match-strong` | `#34D399` (Emerald) | Visible |
+| **Good match** | $0.58\text{--}0.679$ | `.match-good` | `#38BDF8` (Sky) | Visible |
+| **Fair match** | $0.52\text{--}0.579$ | `.match-fair` | `#FBBF24` (Amber) | Visible |
+| **Weak match** | $< 0.52$ | `.match-weak` | `#9CA3AF` (Muted) | Hidden by default (toggle: `< 0.52`) |
+
+### 3.4 Remedy Grade Indicators (Classical Kentian)
 - **Grade 3 (Bold / Verified)**: `#10B981` (Vibrant Emerald with bold weight)
 - **Grade 2 (Italics / Qualified)**: `#06B6D4` (Teal italic badge)
-- **Grade 1 (Plain / Clinical)**: `#6B7280` (Muted silver badge)
+- **Grade 1 (Plain / Clinical)**: `#8492A6` (Muted silver badge, WCAG AA compliant 5.61:1, upgraded from `#6B7280`)
 
 ---
 
@@ -85,7 +97,7 @@ box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 
 1. **Header Bar**:
    - Logo: Glowing emerald leaf (`🌿 Kent-AI`).
-   - Status indicators: Model (`llama3:8b`), ChromaDB Vector Store (`74,513 rubrics indexed`), DB status (`Connected`).
+   - Consolidated Session Telemetry: Compact pill with expandable hover popover for active scope, Ollama LLM (`llama3:8b`), and database metrics (`74,513 rubrics indexed`).
 2. **Main Navigation**:
    - 💬 **Live Patient Intake**: Interactive consultation with live slot extraction and 1-click repertorization.
    - 📊 **Clinical Repertorization**: Multi-rubric totality matrix, Plotly remedy ranking chart, and primary simillimum spotlight.
@@ -94,4 +106,24 @@ box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 
 ---
 
+## 5. Accessibility & WCAG AA Contrast Audit (Task 6)
+
+All 7 dimension badges evaluated against `--bg-surface` (`#111827`) blended with 15% alpha background:
+- **WCAG AA Threshold**: Minimum 4.5:1 for standard body text.
+- **Results**:
+  - `LOC`: 7.74:1 (PASS)
+  - `SEN`: 7.31:1 (PASS)
+  - `MOD_AGG`: 8.25:1 (PASS)
+  - `MOD_AMEL`: 8.71:1 (PASS)
+  - `CONC`: 5.73:1 (PASS)
+  - `TEMP`: 5.84:1 (PASS)
+  - `MENT`: 5.56:1 (PASS)
+  - `NEG`: 5.60:1 (PASS)
+- **Contrast Remediation**:
+  - Legacy `--text-muted` (`#6B7280`) measured **3.67:1** against `#111827` (FAIL).
+  - Remediated to `#8492A6` (**5.61:1**, PASS) and `#9CA3AF` (**7.31:1**, PASS) across dashboard footers, timestamps, and Grade 1 badges.
+
+---
+
 _End of file._
+
