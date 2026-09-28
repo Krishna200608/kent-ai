@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 import streamlit as st
 
 from src.dashboard.components.icons import get_icon
+from src.dashboard.dimensions import pluralize
 from src.data.kent_db import KentDB
 
 
@@ -30,6 +31,7 @@ def render_rubric_card(
     db: KentDB,
     query: Optional[str] = None,
     allow_add_to_case: bool = True,
+    omit_chapter_prefix: bool = True,
 ) -> None:
     """Render an individual rubric as a single unified expandable card with remedy breakdown."""
     raw_id = rubric.get("rubric_id") if rubric.get("rubric_id") is not None else rubric.get("id")
@@ -56,32 +58,40 @@ def render_rubric_card(
         prefix = ""
         leaf = clean_path
 
+    # Omit MIND chapter prefix when viewing within single chapter scope
+    disp_prefix = prefix
+    if omit_chapter_prefix and (prefix == "MIND" or prefix.startswith("MIND >")):
+        disp_prefix = prefix[4:].lstrip(" >").strip()
+
     # Query highlighting for hierarchy
-    high_prefix = highlight_query_words(prefix, query)
+    high_prefix = highlight_query_words(disp_prefix, query) if disp_prefix else ""
     high_leaf = highlight_query_words(leaf, query)
 
-    # Count display
-    count_label = f"{remedy_count} remedies" if remedy_count > 0 else "0 remedies"
+    # Pluralized count display
+    count_label = pluralize(remedy_count, "remedy", "remedies") if remedy_count > 0 else "0 remedies"
 
-    # Match indicator (replaces raw Sim: 0.xxx)
+    # Recalibrated match tiers based on 10-query semantic distribution (Task 5)
     match_label = ""
     match_html = ""
     if sim is not None:
-        if sim >= 0.65:
+        if sim >= 0.68:
             match_label = "Strong match"
             match_html = f"<span class='status-pill match-strong' title='Semantic similarity score: {sim:.3f}'>Strong match</span>"
-        elif sim >= 0.45:
+        elif sim >= 0.58:
             match_label = "Good match"
             match_html = f"<span class='status-pill match-good' title='Semantic similarity score: {sim:.3f}'>Good match</span>"
+        elif sim >= 0.52:
+            match_label = "Fair match"
+            match_html = f"<span class='status-pill match-fair' title='Semantic similarity score: {sim:.3f}'>Fair match</span>"
         else:
             match_label = "Weak match"
             match_html = f"<span class='status-pill match-weak' title='Semantic similarity score: {sim:.3f}'>Weak match</span>"
 
-    # Expander title
-    expander_title = f"{leaf}"
-    if prefix:
-        expander_title += f"  ·  {prefix}"
-    expander_title += f"  ({count_label})"
+    # Expander title (Task 6)
+    if disp_prefix:
+        expander_title = f"{disp_prefix} › {leaf}  ({count_label})"
+    else:
+        expander_title = f"{leaf}  ({count_label})"
     if match_label:
         expander_title += f"  ·  {match_label}"
 
@@ -100,10 +110,17 @@ def render_rubric_card(
 
     dev_id_badge = f"<span class='rubric-dev-id'>#{display_id}</span>" if (show_dev and display_id != 'N/A') else ""
 
+    remedy_noun = pluralize(remedy_count, "remedy", "remedies", include_count=False)
     remedy_count_html = (
-        f"<span style='font-size: 12.5px; color: #06B6D4;'><b>{remedy_count}</b> remedies in Repertory</span>"
+        f"<span style='font-size: 12.5px; color: #06B6D4;'><b>{remedy_count}</b> {remedy_noun} in Repertory</span>"
         if remedy_count > 0
         else "<span class='badge' style='background:rgba(239,68,68,0.12); color:#F87171; border:1px solid rgba(239,68,68,0.3);'>No remedies listed</span>"
+    )
+
+    path_hierarchy_html = (
+        f"<span style='color: #8492A6; font-size: 13px;'>{high_prefix} › </span><b style='color: #F9FAFB; font-size: 14px;'>{high_leaf}</b>"
+        if high_prefix
+        else f"<b style='color: #F9FAFB; font-size: 14px;'>{high_leaf}</b>"
     )
 
     with st.expander(expander_title, expanded=False):
@@ -111,13 +128,13 @@ def render_rubric_card(
         with col_hdr:
             st.html(
                 f"""
-                <div style="margin-bottom: 8px;">
-                    <div style="font-size: 12px; color: #9CA3AF; margin-bottom: 2px;">
-                        <span style="color: #6B7280;">Hierarchy:</span> {high_prefix} &gt; <b style="color: #F9FAFB;">{high_leaf}</b>
+                <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        {path_hierarchy_html}
                         {dev_id_badge}
                         {mind_badge}
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
                         {match_html}
                         {remedy_count_html}
                     </div>
