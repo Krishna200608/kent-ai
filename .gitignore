@@ -59,6 +59,7 @@ data/raw/kent_public_edition/tree.json
 # Checkpoints, logs, model weights
 checkpoints/
 /models/
+logs/
 *.log
 *.pt
 *.bin

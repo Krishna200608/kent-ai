@@ -64,6 +64,7 @@ def build_case_generation_prompt(
     rubric_path: str,
     top_remedies: Optional[List[str]] = None,
     include_examples: bool = True,
+    variation_instruction: Optional[str] = None,
 ) -> str:
     """Build user prompt for generating a clinical case vignette from a rubric."""
     prompt_parts: List[str] = []
@@ -84,8 +85,13 @@ def build_case_generation_prompt(
     prompt_parts.append("### Target Task:")
     prompt_parts.append(f"Kent Repertory Rubric: {rubric_path}")
     if top_remedies:
-        remedy_str = ", ".join(top_remedies[:5])
-        prompt_parts.append(f"Associated Key Remedies for clinical flavor: {remedy_str}")
+        valid_rems = [str(r) for r in top_remedies[:5] if r]
+        if valid_rems:
+            remedy_str = ", ".join(valid_rems)
+            prompt_parts.append(f"Associated Key Remedies for clinical flavor: {remedy_str}")
+
+    if variation_instruction:
+        prompt_parts.append(f"Patient Presentation Archetype & Style:\n{variation_instruction}")
 
     prompt_parts.append(
         "Generate a authentic first-person clinical patient narrative and exact character entity spans."

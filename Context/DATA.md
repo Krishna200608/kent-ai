@@ -222,6 +222,8 @@ Kent's Repertory uses a typographic grading system for remedy prominence:
 
 | File | Status | Format | Description |
 |---|---|---|---|
+| `data/processed/pilot_100_cases.jsonl` | Verified ✅ | JSONL | 100 stratified pilot validation cases across 25 MIND rubrics (4 diverse archetypes/rubric) |
+| `data/processed/pilot_checkpoint.json` | Verified ✅ | JSON | Atomic checkpoint for 100-case pilot generation |
 | `data/processed/mind_cases.jsonl` | Active | JSONL | Synthetic clinical cases with tokens and BIO tags |
 | `data/processed/generation_checkpoint.json` | Active | JSON | Atomic crash-safe checkpoint (completed IDs, counts, timestamps) |
 | `data/processed/train.jsonl` | Active | JSONL | 80% stratified training partition |

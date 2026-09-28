@@ -51,6 +51,7 @@ from src.dashboard.dimensions import (
 )
 
 from src.chatbot.dialogue_manager import DialogueManager
+from src.dashboard.components.chat_viewer import check_ollama_online
 from src.dashboard.components.icons import get_icon
 from src.data.kent_db import KentDB
 from src.pipeline.orchestrator import PatientReport, PipelineOrchestrator
@@ -91,7 +92,7 @@ def initialize_session():
     """Initialize stateful consultation variables."""
     if "pipeline" not in st.session_state:
         st.session_state.pipeline = get_pipeline()
-    if "dialogue_manager" not in st.session_state:
+    if "dialogue_manager" not in st.session_state or not hasattr(st.session_state.dialogue_manager, "is_ollama_online"):
         st.session_state.dialogue_manager = DialogueManager(
             orchestrator=st.session_state.pipeline,
             model_name="llama3:8b",
@@ -114,9 +115,13 @@ def render_header():
     is_mind = "MIND" in active_scope
     short_scope = "MIND (4.9k)" if is_mind else "All Chapters (74k)"
     
+    dm = st.session_state.get("dialogue_manager")
+    is_llm_online = dm.is_ollama_online() if (dm and hasattr(dm, "is_ollama_online")) else check_ollama_online()
+    engine_desc = "llama3:8b (Online)" if is_llm_online else "Offline (Rule-based Fallback)"
+    
     tooltip_text = (
         f"Active Scope: {active_scope}&#10;"
-        "Inference LLM: llama3:8b (Ollama local)&#10;"
+        f"Inference Engine: {engine_desc}&#10;"
         "Kent Knowledge Base: 74,513 rubrics across 37 chapters&#10;"
         "Single source of truth configured in sidebar."
     )
@@ -146,7 +151,7 @@ def render_header():
                             {get_icon('sensors', size=14, color='#10B981')} Session Details
                         </div>
                         <div style="margin-bottom: 4px; color: #D1D5DB; font-size: 12px;">• <b>Active Scope:</b> {active_scope}</div>
-                        {f'<div style="margin-bottom: 4px; color: #D1D5DB; font-size: 12px;">• <b>Engine:</b> llama3:8b (Ollama)</div>' if st.session_state.get('show_dev_details') else ''}
+                        <div style="margin-bottom: 4px; color: {'#10B981' if is_llm_online else '#F59E0B'}; font-size: 12px;">• <b>Engine:</b> {engine_desc}</div>
                         <div style="margin-bottom: 6px; color: #D1D5DB; font-size: 12px;">• <b>Knowledge Base:</b> 74,513 rubrics (37 Chapters)</div>
                         <div style="font-size: 11px; color: #9CA3AF; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 5px; margin-top: 6px;">
                             Configured via sidebar scope control.

@@ -32,7 +32,13 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[logging.StreamHandler(sys.stdout)],
 )
-logger = logging.getLogger("generate_cases")
+# Clinical variation styles to ensure semantic diversity across cases per rubric
+VARIATION_STYLES = {
+    1: "Present as a somatizing patient focusing on physical discomfort and bodily sensations linked to emotional distress.",
+    2: "Present as a natural, conversational narrative describing daily life impact and interpersonal struggles.",
+    3: "Present as an introverted, hesitant patient giving concise, understated descriptions with clear environmental modalities.",
+    4: "Present as an acutely expressive patient in intense distress with vivid temporal triggers and prominent accompanying symptoms.",
+}
 
 
 class GenerationRunner:
@@ -160,7 +166,9 @@ class GenerationRunner:
                             rubric_id=r_id,
                             rubric_path=r_path,
                             case_idx=c_idx,
+                            variation_instruction=VARIATION_STYLES.get(c_idx),
                         )
+                        case.metadata["variation_style"] = VARIATION_STYLES.get(c_idx, "Standard")
                         out_file.write(json.dumps(case.to_dict(), ensure_ascii=False) + "\n")
                         self.cases_generated_count += 1
                         cases_in_this_session += 1

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
+import urllib.request
 import streamlit as st
 
 from src.chatbot.dialogue_manager import DialogueManager
@@ -12,6 +13,17 @@ from src.dashboard.dimensions import (
     KENT_DIMENSIONS_ORDERED,
     pluralize,
 )
+
+
+def check_ollama_online(api_base: str = "http://localhost:11434") -> bool:
+    """Direct HTTP ping to check if local Ollama daemon is active and responding."""
+    try:
+        url = f"{api_base}/api/tags"
+        req = urllib.request.Request(url, method="GET")
+        with urllib.request.urlopen(req, timeout=1.2) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
 
 
 def get_current_step_label(dm: DialogueManager) -> str:
@@ -158,13 +170,28 @@ def render_chat_interface(dm: DialogueManager) -> None:
                                     dm.state_machine.filled_slots.remove(dim.key)
                                 st.rerun()
 
-    # Console Subheader
+    # Console Subheader with live LLM engine status indicator
+    is_llm_online = dm.is_ollama_online() if hasattr(dm, "is_ollama_online") else check_ollama_online()
+    if is_llm_online:
+        engine_badge_html = """
+        <span style="font-size: 12px; color: #10B981; display: inline-flex; align-items: center; gap: 5px; font-weight: 600;" title="LLaMA 3:8B is online on localhost:11434 and providing dynamic empathetic clinical reasoning.">
+            <span class="status-dot"></span> LLaMA 3:8B Online
+        </span>
+        """
+    else:
+        engine_badge_html = """
+        <span style="font-size: 12px; color: #F59E0B; display: inline-flex; align-items: center; gap: 5px; font-weight: 600;" title="Ollama daemon is offline on localhost:11434. Running on deterministic FSM templates. Run 'ollama serve' in your terminal to activate LLaMA 3.">
+            ⚠️ Offline Fallback (Run 'ollama serve')
+        </span>
+        """
+
     st.markdown(
         f"""
         <div style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0 8px 2px;">
             <span style="font-size: 14px; font-weight: 600; color: #D1D5DB; display: flex; align-items: center; gap: 6px;">
                 {get_icon('forum', size=16, color='#10B981')} Clinical Dialogue Console
             </span>
+            {engine_badge_html}
         </div>
         """,
         unsafe_allow_html=True,

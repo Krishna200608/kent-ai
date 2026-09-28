@@ -90,11 +90,12 @@ class CaseGenerator:
         self.tagger = BIOTagger()
         self.kent_db = KentDB()
 
-    def _call_ollama_generate(self, prompt: str) -> str:
+    def _call_ollama_generate(self, prompt: str, seed: Optional[int] = None) -> str:
         """Call Ollama REST API /api/generate with JSON mode.
         
         Args:
             prompt: User prompt containing rubric and instructions.
+            seed: Optional dynamic random seed for variation entropy.
             
         Returns:
             Raw response text from LLM.
@@ -103,6 +104,7 @@ class CaseGenerator:
             ConnectionError: If Ollama daemon is unreachable.
             RuntimeError: If Ollama returns non-200 or unparseable response.
         """
+        actual_seed = seed if seed is not None else self.seed
         url = f"{self.api_base}/api/generate"
         payload = {
             "model": self.model,
@@ -114,7 +116,7 @@ class CaseGenerator:
                 "temperature": self.temperature,
                 "top_p": self.top_p,
                 "num_predict": self.max_tokens,
-                "seed": self.seed,
+                "seed": actual_seed,
             },
         }
 
@@ -245,6 +247,7 @@ class CaseGenerator:
         rubric_path: Optional[str] = None,
         top_remedies: Optional[List[str]] = None,
         case_idx: int = 1,
+        variation_instruction: Optional[str] = None,
     ) -> SyntheticCase:
         """Generate a clinical scenario manifesting the specified rubric.
         
@@ -253,6 +256,7 @@ class CaseGenerator:
             rubric_path: Optional hierarchical path string.
             top_remedies: Optional list of remedy abbreviation strings.
             case_idx: Case variation index for multi-case generation.
+            variation_instruction: Archetype/persona prompt guidance for variation diversity.
             
         Returns:
             SyntheticCase instance complete with tokens and BIO tags.
@@ -262,19 +266,22 @@ class CaseGenerator:
 
         if top_remedies is None:
             rems = get_remedies(rubric_id)
-            top_remedies = [r["abbreviation"] for r in rems[:5]]
+            top_remedies = [r["abbreviation"] for r in rems[:5] if r.get("abbreviation")]
 
         if self.backend == "mock":
             parsed_data = self._generate_mock_case(
                 rubric_id + (case_idx * 1000), rubric_path, top_remedies
             )
         else:
+            # Deterministic dynamic seed per case index to avoid cache collapse across variations
+            dynamic_seed = self.seed + (case_idx * 137)
             prompt = build_case_generation_prompt(
                 rubric_path=rubric_path,
                 top_remedies=top_remedies,
                 include_examples=True,
+                variation_instruction=variation_instruction,
             )
-            raw_response = self._call_ollama_generate(prompt)
+            raw_response = self._call_ollama_generate(prompt, seed=dynamic_seed)
             try:
                 parsed_data = json.loads(raw_response)
             except json.JSONDecodeError as err:

@@ -30,7 +30,10 @@ format:
 	ruff check --fix src/ tests/ scripts/
 
 generate-cases:
-	$(PYTHON) scripts/generate_cases.py
+	$(PYTHON) scripts/generate_cases.py --split --resume
+
+generate-gpu:
+	bash scripts/run_gpu_generation.sh
 
 build-embeddings:
 	$(PYTHON) scripts/build_embeddings.py

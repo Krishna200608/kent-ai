@@ -185,9 +185,35 @@ class DialogueManager:
             logger.warning("Ollama unreachable for chat (%s). Using fallback template.", err)
             return self._mock_response_for_state()
 
+    def is_ollama_online(self) -> bool:
+        """Check if local Ollama daemon is currently running and responding."""
+        try:
+            url = f"{self.api_base}/api/tags"
+            req = urllib.request.Request(url, method="GET")
+            with urllib.request.urlopen(req, timeout=1.5) as resp:
+                return resp.status == 200
+        except Exception:
+            return False
+
     def _mock_response_for_state(self) -> str:
-        """Friendly deterministic response generator for offline testing."""
+        """Friendly deterministic response generator for offline fallback testing."""
         state = self.state_machine.current_state
+
+        if state == IntakeState.REVIEW:
+            summary_lines = []
+            for k, v in self.extracted_slots.items():
+                if v:
+                    dim_title = k.replace("_", " ").title()
+                    summary_lines.append(f"• **{dim_title}**: {', '.join(v)}")
+            summary_block = "\n".join(summary_lines) if summary_lines else "• Primary complaint noted."
+            return (
+                "Thank you for sharing all of this with me. Let me make sure I've got your case right:\n\n"
+                f"{summary_block}\n\n"
+                "Does this summary sound accurate, or would you like to add or adjust any details?"
+            )
+
+        if state == IntakeState.CLARIFICATION:
+            return "Please go ahead and describe the additional symptom, sensation, or detail you'd like to add."
 
         templates = {
             IntakeState.CHIEF_COMPLAINT: "I'm really sorry you're feeling unwell. Could you tell me a little more about what's been troubling you most?",
@@ -196,8 +222,6 @@ class DialogueManager:
             IntakeState.MODALITY: "That helps me picture it. Have you noticed anything that makes it worse, like movement or noise, or anything that brings relief?",
             IntakeState.CONCOMITANT: "I'm noting that down. Does anything else happen alongside this, such as nausea, dizziness, or chills?",
             IntakeState.MENTAL: "Dealing with this must be draining. How has this been affecting your mood, stress, or peace of mind lately?",
-            IntakeState.REVIEW: "Thank you for sharing all of this with me. Let me make sure I've got it right—does this summary sound accurate to you?",
-            IntakeState.CLARIFICATION: "Thank you for clarifying! I've noted that adjustment. Does everything feel complete now?",
             IntakeState.DONE: "Thank you so much. I have all the details needed, and your homeopathic repertory analysis is now complete!",
         }
         return templates.get(state, "I understand. Please tell me more about that.")
