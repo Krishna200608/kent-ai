@@ -634,8 +634,8 @@ def main():
 
     tab1, tab2, tab3, tab4 = st.tabs([
         "Live Patient Intake",
-        "Repertorization Engine (MIND)",
-        "MIND Rubric Explorer (4.9k)",
+        "Repertorization Engine",
+        "Rubric Explorer",
         "Materia Medica Index",
     ])
 
@@ -647,46 +647,99 @@ def main():
         with col_ctrl:
             with st.container(border=True):
                 st.html(
-        f"""
-                    <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 14px;'>
-                        {get_icon('tune', size=20, color='#10B981')}
-                        <span style='font-size: 16px; font-weight: 700; color: #F9FAFB;'>Intake Controls</span>
-                    </div>
-                    """
-    )
-                active_scope = st.session_state.get("repertory_scope", "MIND Chapter Focus (4,933 rubrics)")
-                is_mind = "MIND" in active_scope
-                scope_label = "MIND (4,933 Rubrics)" if is_mind else "All 37 Chapters (74k)"
-                st.html(
                     f"""
-                    <div style='background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px;'>
-                        <div style='font-size: 11px; color: #8492A6; text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;'>Active Scope (Sidebar Control)</div>
-                        <div style='font-size: 13px; color: #F9FAFB; font-weight: 600; margin-top: 3px; display: flex; align-items: center; gap: 6px;'>
-                            {get_icon('psychology' if is_mind else 'database', size=14, color='#10B981' if is_mind else '#06B6D4')}
-                            <span>{scope_label}</span>
-                        </div>
+                    <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 12px;'>
+                        {get_icon('tune', size=18, color='#10B981')}
+                        <span style='font-size: 15px; font-weight: 700; color: #F9FAFB;'>Intake Controls</span>
                     </div>
                     """
                 )
-                if st.button("Generate Full Repertorization", type="primary", use_container_width=True):
-                    transcript = dm.get_full_transcript()
-                    if transcript.strip():
-                        with st.spinner("Analyzing totality and ranking remedies..."):
-                            sec_filter = 1 if is_mind else None
-                            report = pipeline.process_transcript(transcript, section_id=sec_filter)
-                            st.session_state.current_report = report
-                        st.success("Repertorization complete! Scroll down to view report.")
-                    else:
-                        st.warning("Please chat with Kent-AI first before generating report.")
 
-                if st.button("Reset Consultation", type="secondary", use_container_width=True):
-                    dm.reset()
-                    dm.get_greeting()
-                    st.session_state.current_report = None
-                    st.rerun()
+                # Phase 2 item 7: Live Case Summary in right panel
+                st.markdown("<div style='font-size: 13px; font-weight: 700; color: #D1D5DB; margin-bottom: 6px;'>Active Case Summary:</div>", unsafe_allow_html=True)
+                active_scope = st.session_state.get("repertory_scope", "MIND Chapter Focus (4,933 rubrics)")
+                is_mind = "MIND" in active_scope
+
+                # Count filled slots
+                filled_items = []
+                for disp_name, label, key, badge_cls in [
+                    ("Location", "Location", "location", "badge-loc"),
+                    ("Sensation", "Sensation", "sensation", "badge-sen"),
+                    ("Worse from", "Worse from", "modality_agg", "badge-agg"),
+                    ("Better from", "Better from", "modality_amel", "badge-amel"),
+                    ("Concomitants", "Concomitants", "concomitant", "badge-conc"),
+                    ("Temperature", "Temperature", "temporal", "badge-temp"),
+                    ("Mental", "Mental", "mental", "badge-ment"),
+                ]:
+                    vals = dm.extracted_slots.get(key, [])
+                    if vals:
+                        filled_items.append((disp_name, ", ".join(vals), badge_cls))
+
+                if filled_items:
+                    for d_name, d_val, b_cls in filled_items:
+                        st.markdown(f"<div style='font-size: 12px; margin-bottom: 4px;'><span class='badge {b_cls}' style='font-size:11px; padding:2px 6px;'>{d_name}</span> <span style='color:#F9FAFB;'>{d_val}</span></div>", unsafe_allow_html=True)
+                else:
+                    st.markdown("<div style='font-size: 12px; color: #8492A6; margin-bottom: 8px; font-style: italic;'>No symptoms captured yet. Converse in the dialogue console to extract dimensions.</div>", unsafe_allow_html=True)
+
+                st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
+
+                # Phase 2 item 3: Disable button until minimum data exists (complaint + at least 1 modality)
+                has_complaint = bool(dm.extracted_slots.get("location")) or bool(dm.extracted_slots.get("sensation")) or bool(dm.extracted_slots.get("mental")) or (len(dm.history) >= 3)
+                has_modality = bool(dm.extracted_slots.get("modality_agg")) or bool(dm.extracted_slots.get("modality_amel"))
+                can_generate = has_complaint and has_modality
+                collected_count = len(filled_items)
+
+                button_label = f"Generate Repertorization ({collected_count}/7)"
+                if can_generate:
+                    if st.button(button_label, type="primary", use_container_width=True):
+                        transcript = dm.get_full_transcript()
+                        if transcript.strip():
+                            with st.spinner("Analyzing totality and ranking remedies..."):
+                                sec_filter = 1 if is_mind else None
+                                report = pipeline.process_transcript(transcript, section_id=sec_filter)
+                                st.session_state.current_report = report
+                            st.success("Repertorization complete! Scroll down to view report.")
+                        else:
+                            st.warning("Please chat with Kent-AI first before generating report.")
+                else:
+                    st.button(button_label, type="primary", disabled=True, use_container_width=True, help="Requires at least a primary complaint and one modality before generating repertorization.")
+                    st.markdown(f"<div style='font-size: 11.5px; color: #9CA3AF; margin-top: 4px;'>Requires primary complaint + at least one modality ({collected_count}/7 collected).</div>", unsafe_allow_html=True)
 
                 st.markdown("---")
-                st.html("<div style='font-size: 12px; color: #9CA3AF; line-height: 1.5;'><b>Kentian Intake Guidance:</b><br>Prioritize emotional & mental symptoms (anxiety, fears, grief, irritability, memory) alongside somatic modalities.</div>")
+
+                # Phase 2 item 4: Reset Consultation as quiet action with confirmation
+                if st.session_state.get("confirm_intake_reset", False):
+                    st.warning("Clear all intake symptoms?")
+                    col_cf1, col_cf2 = st.columns(2)
+                    with col_cf1:
+                        if st.button("Yes, Clear", type="primary", use_container_width=True, key="confirm_reset_yes"):
+                            dm.reset()
+                            dm.get_greeting()
+                            st.session_state.current_report = None
+                            st.session_state.confirm_intake_reset = False
+                            st.toast("Consultation reset.")
+                            st.rerun()
+                    with col_cf2:
+                        if st.button("Cancel", use_container_width=True, key="confirm_reset_no"):
+                            st.session_state.confirm_intake_reset = False
+                            st.rerun()
+                else:
+                    if st.button("Reset Consultation", type="secondary", use_container_width=True):
+                        st.session_state.confirm_intake_reset = True
+                        st.rerun()
+
+                st.markdown("---")
+
+                # Phase 2 item 7: Move Kentian Intake Guidance into a '?' popover
+                with st.popover("Intake Guidance (?)"):
+                    st.markdown(
+                        "<div style='font-size: 12.5px; color: #D1D5DB; line-height: 1.5;'>"
+                        "<b>Kentian Intake Guidance:</b><br>"
+                        "Prioritize mental & emotional generals (anxiety, fears, grief, restlessness) "
+                        "alongside physical modalities (aggravation/amelioration times, temperatures, weather)."
+                        "</div>",
+                        unsafe_allow_html=True,
+                    )
 
         with col_chat:
             render_chat_interface(dm)
