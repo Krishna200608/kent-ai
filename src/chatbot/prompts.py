@@ -153,5 +153,8 @@ Recent Conversation History:
 
 Patient just said: "{user_utterance}"
 
-Respond warmly and naturally as Kent-AI according to your persona and focus on the current goal:"""
+Respond warmly and naturally as Kent-AI (2 to 3 sentences) according to your persona and focus on the current goal.
+At the very end of your response, on a new line, provide 3 to 4 concise first-person patient instant answer options (max 6 words each) that directly answer the question you just asked the patient, formatted strictly as:
+QUICK_REPLIES: ["answer 1", "answer 2", "answer 3", "answer 4"]"""
+
 

@@ -61,6 +61,34 @@ class ConversationStateMachine:
             if val and (isinstance(val, list) and len(val) > 0 or isinstance(val, str) and val.strip()):
                 self.filled_slots.add(slot_name.lower())
 
+    @property
+    def detected_dimensions(self) -> Dict[str, bool]:
+        """Read-only mapping of which of the 7 Kent dimensions have been detected this session."""
+        return {
+            "location": "location" in self.filled_slots or "loc" in self.filled_slots,
+            "sensation": "sensation" in self.filled_slots or "sen" in self.filled_slots,
+            "modality_agg": "modality_agg" in self.filled_slots,
+            "modality_amel": "modality_amel" in self.filled_slots,
+            "concomitant": "concomitant" in self.filled_slots or "conc" in self.filled_slots,
+            "temporal": "temporal" in self.filled_slots or "temp" in self.filled_slots,
+            "mental": "mental" in self.filled_slots or "ment" in self.filled_slots,
+        }
+
+    @classmethod
+    def get_clinical_stage_flow(cls) -> List[tuple[IntakeState, str]]:
+        """Return canonical ordered sequence of clinical intake stages for UI steppers."""
+        return [
+            (IntakeState.GREETING, "Greeting"),
+            (IntakeState.CHIEF_COMPLAINT, "Complaint"),
+            (IntakeState.LOCATION, "Location"),
+            (IntakeState.SENSATION, "Sensation"),
+            (IntakeState.MODALITY, "Modalities"),
+            (IntakeState.CONCOMITANT, "Concomitants"),
+            (IntakeState.MENTAL, "Mental"),
+            (IntakeState.REVIEW, "Review"),
+            (IntakeState.DONE, "Ready"),
+        ]
+
     def _is_slot_filled(self, state: IntakeState) -> bool:
         """Check whether a specific dimension state has adequate information."""
         if state == IntakeState.LOCATION:
