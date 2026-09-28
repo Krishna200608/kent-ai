@@ -913,4 +913,48 @@ footer {
     border-color: rgba(239, 68, 68, 0.6) !important;
 }
 
+/* =========================================================================
+   PHASE 4 & 5: RUBRIC & REMEDY EXPANDABLE CARDS & MATCH BADGES
+   ========================================================================= */
+
+.query-match {
+    background: rgba(16, 185, 129, 0.22);
+    color: #34D399;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-weight: 700;
+}
+
+.match-strong {
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #34D399 !important;
+    border: 1px solid rgba(16, 185, 129, 0.35) !important;
+    font-weight: 700;
+}
+
+.match-good {
+    background: rgba(6, 182, 212, 0.12) !important;
+    color: #38BDF8 !important;
+    border: 1px solid rgba(6, 182, 212, 0.3) !important;
+    font-weight: 600;
+}
+
+.match-weak {
+    background: rgba(156, 163, 175, 0.1) !important;
+    color: #9CA3AF !important;
+    border: 1px solid rgba(156, 163, 175, 0.25) !important;
+    font-weight: 500;
+}
+
+.rubric-dev-id {
+    font-size: 11px;
+    color: #6B7280;
+    font-family: monospace;
+    margin-left: 6px;
+    padding: 1px 4px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 3px;
+}
+
+
 
