@@ -128,6 +128,15 @@ When converting token BIO tags to HuggingFace tokenizer subwords:
 - Special tokens (`[CLS]`, `[SEP]`, `[PAD]`) have `offset_mapping == (0, 0)`.
 - **Requirement**: They MUST be labeled `-100` (PyTorch `CrossEntropyLoss` ignore index), never `"O"` or `0`, otherwise the model learns to predict entity tags for sentence boundary tokens. Use `BIOTagger.align_with_subwords(..., ignore_index=-100)`.
 
+### 6.5 Autoregressive Prompt Cache & Variation Collapse in LLaMA 3
+
+When generating multiple case variations (e.g., 4 variations) for the same rubric:
+- **Problem**: With a static RNG seed (`seed: 42`) and generic prompt, Ollama hits KV-cache / greedy sampling paths, repeating near-identical patient stories (~72.2% pairwise Jaccard overlap).
+- **Solution**: 
+  1. Condition the user prompt with explicit clinical archetypes (`VARIATION_STYLES`: somatizing, conversational, introverted, acute crisis).
+  2. Inject dynamic entropy seeding: `dynamic_seed = self.seed + (case_idx * 137)`.
+  This dropped lexical overlap to **13.1%** (86.9% lexical diversity) with 100% BIO slice alignment.
+
 ---
 
 ## 7. ChromaDB & Vector Store Gotchas

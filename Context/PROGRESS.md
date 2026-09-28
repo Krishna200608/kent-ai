@@ -101,17 +101,20 @@ python scripts/generate_cases.py --mock --limit 20 --cases-per-rubric 4 --resume
 
 ### Production GPU Launch Instructions
 
+See full guide in [`docs/GPU_SETUP_GUIDE.md`](docs/GPU_SETUP_GUIDE.md).
+
 ```bash
-# On College GPU Server:
-ollama run llama3:8b
-nohup python scripts/generate_cases.py --split > generation.log 2>&1 &
-tail -f generation.log
+# On College GPU Server (Turnkey Automated Runner):
+chmod +x scripts/run_gpu_generation.sh
+./scripts/run_gpu_generation.sh
+
+# Monitor live generation:
+tail -f logs/generation.log
 ```
 
-### Hardware
-
+### Hardware Deployment
 - College GPU server via SSH
-- `nohup python scripts/generate_cases.py > generation.log 2>&1 &`
+- Background execution: `./scripts/run_gpu_generation.sh` (or `python scripts/generate_cases.py --split --resume`)
 
 ---
 
