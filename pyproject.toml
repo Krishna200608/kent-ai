@@ -63,3 +63,8 @@ include = ["src*"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
+
+[tool.pyright]
+include = ["src", "tests"]
+extraPaths = ["."]
+
