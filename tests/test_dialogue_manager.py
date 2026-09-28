@@ -92,3 +92,43 @@ def test_dialogue_manager_handover_on_done(mock_dialogue_manager):
     assert report is not None
     assert report.patient_id.startswith("PT-")
     assert report.to_markdown() is not None
+
+
+def test_dynamic_suggestions_generation(mock_dialogue_manager):
+    """Verify that dynamic suggestions match the question asked by the chatbot."""
+    # 1. Greeting suggestions
+    greeting = mock_dialogue_manager.get_greeting()
+    suggestions = mock_dialogue_manager.get_current_suggestions()
+    assert len(suggestions) >= 3
+    assert any("headache" in s.lower() or "pain" in s.lower() for s in suggestions)
+
+    # 2. Location question suggestions
+    loc_suggestions = mock_dialogue_manager.generate_dynamic_suggestions(
+        "Whereabouts in your body or head does this feel most intense?"
+    )
+    assert len(loc_suggestions) >= 3
+    assert any("forehead" in s.lower() or "temple" in s.lower() for s in loc_suggestions)
+
+    # 3. Sensation question suggestions
+    sen_suggestions = mock_dialogue_manager.generate_dynamic_suggestions(
+        "How would you describe the feeling—is it more of a throbbing, burning, or sharp ache?"
+    )
+    assert len(sen_suggestions) >= 3
+    assert any("throbbing" in s.lower() or "sharp" in s.lower() for s in sen_suggestions)
+
+    # 4. Modality question suggestions
+    mod_suggestions = mock_dialogue_manager.generate_dynamic_suggestions(
+        "What seems to make it worse, or what triggers it?"
+    )
+    assert len(mod_suggestions) >= 3
+    assert any("worse" in s.lower() or "heat" in s.lower() for s in mod_suggestions)
+
+    # 5. Quick replies parsing
+    model_output = (
+        "I'm noting that down. Where does it hurt?\n"
+        'QUICK_REPLIES: ["Left temple", "Right forehead", "Behind both eyes"]'
+    )
+    clean_text, parsed_opts = mock_dialogue_manager._parse_and_strip_quick_replies(model_output)
+    assert "QUICK_REPLIES" not in clean_text
+    assert parsed_opts == ["Left temple", "Right forehead", "Behind both eyes"]
+
