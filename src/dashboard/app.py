@@ -9,8 +9,10 @@ A state-of-the-art clinical interface built to Google Stitch UI/UX design standa
 
 from __future__ import annotations
 
+import copy
 import logging
 import sys
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -24,14 +26,21 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from src.chatbot.dialogue_manager import DialogueManager
-from src.dashboard.components.chat_viewer import render_chat_interface, render_slot_badges
-from src.dashboard.components.icons import get_icon
-from src.dashboard.components.rubric_tree import render_rubric_card
 import importlib
 import src.dashboard.styles as dashboard_styles
 importlib.reload(dashboard_styles)
 from src.dashboard.styles import inject_custom_css
+
+import src.dashboard.components.rubric_tree as rubric_tree_mod
+importlib.reload(rubric_tree_mod)
+from src.dashboard.components.rubric_tree import render_rubric_card
+
+import src.dashboard.components.chat_viewer as chat_viewer_mod
+importlib.reload(chat_viewer_mod)
+from src.dashboard.components.chat_viewer import render_chat_interface, render_slot_badges
+
+from src.chatbot.dialogue_manager import DialogueManager
+from src.dashboard.components.icons import get_icon
 from src.data.kent_db import KentDB
 from src.pipeline.orchestrator import PatientReport, PipelineOrchestrator
 from src.search.embedder import RubricEmbedder
@@ -272,9 +281,13 @@ def render_totality_matrix(report: PatientReport, db: KentDB) -> None:
     for idx, r in enumerate(rubrics, start=1):
         full_p = r.get("path") or ""
         short_label = full_p.split(">")[-1].strip()
-        if len(short_label) > 20:
-            short_label = short_label[:18] + "..."
-        headers_html += f"<th title='{full_p}' style='font-size: 11px;'>R{idx}: {short_label}</th>"
+        if len(short_label) > 22:
+            short_label = short_label[:20] + "..."
+        matched_query = r.get("query") or r.get("matched_symptom") or ""
+        if len(matched_query) > 20:
+            matched_query = matched_query[:18] + ".."
+        query_sub = f"<div style='font-size: 10px; color: #10B981; font-weight: normal; margin-top: 2px;' title='Matched finding: {r.get('query', '')}'>↳ {matched_query}</div>" if matched_query else ""
+        headers_html += f"<th title='{full_p}&#10;Matched finding: {r.get('query', short_label)}' style='font-size: 11.5px;'>R{idx}: {short_label}{query_sub}</th>"
 
     rows_html = []
     for rank, rem in enumerate(remedies, start=1):
@@ -310,7 +323,7 @@ def render_totality_matrix(report: PatientReport, db: KentDB) -> None:
         rows_html.append(f"<tr>{''.join(row_tds)}</tr>")
 
     table_html = f"""
-    <div style='overflow-x: auto; margin-top: 10px; margin-bottom: 20px;'>
+    <div style='overflow-x: auto; margin-top: 10px; margin-bottom: 12px;'>
         <table class='repertory-grid'>
             <thead>
                 <tr>{headers_html}</tr>
@@ -319,6 +332,9 @@ def render_totality_matrix(report: PatientReport, db: KentDB) -> None:
                 {''.join(rows_html)}
             </tbody>
         </table>
+    </div>
+    <div style='font-size: 12px; color: #9CA3AF; margin-top: 4px; font-style: italic;'>
+        <b>Clinical Note:</b> Decision-support analysis based on Dr. Kent's Repertory; does not constitute a clinical prescription or medical diagnosis.
     </div>
     """
     st.html(table_html)
@@ -460,10 +476,22 @@ def render_sidebar_case_tray():
         """
     )
 
+    dm = st.session_state.get("dialogue_manager")
+    intake_items = []
+    if dm and hasattr(dm, "extracted_slots"):
+        for slot_key, slot_vals in dm.extracted_slots.items():
+            if slot_vals:
+                intake_items.append((slot_key, ", ".join(slot_vals)))
+
+    if intake_items:
+        with st.expander(f"Intake Dimensions ({len(intake_items)})", expanded=False):
+            for skey, svals in intake_items:
+                st.markdown(f"<div style='font-size: 11px; margin-bottom: 2px;'><b style='color:#10B981;'>{skey}:</b> <span style='color:#E5E7EB;'>{svals}</span></div>", unsafe_allow_html=True)
+
     if total_items == 0:
         st.markdown(
             '<div style="font-size: 12px; color: #8492A6; margin-bottom: 8px;">'
-            'No items collected yet. Click <b>+ Add to case</b> on rubrics or remedies.'
+            'No items collected yet. Click <b>+ Add to case</b> on rubrics or remedies in Explorer or Materia Medica.'
             '</div>',
             unsafe_allow_html=True,
         )
@@ -471,14 +499,14 @@ def render_sidebar_case_tray():
 
     # List rubrics
     if rubrics:
-        st.markdown(f"**Rubrics ({len(rubrics)}):**")
+        st.markdown(f"**Selected Rubrics ({len(rubrics)}):**")
         for idx, r in enumerate(rubrics):
             col_r_txt, col_r_del = st.columns([5, 1])
             with col_r_txt:
                 r_name = r.get("path") or r.get("name", "Rubric")
-                if len(r_name) > 35:
-                    r_name = "..." + r_name[-32:]
-                st.markdown(f"<span style='font-size: 12px; color: #E5E7EB;'>• {r_name}</span>", unsafe_allow_html=True)
+                if len(r_name) > 34:
+                    r_name = "..." + r_name[-31:]
+                st.markdown(f"<span style='font-size: 11.5px; color: #E5E7EB;'>• {r_name}</span>", unsafe_allow_html=True)
             with col_r_del:
                 if st.button("✕", key=f"del_tray_r_{idx}", help="Remove rubric from case"):
                     tray["rubrics"].pop(idx)
@@ -486,19 +514,40 @@ def render_sidebar_case_tray():
 
     # List remedies
     if remedies:
-        st.markdown(f"**Remedies ({len(remedies)}):**")
+        st.markdown(f"**Selected Remedies ({len(remedies)}):**")
         for idx, rem in enumerate(remedies):
             col_rem_txt, col_rem_del = st.columns([5, 1])
             with col_rem_txt:
-                st.markdown(f"<span style='font-size: 12px; color: #34D399;'>• {rem.get('full_name')} ({rem.get('abbreviation')})</span>", unsafe_allow_html=True)
+                rem_name = rem.get('full_name') or rem.get('abbreviation')
+                rem_abbr = rem.get('abbreviation') or ''
+                st.markdown(f"<span style='font-size: 11.5px; color: #34D399;'>• {rem_name} ({rem_abbr})</span>", unsafe_allow_html=True)
             with col_rem_del:
                 if st.button("✕", key=f"del_tray_rem_{idx}", help="Remove remedy from case"):
                     tray["remedies"].pop(idx)
                     st.rerun()
 
-    if rubrics and st.button("Repertorize This Case", type="primary", use_container_width=True, key="tray_repertorize_btn"):
-        st.session_state.trigger_case_repertorize = True
-        st.rerun()
+    col_btn1, col_btn2 = st.columns([3, 2])
+    with col_btn1:
+        if rubrics and st.button("Repertorize This Case", type="primary", use_container_width=True, key="tray_repertorize_btn"):
+            pipeline = get_pipeline()
+            db = get_db()
+            ranked = pipeline.ranker.rank(rubrics, top_n=10)
+            report = PatientReport(
+                patient_id=f"TRAY-{uuid.uuid4().hex[:6].upper()}",
+                transcript=f"Totality compiled from {len(rubrics)} manually selected rubrics in Case Tray.",
+                dimensions={"case_rubrics": [r.get("path") or r.get("name") for r in rubrics]},
+                matched_rubrics=rubrics,
+                ranked_remedies=ranked,
+                search_queries=[r.get("path", "") for r in rubrics],
+            )
+            st.session_state.current_report = report
+            st.toast("Case repertorized! Report displayed below in intake tab.")
+            st.rerun()
+    with col_btn2:
+        if st.button("Clear Tray", key="clear_all_tray", use_container_width=True):
+            st.session_state.case_tray = {"rubrics": [], "remedies": []}
+            st.rerun()
+
 
 
 def render_sidebar():
@@ -750,22 +799,26 @@ def main():
             render_report_view(st.session_state.current_report, db)
 
     # =========================================================================
-    # TAB 2: Direct Clinical Repertorization Engine (MIND Focus)
+    # TAB 2: Direct Clinical Repertorization Engine
     # =========================================================================
     with tab2:
         with st.container(border=True):
             st.html(
-        f"""
+                f"""
                 <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 8px;'>
                     {get_icon('psychology', size=22, color='#10B981')}
-                    <h3 style='margin: 0;'>Instant Clinical Repertorization (MIND Focus)</h3>
+                    <h3 style='margin: 0;'>Clinical Repertorization Engine</h3>
                 </div>
                 """
-    )
-            st.markdown("Input patient clinical narrative to extract 7 dimensions, retrieve matching rubrics from Kent's **MIND chapter (Section 1: 4,933 rubrics)**, and compute remedy totality. *(Full 37 chapters available via filter below)*")
+            )
+            st.markdown(
+                "Input patient clinical narrative to extract Dr. Kent's **7 clinical dimensions** "
+                "(Location, Sensation, Aggravations [worse from], Ameliorations [better from], "
+                "Concomitants, Temporal, and Mental/Emotional generals), retrieve matching rubrics, and compute totality."
+            )
 
             example_cases = {
-                "Select a MIND clinical vignette...": "",
+                "Select a clinical vignette (or enter free text below)...": "",
                 "Case 1: Severe anxiety in morning, worse alone (MIND)": "Doctor, I feel terribly anxious and depressed every morning, worse when alone. My thoughts race with fear and dread. I have no fever and no nausea.",
                 "Case 2: Absent-minded & forgetful on waking (MIND)": "Patient complains of extreme absent-mindedness and difficulty concentrating, especially in the morning after waking up, with trembling hands and restless pacing.",
                 "Case 3: Fear of dark & crowds with weeping (MIND)": "Patient reports overwhelming fear in the dark and in crowded places. Weeps easily upon any emotional upset, feels completely forsaken and abandoned, relieved by fresh open air.",
@@ -777,26 +830,28 @@ def main():
 
             user_case_text = st.text_area(
                 "Patient Clinical Narrative:",
-                value=default_text or "Doctor, I feel terribly anxious and depressed every morning, worse when alone. My thoughts race with fear and dread. I have no fever and no nausea.",
+                value=default_text,
+                placeholder="Describe patient symptoms in free text (e.g., 'Anxious and depressed every morning, worse when alone. Thoughts race with fear and dread. No fever, no nausea.')...",
                 height=120,
             )
 
-            col_opt1, col_opt2, col_opt3 = st.columns([1, 1, 1])
-            with col_opt1:
-                top_k_rubrics = st.slider("Rubrics per query:", 1, 5, 3)
-            with col_opt2:
-                top_remedies_count = st.slider("Top remedies to rank:", 5, 20, 10)
-            with col_opt3:
-                sections = db.get_sections()
-                mind_opt = "1: MIND (4,933 rubrics - Focus Chapter)"
-                all_opt = "All Chapters (74,513 rubrics)"
-                sec_options = [mind_opt, all_opt] + [f"{s['id']}: {s['name']}" for s in sections if s['id'] != 1]
-                section_choice = st.selectbox("Filter Chapter:", sec_options, index=0)
-                sec_id = 1
-                if section_choice == all_opt:
-                    sec_id = None
-                elif ":" in section_choice:
-                    sec_id = int(section_choice.split(":")[0])
+            with st.expander("Advanced Settings", expanded=False):
+                col_opt1, col_opt2, col_opt3 = st.columns([1, 1, 1])
+                with col_opt1:
+                    top_k_rubrics = st.slider("Matches per symptom:", 1, 5, 3, help="Candidate rubrics to retrieve per extracted symptom dimension")
+                with col_opt2:
+                    top_remedies_count = st.slider("Remedies to show:", 5, 20, 10, help="Number of ranked homeopathic remedies to show in totality grid")
+                with col_opt3:
+                    sections = db.get_sections()
+                    mind_opt = "1: MIND (4,933 rubrics - Focus Chapter)"
+                    all_opt = "All Chapters (74,513 rubrics)"
+                    sec_options = [mind_opt, all_opt] + [f"{s['id']}: {s['name']}" for s in sections if s['id'] != 1]
+                    section_choice = st.selectbox("Filter Chapter:", sec_options, index=0)
+                    sec_id = 1
+                    if section_choice == all_opt:
+                        sec_id = None
+                    elif ":" in section_choice:
+                        sec_id = int(section_choice.split(":")[0])
 
             run_btn = st.button("Analyze & Repertorize Case", type="primary", use_container_width=True)
 
@@ -808,7 +863,85 @@ def main():
                     top_remedies=top_remedies_count,
                     section_id=sec_id,
                 )
-                render_report_view(report, db)
+                st.session_state.tab2_report = report
+                st.session_state.tab2_active_dims = copy.deepcopy(report.dimensions)
+
+        # If report generated in Tab 2, display extracted symptom chips and repertorization report
+        active_t2_report = st.session_state.get("tab2_report")
+        if active_t2_report:
+            st.markdown("---")
+            with st.container(border=True):
+                st.html(
+                    f"""
+                    <div style='display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;'>
+                        <div style='display: flex; align-items: center; gap: 8px;'>
+                            {get_icon('filter_alt', size=18, color='#10B981')}
+                            <h4 style='margin: 0;'>Extracted Clinical Symptoms & Modalities (Active Filter)</h4>
+                        </div>
+                        <span style='font-size: 11.5px; color: #9CA3AF;'>Filter symptoms before totality ranking</span>
+                    </div>
+                    """
+                )
+
+                dims = st.session_state.get("tab2_active_dims", active_t2_report.dimensions)
+                dim_cols = st.columns(4)
+                active_symptoms_list = []
+
+                with dim_cols[0]:
+                    st.markdown("**Symptom & Location:**")
+                    locs = dims.get("location", []) + dims.get("sensation", [])
+                    for i, item in enumerate(locs):
+                        c = st.checkbox(item, value=True, key=f"t2_symptom_{i}_{item}")
+                        if c:
+                            active_symptoms_list.append(item)
+                    if not locs:
+                        st.caption("None identified")
+
+                with dim_cols[1]:
+                    st.markdown("**Modalities (Worse/Better):**")
+                    mods = [f"worse: {m}" for m in dims.get("modality_agg", [])] + [f"better: {m}" for m in dims.get("modality_amel", [])]
+                    for i, item in enumerate(mods):
+                        c = st.checkbox(item, value=True, key=f"t2_mod_{i}_{item}")
+                        if c:
+                            active_symptoms_list.append(item)
+                    if not mods:
+                        st.caption("None identified")
+
+                with dim_cols[2]:
+                    st.markdown("**Mental / Generals:**")
+                    ments = dims.get("mental", []) + dims.get("temporal", [])
+                    for i, item in enumerate(ments):
+                        c = st.checkbox(item, value=True, key=f"t2_ment_{i}_{item}")
+                        if c:
+                            active_symptoms_list.append(item)
+                    if not ments:
+                        st.caption("None identified")
+
+                with dim_cols[3]:
+                    st.markdown("**Negated / Excluded:**")
+                    negs = dims.get("negated", [])
+                    for item in negs:
+                        st.markdown(f"<span class='badge badge-neg'>{item}</span>", unsafe_allow_html=True)
+                    if not negs:
+                        st.caption("None")
+
+                col_re_btn, col_re_note = st.columns([1.5, 3])
+                with col_re_btn:
+                    if st.button("Re-run Repertorization", type="secondary", use_container_width=True, help="Re-run totality ranking with active selected symptoms"):
+                        if active_symptoms_list:
+                            mod_transcript = ". ".join(active_symptoms_list)
+                            with st.spinner("Re-evaluating totality with modified symptoms..."):
+                                new_report = pipeline.process_transcript(
+                                    transcript=mod_transcript,
+                                    top_rubrics_per_query=top_k_rubrics if 'top_k_rubrics' in locals() else 3,
+                                    top_remedies=top_remedies_count if 'top_remedies_count' in locals() else 10,
+                                    section_id=sec_id if 'sec_id' in locals() else 1,
+                                )
+                                st.session_state.tab2_report = new_report
+                                st.toast("Totality updated with modified symptoms.")
+                                st.rerun()
+
+            render_report_view(active_t2_report, db)
 
     # =========================================================================
     # TAB 3: Kent's MIND Rubric Explorer (4,933 Rubrics)
@@ -816,18 +949,22 @@ def main():
     with tab3:
         with st.container(border=True):
             st.html(
-        f"""
+                f"""
                 <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 8px;'>
                     {get_icon('psychology', size=22, color='#10B981')}
-                    <h3 style='margin: 0;'>Kent's MIND Repertory & Semantic Rubric Search</h3>
+                    <h3 style='margin: 0;'>Kent's MIND Repertory & Rubric Search</h3>
                 </div>
                 """
-    )
-            st.markdown("Query **4,933 digitized MIND rubrics** using dense semantic vectors or exact text search. *(Switch chapter filter to explore other sections)*")
+            )
+            st.markdown("Explore **4,933 digitized MIND rubrics** using meaning-based semantic search or exact words.")
 
             col_search, col_sec = st.columns([3, 1])
             with col_search:
-                search_query = st.text_input("Search Rubric (e.g. 'anxiety dark', 'fear alone', 'absent-minded', 'weeping'):", value="anxiety dark")
+                search_query = st.text_input(
+                    "Search Rubric:",
+                    value="anxiety dark",
+                    placeholder="e.g. 'anxiety dark', 'fear alone', 'absent-minded', 'weeping easily'...",
+                )
             with col_sec:
                 sections = db.get_sections()
                 mind_opt = "1: MIND (4,933 rubrics - Focus Chapter)"
@@ -840,30 +977,58 @@ def main():
                 elif ":" in selected_sec_str:
                     chosen_sec_id = int(selected_sec_str.split(":")[0])
 
-            search_mode = st.radio("Search Algorithm:", ["Dense Semantic Search (all-MiniLM-L6-v2)", "Exact FTS5 Lexical Search"], horizontal=True)
+            col_mode, col_sort, col_limit = st.columns([2, 1.5, 1])
+            with col_mode:
+                search_mode = st.radio("Search Mode:", ["Meaning-based", "Exact words"], horizontal=True)
+            with col_sort:
+                sort_by = st.selectbox("Sort By:", ["Relevance (Similarity)", "Remedy Count (High to Low)"])
+            with col_limit:
+                limit = st.select_slider("Results:", options=[15, 30, 50], value=15)
+
+            col_filt1, col_filt2 = st.columns(2)
+            with col_filt1:
+                show_weak = st.checkbox("Show weaker matches (< 0.45 similarity)", value=False)
+            with col_filt2:
+                hide_empty = st.checkbox("Hide rubrics with 0 remedies", value=True)
+
             search_clicked = st.button("Search Rubrics", type="primary", use_container_width=True)
 
         if (search_clicked or search_query) and search_query.strip():
             with st.spinner("Searching rubrics..."):
-                if "Dense" in search_mode:
-                    results = pipeline.vector_store.query(
+                if search_mode == "Meaning-based":
+                    raw_results = pipeline.vector_store.query(
                         query_text=search_query,
-                        top_k=15,
+                        top_k=max(limit, 30),
                         section_id=chosen_sec_id,
                     )
                 else:
-                    results = db.search_rubrics(
+                    raw_results = db.search_rubrics(
                         query=search_query,
                         section_id=chosen_sec_id,
-                        limit=15,
+                        limit=max(limit, 30),
                     )
 
-            if results:
-                st.markdown(f"Found **{len(results)}** matching rubrics:")
-                for r in results:
-                    render_rubric_card(r, db)
+            # Filter out weaker matches if toggled off
+            filtered_results = raw_results
+            if not show_weak and search_mode == "Meaning-based":
+                filtered_results = [r for r in filtered_results if r.get("similarity", 1.0) >= 0.45]
+
+            # Filter empty rubrics
+            if hide_empty:
+                filtered_results = [r for r in filtered_results if r.get("remedy_count", 0) > 0]
+
+            # Sort
+            if "Remedy Count" in sort_by:
+                filtered_results = sorted(filtered_results, key=lambda r: r.get("remedy_count", 0), reverse=True)
+
+            display_results = filtered_results[:limit]
+
+            if display_results:
+                st.markdown(f"Displaying **{len(display_results)}** matching rubrics:")
+                for r in display_results:
+                    render_rubric_card(r, db, query=search_query)
             else:
-                st.info("No rubrics matched the specified search.")
+                st.info("No rubrics matched the specified search and filter criteria.")
 
     # =========================================================================
     # TAB 4: Materia Medica & Remedy Index
@@ -871,22 +1036,41 @@ def main():
     with tab4:
         with st.container(border=True):
             st.html(
-        f"""
+                f"""
                 <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 8px;'>
                     {get_icon('medication', size=22, color='#10B981')}
                     <h3 style='margin: 0;'>Homeopathic Remedy Dictionary & MIND Keynotes</h3>
                 </div>
                 """
-    )
+            )
             st.markdown("Browse cataloged remedies in Kent's Repertory with full Latin names, abbreviations, and characteristic Grade 3 keynotes.")
 
-            col_rem_search, col_rem_toggle = st.columns([3, 1])
+            col_rem_search, col_rem_clear, col_rem_toggle = st.columns([3.5, 0.8, 2.2])
             with col_rem_search:
-                rem_search = st.text_input("Filter Remedy by Name or Abbreviation (e.g. 'Lach', 'Phos', 'Nux-v', 'Ars', 'Acon'):", value="Lach")
+                if "rem_filter_text" not in st.session_state:
+                    st.session_state.rem_filter_text = "Lach"
+                rem_search = st.text_input(
+                    "Filter Remedy by Name or Abbreviation:",
+                    value=st.session_state.rem_filter_text,
+                    key="rem_input_widget",
+                    placeholder="e.g. 'Lach', 'Phos', 'Nux-v', 'Ars', 'Acon'...",
+                )
+                st.session_state.rem_filter_text = rem_search
+            with col_rem_clear:
+                st.write("")
+                st.write("")
+                if st.button("✕ Clear", help="Clear remedy search filter"):
+                    st.session_state.rem_filter_text = ""
+                    st.session_state.rem_input_widget = ""
+                    st.rerun()
             with col_rem_toggle:
                 st.write("")
                 st.write("")
-                prioritize_mind = st.checkbox("Prioritize MIND Keynotes", value=True)
+                prioritize_mind = st.checkbox(
+                    "Prioritize MIND Keynotes",
+                    value=True,
+                    help="Sort characteristic Grade 3 symptoms so that mental & emotional rubrics appear first in the keynote list.",
+                )
 
         if rem_search.strip():
             with db.connect() as conn:
@@ -897,36 +1081,66 @@ def main():
                         r.abbreviation,
                         r.full_name,
                         r.normalized,
-                        (SELECT COUNT(*) FROM rubric_remedies rr WHERE rr.remedy_id = r.id) as total_rubrics
+                        (SELECT COUNT(*) FROM rubric_remedies rr WHERE rr.remedy_id = r.id) as total_rubrics,
+                        (SELECT COUNT(*) FROM rubric_remedies rr JOIN rubrics rb ON rr.rubric_id = rb.id WHERE rr.remedy_id = r.id AND rb.section_id = 1) as mind_rubrics
                     FROM remedies r
                     WHERE r.abbreviation LIKE ? OR r.full_name LIKE ? OR r.normalized LIKE ?
-                    ORDER BY total_rubrics DESC
-                    LIMIT 15
+                    ORDER BY mind_rubrics DESC, total_rubrics DESC
+                    LIMIT 20
                 """
                 like_term = f"%{rem_search.strip()}%"
                 cur.execute(query, (like_term, like_term, like_term))
                 remedy_rows = cur.fetchall()
 
             if remedy_rows:
+                st.markdown(f"Found **{len(remedy_rows)}** cataloged remedies:")
                 for row in remedy_rows:
-                    r_id, abbr, name, norm, count = row["id"], row["abbreviation"], row["full_name"], row["normalized"], row["total_rubrics"]
-                    st.html(
-        f"""
-                        <div class="stGlassCard" style="padding: 16px; margin-bottom: 8px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <span style="font-size: 20px; font-weight: 800; color: #FFFFFF;">{name or abbr}</span>
-                                    <span style="color: #34D399; font-weight: 700; margin-left: 8px;">({abbr})</span>
-                                    <div style="font-size: 13px; color: #9CA3AF; margin-top: 4px;">Standardized: <code>{norm or abbr}</code></div>
+                    r_id, abbr, name, norm = row["id"], row["abbreviation"], row["full_name"], row["normalized"]
+                    total_count, mind_count = row["total_rubrics"], row["mind_rubrics"]
+
+                    show_dev = st.session_state.get("show_dev_details", False)
+                    dev_norm = f"<span class='rubric-dev-id'>Std: {norm or abbr}</span>" if show_dev else ""
+
+                    card_title = f"{name or abbr} ({abbr})  ·  {mind_count} in MIND  ·  {total_count} across all chapters"
+
+                    with st.expander(card_title, expanded=False):
+                        col_reminfo, col_remact = st.columns(2)
+                        with col_reminfo:
+                            st.html(
+                                f"""
+                                <div style="margin-bottom: 8px;">
+                                    <div style="font-size: 18px; font-weight: 800; color: #FFFFFF;">
+                                        {name or abbr} <span style="color: #34D399; font-weight: 700;">({abbr})</span>
+                                        {dev_norm}
+                                    </div>
+                                    <div style="font-size: 12.5px; color: #9CA3AF; margin-top: 4px;">
+                                        <span class="status-pill" style="color: #10B981;" title="Present in {mind_count} rubrics of Chapter 1 (MIND)"><b>{mind_count}</b> in MIND</span>
+                                        <span class="status-pill" style="margin-left: 6px;" title="Present in {total_count} rubrics across all 37 chapters of Kent Repertory"><b>{total_count:,}</b> across all chapters</span>
+                                    </div>
                                 </div>
-                                <div style="text-align: right;">
-                                    <span class="status-pill">{count} rubrics</span>
-                                </div>
-                            </div>
-                        </div>
-                        """
-    )
-                    with st.expander(f"Inspect Characteristic Keynotes for {name or abbr} (Grade 3)"):
+                                """
+                            )
+                        with col_remact:
+                            tray = st.session_state.get("case_tray", {"rubrics": [], "remedies": []})
+                            is_in_tray = any(item.get("id") == r_id for item in tray.get("remedies", []))
+                            rem_btn_key = f"tray_add_rem_{r_id}"
+                            if is_in_tray:
+                                st.button("✓ Added to Case", key=rem_btn_key, disabled=True, use_container_width=True)
+                            else:
+                                if st.button("+ Add to case", key=rem_btn_key, use_container_width=True):
+                                    if "case_tray" not in st.session_state:
+                                        st.session_state.case_tray = {"rubrics": [], "remedies": []}
+                                    st.session_state.case_tray["remedies"].append({
+                                        "id": r_id,
+                                        "abbreviation": abbr,
+                                        "full_name": name or abbr,
+                                        "mind_rubrics": mind_count,
+                                        "total_rubrics": total_count,
+                                    })
+                                    st.toast(f"Added {abbr} to case tray.")
+                                    st.rerun()
+
+                        # Characteristic Grade 3 Keynotes inside the single card
                         keynotes = db.get_remedy_rubrics(r_id, min_grade=3, limit=16)
                         if not keynotes:
                             st.write("No Grade 3 keynote rubrics cataloged for this remedy.")
@@ -936,6 +1150,7 @@ def main():
                                     keynotes,
                                     key=lambda kn: (0 if (kn.get("section_name") == "MIND" or str(kn["path"]).startswith("MIND")) else 1)
                                 )
+                            st.markdown(f"**Characteristic Grade 3 Keynotes ({len(keynotes)}):**")
                             for kn in keynotes:
                                 is_mind_kn = kn.get("section_name") == "MIND" or str(kn["path"]).startswith("MIND")
                                 mind_badge = f"<span class='badge badge-mind' style='margin-left: 6px;'>{get_icon('psychology', size=11, color='#10B981')} MIND</span>" if is_mind_kn else ""
