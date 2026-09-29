@@ -1,0 +1,279 @@
+\frontmatter% Use roman page numbering style (i, ii, iii, iv...) for the pre-content pages
+
+\pagestyle{plain} % Default to the plain heading style until the thesis style is called for the body content
+%----------------------------------------------------------------------------------------
+%	TITLE PAGE
+%----------------------------------------------------------------------------------------
+
+\begin{titlepage}
+\begin{center}
+\begin{spacing}{1.2}
+
+{\huge \bfseries \ttitle\par}  % ← Uses thesis title from main.tex
+
+\vspace {5mm}
+\textit{A thesis submitted in partial fulfillment of the requirements\\for the award of the degree of} 
+
+\vspace{7mm}
+\textsc{\huge \MakeUppercase{\degreename}}  % ← Uses degree from main.tex
+
+\vspace {3mm}
+% Logo display - no figure environment needed on title page
+\centering
+\includegraphics[width=5cm]{Figures/IIITA_Logo.png}
+\par\vspace{5mm}
+% ************************************
+\noindent\makebox[\textwidth][c]{%
+\begin{minipage}[t]{0.45\textwidth}
+    \begin{flushleft} \large
+        \textit{By:-} \\%[2mm]
+            \textsc{\studentnamesformatted} % ← Uses student names from main.tex
+    \end{flushleft}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.45\textwidth}
+    \begin{flushright} \large
+        \textit{Enrollment No.} \\
+            \textsc{\rollnumbersformatted} % ← Uses roll numbers from main.tex
+    \end{flushright}
+\end{minipage}}\\[1cm]
+% *************************************
+
+\textit{Under the Supervision of}\\[2mm]
+\textsc{\Large \supname}\\% ← Uses supervisor name from main.tex
+\vspace{7mm}
+\textit{to the}\\[2mm]
+\textsc{\Large \deptname}\\ % ← Uses department from main.tex
+
+\vspace{8mm}
+% Hindi text commented out for pdfLaTeX compatibility
+% \begin{hindi}
+%     \textsc{\Large {भारतीय सूचना प्रौद्योगिकी संस्थान, इलाहाबाद}} \\
+% \end{hindi}
+% \vspace{3mm}
+\textsc{\Large \univname} % ← Uses university from main.tex
+
+\vspace{5mm}
+% \today
+September, 2026
+
+
+\end{spacing}
+\end{center}
+\end{titlepage}
+
+
+%----------------------------------------------------------------------------------------
+%	CERTIFICATE
+%----------------------------------------------------------------------------------------
+\checktoopen
+\begin{figure}[htp]
+    \centering
+    \includegraphics[width=\textwidth,height=3cm,keepaspectratio]{Figures/IIITA_Header.png}
+\end{figure}
+% \string\setblankpagestyle \space
+\thispagestyle{empty}
+\vspace*{.06\textheight}
+
+\begin{spacing}{1.5}
+\begin{center}
+    {\centering\large\bfseries CERTIFICATE \par\vspace{10pt}}
+\end{center}
+
+\noindent It is certified that the work contained in the thesis titled \textbf{\enquote{\ttitle}} by {\studentnamescomma} has been carried out under my supervision and that this work has not been submitted elsewhere for a degree.
+% ↑ Uses title and student names from main.tex
+
+\vspace{3.5cm}
+\hfill\begin{minipage}{7.5cm}   %{0.52\linewidth}
+    \begin{spacing}{1.2}
+        \par
+        \rule{\textwidth}{0.2pt}\\
+        {\supname} \par  % ← Uses supervisor name from main.tex
+        {\deptname}  \par  % ← Uses department from main.tex
+        IIIT Allahabad \par
+    \end{spacing}
+\end{minipage}
+
+\end{spacing}
+% \end{certificate}
+\cleardoublepage
+
+%----------------------------------------------------------------------------------------
+%	DECLARATION
+%----------------------------------------------------------------------------------------
+\checktoopen
+\begin{figure}[htp]
+    \centering
+    \includegraphics[width=\textwidth,height=3cm,keepaspectratio]{Figures/IIITA_Header.png}
+\end{figure}
+% \string\setblankpagestyle \space
+\thispagestyle{empty}
+\vspace{1mm}
+
+\begin{center}
+    {\large\bfseries CANDIDATE DECLARATION}
+\end{center}
+
+\begin{spacing}{1.2}
+
+\noindent \pronounwe, \studentnamesdeclaration, hereby certify that the thesis titled \textbf{\enquote{\ttitle}} has been submitted by \pronounour{} in partial fulfillment of the requirements for the Degree of \degreename{} in the \deptname{} at the \univname.
+% ↑ Uses pronouns and names from main.tex - automatically adjusts for single/multiple students
+
+\par
+\noindent We acknowledge that plagiarism includes: 
+\begin{enumerate} 
+    \item Reproducing another person's work (fully or partially) or ideas and presenting them as our own.
+    \item Copying or paraphrasing another person's work without appropriate attribution.
+    \item Engaging in literary theft by reproducing a unique literary construct without crediting its source.
+\end{enumerate}
+\par
+We affirm that due credit has been given to all original authors and sources through proper citations for words, ideas, diagrams, graphics, computer programs, experiments, results, and websites that are not our own contributions. Direct quotations have been appropriately marked, and sources have been properly referenced. Furthermore, we declare that no portion of our work is plagiarized. In the event of a plagiarism claim, we accept full responsibility for the contents of this thesis. We acknowledge that our supervisor may not be able to verify the originality of every aspect of our work.
+\end{spacing}
+
+\begin{spacing}{2.0}
+% \vspace{1cm}
+\noindent
+\begin{minipage}[t]{0.4\textwidth}  
+    \begin{flushleft} 
+        Place: \rule{40mm}{0.1pt}\\
+    \end{flushleft}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.4\textwidth}
+    \begin{flushright}         
+        Date: \rule{40mm}{0.1pt}\\       
+    \end{flushright}
+\end{minipage}
+% \rule{\textwidth}{0.1pt}\\
+\par
+{\studentsignatures} % ← Uses student names and rolls from main.tex
+\end{spacing}
+
+
+        
+\cleardoublepage
+
+
+
+%----------------------------------------------------------------------------------------
+%	QUOTATION PAGE
+%----------------------------------------------------------------------------------------
+
+% \vspace*{0.2\textheight}
+% \begin{spacing}{1.5}
+% \noindent\enquote{\itshape Thanks to my solid academic training, today I can write hundreds of words on virtually any topic without possessing a shred of information, which is how I also got a good job in industry.}\bigbreak
+
+% \hfill {\firstauthorname}
+% \end{spacing}
+% \cleardoublepage
+
+
+%----------------------------------------------------------------------------------------
+%	ABSTRACT PAGE
+%----------------------------------------------------------------------------------------
+
+\begin{abstract}
+\begin{spacing}{1.5}
+
+\addchaptertocentry{\abstractname} % Add the abstract to the table of contents
+Homeopathic clinical consultation requires exhaustive exploratory case-taking (30--45 minutes) to elicit multidimensional symptom profiles, followed by manual repertorization across massive 19th-century taxonomic repertories. This creates severe clinical bottlenecks and cognitive fatigue in high-volume healthcare settings. Furthermore, a substantial semantic divide exists between informal, colloquial patient descriptions and archaic repertorial rubrics, rendering traditional keyword search brittle.
+
+In this project, we present \textbf{Kent-AI}, an AI-powered conversational clinical assistant for homeopathic case-taking and dense semantic repertorization. Grounded in a digitized open-access database of Dr.~James Tyler Kent's \emph{Repertory of the Homoeopathic Materia Medica} comprising 74,513 hierarchical rubrics, 679 remedies, and 507,179 associations, Kent-AI decouples clinical intake into an empathetic, privacy-preserving multi-stage pipeline. The system deploys a 10-state finite state machine (FSM) intake chatbot powered by a local LLaMA~3 8B model to systematically gather Kent's seven clinical dimensions (Location, Sensation, Modality-Aggravation, Modality-Amelioration, Concomitant, Temporal, and Mental/Emotional). Symptoms are parsed using a token-level \texttt{Bio\_ClinicalBERT} named entity recognizer and a LLaMA~3 negation/coreference resolver. Affirmative symptom queries are retrieved via a 384-dimensional persistent ChromaDB HNSW cosine index over all 74,513 rubrics, and remedies are scored via a classical Kentian grade-weighted and inverse remedy frequency (IRF) algorithm.
+
+To address the complete absence of domain-specific clinical training data, we introduce a synthetic case generation pipeline with automated 4-tier character offset drift repair. On a 100-case pilot benchmark across 25 MIND rubrics, our pipeline achieved 100.0\% JSON schema validity, 100.0\% character offset alignment (0 drift), and 86.9\% lexical diversity. The clinician interacts with the system via a clinical Streamlit dashboard featuring an interactive Totality Matrix grid, reducing case-taking review time to 5--10 minutes while preserving complete medical provenance.
+
+\end{spacing}
+\end{abstract}
+
+%----------------------------------------------------------------------------------------
+%	ACKNOWLEDGEMENTS
+%----------------------------------------------------------------------------------------
+
+\begin{acknowledgements}
+\begin{spacing}{1.5}
+\addchaptertocentry{\acknowledgementname} % Add the acknowledgements to the table of contents
+
+We express our deepest gratitude to our project supervisor, \textbf{XYZ}, Department of Information Technology at the Indian Institute of Information Technology, Allahabad, for invaluable guidance, continuous encouragement, and insightful feedback throughout the course of this research. The expertise and direction provided have been instrumental in shaping the theoretical rigor and engineering execution of Kent-AI.
+
+We also thank the faculty and staff of the Department of Information Technology and the Undergraduate Studies Committee (UGSC) at IIIT Allahabad for providing the necessary computational infrastructure and academic environment.
+
+Finally, we acknowledge the open-source digitized repertory community, specifically the digitized Kent's Repertory project foundation developed by \texttt{su4532}, which served as the raw digital knowledge base enabling our dense vector space construction.
+
+\end{spacing}
+\end{acknowledgements}
+
+%----------------------------------------------------------------------------------------
+%	LIST OF CONTENTS/FIGURES/TABLES PAGES
+%----------------------------------------------------------------------------------------
+
+\tableofcontents % Prints the main table of contents
+
+\listoffigures % Prints the list of figures
+
+
+\listoftables % Prints the list of tables
+
+
+%----------------------------------------------------------------------------------------
+%	ABBREVIATIONS
+%----------------------------------------------------------------------------------------
+
+\begin{abbreviations}{ll} % Include a list of abbreviations (a table of two columns)
+
+\textbf{AI}      & \textbf{A}rtificial \textbf{I}ntelligence\\
+\textbf{AYUSH}   & \textbf{A}yurveda, \textbf{Y}oga, \textbf{U}nani, \textbf{S}iddha, and \textbf{H}omoeopathy\\
+\textbf{BERT}    & \textbf{B}idirectional \textbf{E}ncoder \textbf{R}epresentations from \textbf{T}ransformers\\
+\textbf{BIO}     & \textbf{B}eginning, \textbf{I}nside, \textbf{O}utside (Token Tagging Schema)\\
+\textbf{DAL}     & \textbf{D}ata \textbf{A}ccess \textbf{L}ayer\\
+\textbf{EHR}     & \textbf{E}lectronic \textbf{H}ealth \textbf{R}ecord\\
+\textbf{FSM}     & \textbf{F}inite \textbf{S}tate \textbf{M}achine\\
+\textbf{FTS}     & \textbf{F}ull-\textbf{T}ext \textbf{S}earch\\
+\textbf{HNSW}    & \textbf{H}ierarchical \textbf{N}avigable \textbf{S}mall \textbf{W}orld\\
+\textbf{IRF}     & \textbf{I}nverse \textbf{R}emedy \textbf{F}requency\\
+\textbf{JSON}    & \textbf{J}ava\textbf{S}cript \textbf{O}bject \textbf{N}otation\\
+\textbf{LLM}     & \textbf{L}arge \textbf{L}anguage \textbf{M}odel\\
+\textbf{MIMIC}   & \textbf{M}edical \textbf{I}nformation \textbf{M}art for \textbf{I}ntensive \textbf{C}are\\
+\textbf{MRR}     & \textbf{M}ean \textbf{R}eciprocal \textbf{R}ank\\
+\textbf{NER}     & \textbf{N}amed \textbf{E}ntity \textbf{R}ecognition\\
+\textbf{NLP}     & \textbf{N}atural \textbf{L}anguage \textbf{P}rocessing\\
+\textbf{OSCE}    & \textbf{O}bjective \textbf{S}tructured \textbf{C}linical \textbf{E}xamination\\
+\textbf{PHC}     & \textbf{P}rimary \textbf{H}ealth \textbf{C}entre\\
+\textbf{RAG}     & \textbf{R}etrieval-\textbf{A}ugmented \textbf{G}eneration\\
+\textbf{UMLS}    & \textbf{U}nified \textbf{M}edical \textbf{L}anguage \textbf{S}ystem\\
+
+\end{abbreviations}
+
+%----------------------------------------------------------------------------------------
+%	PHYSICAL CONSTANTS/OTHER DEFINITIONS
+%----------------------------------------------------------------------------------------
+
+\begin{constants}{lr@{${}={}$}l} % The list of physical constants is a three column table
+
+% The \SI{}{} command is provided by the siunitx package, see its documentation for instructions on how to use it
+
+Speed of Light & $c_{0}$ & \SI{2.99792458e8}{\meter\per\second} (exact)\\
+Constant Name & $Symbol$ & $Constant Value$ with units\\
+
+\end{constants}
+
+%----------------------------------------------------------------------------------------
+%	SYMBOLS
+%----------------------------------------------------------------------------------------
+
+\begin{symbols}{lll} % Include a list of Symbols (a three column table)
+
+$a$ & distance & \si{\meter} \\
+$P$ & power & \si{\watt} (\si{\joule\per\second}) \\
+%Symbol & Name & Unit \\
+
+\addlinespace % Gap to separate the Roman symbols from the Greek
+
+$\omega$ & angular frequency & \si{\radian} \\
+
+\end{symbols}
+
+%----------------------------------------------------------------------------------------
+%	DEDICATION
+%----------------------------------------------------------------------------------------
+
+\dedicatory{Dedicated to our beloved parents and families, whose endless sacrifices, encouragement, and unconditional love have been our greatest strength\ldots} 

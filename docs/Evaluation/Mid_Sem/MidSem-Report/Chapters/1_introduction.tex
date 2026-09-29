@@ -1,0 +1,132 @@
+\chapter{Introduction}
+\label{Chapter1}
+
+\begin{sloppypar}
+This chapter introduces the fundamental concepts of homeopathic medicine, the clinical process of repertorization, and the foundational structure of Dr.~James Tyler Kent's \emph{Repertory of the Homoeopathic Materia Medica}. We discuss the severe time bottlenecks and cognitive burdens inherent in traditional homeopathic case-taking, motivating the necessity for an artificial intelligence clinical assistant. Finally, we formulate the research problems and provide a formal mathematical specification of the clinical pipeline.
+
+\section{Background and Clinical Context}
+Homeopathy is an individualized system of complementary medicine practiced widely across the globe and institutionalized in India under the Ministry of AYUSH. The therapeutic core of classical homeopathy rests on the fundamental law of similars:
+\begin{equation}
+    \text{Similia Similibus Curentur} \quad \text{("Let like be cured by like")}
+\end{equation}
+Under this paradigm, a diseased patient is treated by administering micro-diluted substances that have been shown in healthy human provers to elicit a totality of physical, mental, and modal symptoms matching the patient's individual state. The single indicated remedy that corresponds to this holistic symptom picture is termed the \emph{Simillimum}.
+
+In classical clinical practice, identifying the simillimum requires \textbf{Repertorization}: the systematic process of eliciting patient complaints, mapping colloquial symptoms into standardized taxonomic entries called \textbf{rubrics}, and cross-referencing candidate remedies across the repertory to compute an optimal remedy totality score \cite{Kent1897}.
+
+\section{Dr. James Tyler Kent's Repertory}
+First published in 1897 and continuously updated through modern expanded editions, Dr.~J.~T.~Kent's \emph{Repertory of the Homoeopathic Materia Medica} serves as the preeminent clinical benchmark for constitutional case analysis. The digitized database utilized in this research comprises:
+\begin{itemize}
+    \item \textbf{37 Anatomical and Symptom Sections}: Commencing philosophically with the \texttt{MIND} section (4,933 rubrics) and proceeding anatomically through sensory and regional chapters down to \texttt{GENERALITIES} (2,336 rubrics).
+    \item \textbf{74,513 Hierarchical Rubrics}: Arranged in tree structures up to depth 7 (e.g., \texttt{MIND > FEAR > alone, of being}).
+    \item \textbf{679 Homeopathic Remedies}: Master dictionary of standardized botanical, mineral, and animal remedy abbreviations (e.g., \emph{Acon., Phos., Nat-m.}).
+    \item \textbf{507,179 Rubric--Remedy Associations}: Verified mappings linking rubrics to remedies with typographic prominence grading.
+\end{itemize}
+
+\subsection{Three-Tier Typographic Grading System}
+Kent instituted a 3-tier grading hierarchy to indicate the clinical confidence and proving prominence of remedies within each rubric:
+\begin{itemize}
+    \item \textbf{Grade 3 (Bold Capitals, Weight = 3)}: Highest clinical prominence; repeatedly confirmed in provers and consistently verified in clinical cures.
+    \item \textbf{Grade 2 (Italics, Weight = 2)}: Moderately verified; confirmed by multiple provers and occasional clinical application.
+    \item \textbf{Grade 1 (Roman/Plain, Weight = 1)}: Solitary proving symptoms or occasional clinical observations.
+\end{itemize}
+
+\section{Motivation: The Clinical Consultation Bottleneck}
+Despite the widespread utilization of homeopathy, the conventional consultation workflow suffers from severe operational inefficiencies:
+\begin{enumerate}
+    \item \textbf{Time-Intensive Case-Taking}: A thorough classical homeopathic consultation consumes \textbf{30 to 45 minutes} purely for exploratory interview questioning and manual note-taking before analysis begins. In busy outpatient departments and Primary Health Centres (PHCs), this bottleneck restricts clinician capacity to only 8--12 patients per day.
+    \item \textbf{Human Cognitive Overload}: Human working memory cannot reliably index, cross-reference, and evaluate patient complaints across 74,513 rubrics and 679 remedies. Consequently, physicians frequently suffer from diagnostic fatigue, exhibiting heuristic cognitive bias toward a small set of 30--50 common "polycrest" remedies (*Sulphur, Lycopodium, Calcarea carb*), overlooking hundreds of smaller, highly specific remedies.
+    \item \textbf{The Lay vs. Archaic Semantic Gap}: Patients communicate their suffering in modern colloquial language (e.g., \emph{"crushing vice-like headache when bending over"}), whereas Kent's repertory is compiled in 19th-century Victorian medical prose (\texttt{HEAD > PAIN > pressing > as if in a vise} and \texttt{HEAD > PAIN > stooping, from}). Traditional keyword search engines fail due to zero token overlap.
+    \item \textbf{Inter-Practitioner Inconsistency}: Different practitioners interpreting the same patient narrative frequently select disparate rubrics, leading to substantial variability in prescription outcomes \cite{Doherty2026_HOHM}.
+\end{enumerate}
+
+\section{Research Objectives and Scope}
+To resolve these bottlenecks, this project develops \textbf{Kent-AI}, an end-to-end, privacy-preserving clinical assistant that automates pre-consultation patient intake. The primary research objectives are:
+\begin{enumerate}
+    \item To engineer a conversational intake agent governed by a 10-state Finite State Machine (FSM) that systematically extracts Kent's seven clinical dimensions.
+    \item To implement a fine-grained token-level Named Entity Recognition (NER) model fine-tuned on \texttt{Bio\_ClinicalBERT}, coupled with an LLM-based negation and coreference resolver.
+    \item To construct an open-access dense semantic vector index over all 74,513 Kentian rubric paths using ChromaDB and Sentence-Transformers, enabling neural semantic retrieval.
+    \item To formulate a transparent, provable Kentian remedy ranker integrating totality coverage, typographic grade weighting, and inverse remedy frequency specificity penalties.
+    \item To deploy an intuitive, clinician-facing clinical dashboard with a clear and consistent interface, reducing doctor evaluation time to 5--10 minutes.
+    \item To clinically validate the Kent-AI diagnostic framework in collaboration with certified homeopathic experts, evaluating prescription validity, rubric alignment accuracy, and real-world clinical workflow efficiency.
+\end{enumerate}
+
+\begin{figure}[htp]
+\centering
+\resizebox{0.88\textwidth}{!}{%
+\begin{tikzpicture}[
+    auto,
+    node distance=1.0cm and 2.0cm,
+    font=\small,
+    box/.style={
+        draw,
+        rounded corners=5pt,
+        align=center,
+        thick,
+        inner sep=7pt,
+        drop shadow={opacity=0.12, shadow xshift=1.5pt, shadow yshift=-1.5pt}
+    },
+    patient/.style={box, fill=blue!10, draw=blue!60!black, minimum width=5.2cm, minimum height=1.0cm},
+    intake/.style={box, fill=teal!12, draw=teal!70!black, minimum width=5.2cm, minimum height=1.0cm},
+    extraction/.style={box, fill=purple!12, draw=purple!70!black, minimum width=5.2cm, minimum height=1.0cm},
+    retrieval/.style={box, fill=cyan!12, draw=cyan!70!black, minimum width=5.2cm, minimum height=1.0cm},
+    ranker/.style={box, fill=orange!15, draw=orange!70!black, minimum width=5.2cm, minimum height=1.0cm},
+    dashboard/.style={box, fill=green!15, draw=green!60!black, minimum width=5.2cm, minimum height=1.0cm},
+    dbnode/.style={box, cylinder, shape border rotate=90, aspect=0.18, fill=gray!12, draw=gray!70!black, minimum width=4.0cm, minimum height=1.15cm, inner xsep=9pt},
+    arrow/.style={-Stealth, thick, draw=gray!80!black},
+    darrow/.style={Stealth-Stealth, thick, draw=gray!80!black}
+]
+
+    % Central processing pipeline
+    \node[patient] (pat) {\textbf{Patient Utterance} \\ \footnotesize Free-text symptom complaints};
+    \node[intake, below=of pat] (chat) {\textbf{Conversational Intake Agent} \\ \footnotesize 10-State Intake FSM (LLaMA 3 8B)};
+    \node[extraction, below=of chat] (nlp) {\textbf{Symptom Extraction \& Resolution} \\ \footnotesize \texttt{Bio\_ClinicalBERT} + LLaMA 3 Filter};
+    \node[retrieval, below=of nlp] (ret) {\textbf{Dense Semantic Retrieval} \\ \footnotesize ChromaDB Cosine Store ($d=384$)};
+    \node[ranker, below=1.4cm of ret] (rank) {\textbf{Kentian Remedy Ranker} \\ \footnotesize Totality Score $\times$ IRF Specificity};
+    \node[dashboard, below=of rank] (dash) {\textbf{Clinician Dashboard} \\ \footnotesize Totality Matrix \& Pre-Consultation Summary};
+
+    % Knowledge Base stores (on the right)
+    \node[dbnode, right=1.8cm of ret] (vdb) {\textbf{ChromaDB Store} \\ \footnotesize 74,513 Rubric Embeddings};
+    \node[dbnode, right=1.8cm of rank] (sqldb) {\textbf{Kent Repertory SQLite} \\ \footnotesize 679 Remedies $\cdot$ 507k Links};
+
+    % Downward pipeline flow
+    \draw[arrow] (pat) -- node[right=3pt, font=\scriptsize] {Patient input} (chat);
+    \draw[arrow] (chat) -- node[right=3pt, font=\scriptsize] {Dialogue transcript} (nlp);
+    \draw[arrow] (nlp) -- node[right=3pt, font=\scriptsize] {Affirmative queries $q_k$} (ret);
+    \draw[arrow] (ret) -- node[right=3pt, font=\scriptsize] {Matched rubrics $\mathcal{R}^*$} (rank);
+    \draw[arrow] (rank) -- node[right=3pt, font=\scriptsize] {Ranked candidates} (dash);
+
+    % Database connections
+    \draw[darrow] (ret.east) -- node[midway, above=4pt, fill=white, inner sep=1pt, font=\scriptsize] {Cosine match} (vdb.west);
+    \draw[arrow] (sqldb.west) -- node[midway, above=4pt, fill=white, inner sep=1pt, font=\scriptsize] {Remedy grades} (rank.east);
+
+\end{tikzpicture}
+}
+\caption{Overall modular architecture of the Kent-AI clinical assistant showing the multi-stage transformation from raw patient dialogue to grounded repertorization.}
+\label{fig:intro_architecture}
+\end{figure}
+
+\section{Formal Problem Formulation}
+Let the patient consultation be represented as a multi-turn dialogue $\mathcal{D} = \{(u_1, a_1), (u_2, a_2), \dots, (u_T, a_T)\}$, where $u_t$ is the patient utterance and $a_t$ is the agent response. The dialogue transitions over a finite intake state space $\mathcal{S}_{\text{intake}}$:
+\begin{equation}
+    S_{t+1} = \delta(S_t, u_t, \Phi_t)
+\end{equation}
+where $\Phi_t \in [0, 1]^7$ represents the filling status of Kent's 7 clinical dimensions: Location (\texttt{LOC}), Sensation (\texttt{SEN}), Modality-Aggravation (\texttt{MOD\_AGG}), Modality-Amelioration (\texttt{MOD\_AMEL}), Concomitants (\texttt{CONC}), Temporal (\texttt{TEMP}), and Mental/Emotional (\texttt{MENT}).
+
+Given the full transcribed text tokenized into sequence $\mathbf{x} = (x_1, x_2, \dots, x_N)$, the token-level entity classifier outputs label sequence $\mathbf{y} = (y_1, y_2, \dots, y_N)$:
+\begin{equation}
+    \hat{y}_i = \arg\max_{c \in \mathcal{Y}} P(y_i = c \mid \mathbf{x}; \boldsymbol{\theta}_{\text{BERT}})
+\end{equation}
+where $\mathcal{Y}$ is a 15-class BIO tagging scheme.
+
+Following negation filtering and coreference resolution, each affirmative symptom query $q_k$ is mapped to embedding vector $\mathbf{q}_k = \text{Embed}(q_k) \in \mathbb{R}^{384}$. Candidate rubrics are retrieved from the pre-indexed repository of 74,513 normalized rubric embeddings $\mathbf{e}_r \in \mathbb{R}^{384}$ using cosine similarity:
+\begin{equation}
+    \text{Similarity}(\mathbf{q}_k, \mathbf{e}_r) = \frac{\mathbf{q}_k \cdot \mathbf{e}_r}{\|\mathbf{q}_k\|_2 \|\mathbf{e}_r\|_2} = 1 - d_{\text{cosine}}(\mathbf{q}_k, \mathbf{e}_r)
+\end{equation}
+
+For the set of top retrieved rubrics $\mathcal{R}^*$, the indicated rank score for candidate homeopathic remedy $m$ is formulated as:
+\begin{equation}
+    \text{Score}(m \mid \mathcal{R}^*) = \sum_{r \in \mathcal{R}^*} \mathbb{I}(m \in \mathcal{M}_r) \cdot w(g_{r,m}) \cdot \text{IRF}(r) \cdot \text{Similarity}(q_r, r)
+\end{equation}
+where $\mathbb{I}(\cdot)$ denotes rubric membership, $w(g_{r,m}) \in \{1, 2, 3\}$ denotes typographic grade weight, and $\text{IRF}(r) = \ln(1 + |\mathcal{M}_{\text{total}}| / |\mathcal{M}_r|)$ denotes the Inverse Remedy Frequency specificity penalty.
+
+\end{sloppypar}

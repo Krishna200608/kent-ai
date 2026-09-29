@@ -1,0 +1,362 @@
+\chapter{Proposed Methodology and System Architecture}
+\label{Chapter3}
+
+\begin{sloppypar}
+This chapter presents the comprehensive architectural and mathematical design of \textbf{Kent-AI}. The system is decoupled into six modular layers: Data Access Layer, Conversational Intake Layer, Symptom Extraction and Resolution Layer, Dense Semantic Retrieval Layer, Remedy Ranking Engine, and Clinical Interface Layer. Each module is engineered for local, privacy-preserving execution with zero cloud dependency.
+
+\section{System Architecture and Sequential NLP Pipeline}
+Figure~\ref{fig:sequential_pipeline} illustrates the sequential clinical NLP extraction and contextual LLaMA~3 resolution pipeline of Kent-AI. The patient interacts with an empathetic conversational agent. The resulting transcript is tagged by a token-level Named Entity Recognizer (\texttt{Bio\_ClinicalBERT}) and refined by a localized LLaMA~3 resolver that extracts an affirmative 7-dimensional symptom profile. Candidate rubrics are retrieved from a ChromaDB dense vector store across 74,513 rubrics, and remedies are ranked via a classical Kentian totality scoring algorithm.
+
+\begin{figure}[htp]
+\centering
+\resizebox{0.90\textwidth}{!}{%
+\begin{tikzpicture}[
+    auto,
+    node distance=0.8cm and 1.0cm,
+    font=\small,
+    box/.style={
+        draw,
+        rounded corners=5pt,
+        align=center,
+        thick,
+        inner sep=6pt,
+        drop shadow={opacity=0.12, shadow xshift=1.5pt, shadow yshift=-1.5pt}
+    },
+    inputbox/.style={box, fill=blue!10, draw=blue!60!black, minimum width=10.5cm, minimum height=0.9cm},
+    bertbox/.style={box, fill=purple!12, draw=purple!70!black, minimum width=10.5cm, minimum height=1.0cm},
+    spanbox/.style={box, fill=gray!8, draw=gray!60!black, minimum width=10.0cm, minimum height=0.8cm},
+    llmbox/.style={box, fill=teal!12, draw=teal!70!black, minimum width=10.5cm, minimum height=1.0cm},
+    subproc/.style={box, fill=white, draw=teal!70!black, font=\footnotesize, minimum width=3.0cm, minimum height=0.8cm},
+    outbox/.style={box, fill=green!15, draw=green!60!black, minimum width=10.5cm, minimum height=0.9cm},
+    arrow/.style={-Stealth, thick, draw=gray!80!black}
+]
+
+    % Stage 0: Raw Utterance
+    \node[inputbox] (input) {
+        \textbf{Patient Utterance} \\
+        \footnotesize \emph{``Throbbing headache on right temple since morning, worse stooping. No vomiting.''}
+    };
+
+    % Stage 1: ClinicalBERT
+    \node[bertbox, below=0.75cm of input] (bert) {
+        \textbf{Token-Level BIO Tagging (\texttt{Bio\_ClinicalBERT})} \\
+        \footnotesize 15-Class Token Classification Head ($d_{\text{model}}=768$)
+    };
+
+    % Token Spans
+    \node[spanbox, below=0.65cm of bert] (tokens) {
+        \colorbox{purple!15}{\scriptsize\texttt{[throbbing]$\to$SEN}} \enskip
+        \colorbox{blue!15}{\scriptsize\texttt{[right temple]$\to$LOC}} \enskip
+        \colorbox{orange!15}{\scriptsize\texttt{[morning]$\to$TEMP}} \enskip
+        \colorbox{red!15}{\scriptsize\texttt{[stooping]$\to$MOD\_AGG}} \enskip
+        \colorbox{gray!20}{\scriptsize\texttt{[No vomiting]$\to$NEG}}
+    };
+
+    % Stage 2: LLaMA 3
+    \node[llmbox, below=0.75cm of tokens] (llm) {
+        \textbf{Contextual Resolution (\texttt{LLaMA 3 8B})} \\
+        \footnotesize Negation Filtering, Coreference Resolution \& Schema Validation
+    };
+
+    % Sub-operations
+    \node[subproc, below=0.35cm of llm.south west, anchor=north west, xshift=0.35cm] (sub1) {
+        \textbf{Negation Filter} \\
+        \scriptsize Prune \texttt{vomiting}
+    };
+    \node[subproc, right=0.35cm of sub1] (sub2) {
+        \textbf{Coreference Linking} \\
+        \scriptsize Attach to \texttt{temple}
+    };
+    \node[subproc, right=0.35cm of sub2] (sub3) {
+        \textbf{Slot Mapping} \\
+        \scriptsize Canonical 7 dimensions
+    };
+
+    % Stage 3: Structured Output
+    \node[outbox, below=1.5cm of sub2] (out) {
+        \textbf{Validated 7-Dimension JSON Profile} \\
+        \footnotesize \texttt{\{"LOC": "Right temple", "SEN": "Throbbing", "MOD\_AGG": "Stooping", "TEMP": "Morning"\}}
+    };
+
+    % Connecting Arrows
+    \draw[arrow] (input) -- node[right=3pt, font=\scriptsize] {Raw text} (bert);
+    \draw[arrow] (bert) -- node[right=3pt, font=\scriptsize] {BIO predictions} (tokens);
+    \draw[arrow] (tokens) -- node[right=3pt, font=\scriptsize] {Entity spans} (llm);
+    \draw[arrow] (llm.south -| sub1.north) -- (sub1.north);
+    \draw[arrow] (llm.south -| sub2.north) -- (sub2.north);
+    \draw[arrow] (llm.south -| sub3.north) -- (sub3.north);
+    \draw[arrow] (sub2.south) -- node[right=3pt, font=\scriptsize] {Affirmative query $q_k$} (out.north);
+
+\end{tikzpicture}
+}
+\caption{Sequential clinical NLP extraction and LLaMA 3 resolution pipeline, illustrating token-level entity extraction by ClinicalBERT followed by contextual negation filtering and coreference resolution by LLaMA 3.}
+\label{fig:sequential_pipeline}
+\end{figure}
+
+\section{Data Layer: Digitized Kent's Repertory and Python DAL}
+The foundation of Kent-AI is grounded in an open-access SQLite database (\texttt{data/raw/repertory.sqlite}, 112 MB) derived from the digitized Kent's Repertory project developed by \texttt{su4532}. 
+
+\subsection{Database Schema}
+The database comprises four relational core tables and full-text search indexes:
+\begin{itemize}
+    \item \texttt{sections} (37 rows): Anatomical and philosophical chapters (e.g., \texttt{MIND}, \texttt{HEAD}, \texttt{GENERALITIES}).
+    \item \texttt{rubrics} (74,513 rows): Hierarchical tree of clinical symptoms, containing pre-computed unique ancestry paths (e.g., \texttt{MIND > ABSENT-MINDED > morning}), depths (0 to 7), and source PDF page bounds.
+    \item \texttt{remedies} (679 rows): Standardized homeopathic remedy abbreviations, normalized lowercase keys, and full botanical/chemical nomenclature.
+    \item \texttt{rubric\_remedies} (507,179 rows): Many-to-many join linking rubrics to remedies with typographic grades (\texttt{grade\_candidate} $\in \{1, 2, 3\}$).
+    \item \texttt{rubric\_search}: SQLite FTS5 virtual table supporting prefix and exact keyword querying.
+\end{itemize}
+
+\subsection{Python Data Access Layer (DAL)}
+We implemented a high-performance Python Data Access Layer in \texttt{src/data/kent\_db.py} (448 lines) enforcing strict read-only execution (\texttt{PRAGMA query\_only = ON}). Remedy grades are resolved through the coalescing expression:
+\begin{equation}
+    \text{Grade} = \text{COALESCE}(\text{grade}, \text{grade\_candidate}, 1)
+\end{equation}
+guaranteeing safe fallbacks for unassigned typography candidates.
+
+\section{Synthetic Clinical Case Generation Pipeline (HomeoNER)}
+Because no public annotated dataset exists for homeopathic clinical intake, we engineered a ground-truth-driven reverse generation pipeline implemented in \texttt{src/data/case\_generator.py}, \texttt{src/data/bio\_tagger.py}, and \texttt{src/data/splitter.py}.
+
+\subsection{Generative Synthesis and Entropy Seeding}
+For each sampled rubric and its associated high-grade remedies, LLaMA~3 8B generates realistic patient case narratives conditioned on four clinical archetypes:
+\begin{equation}
+    \text{Archetypes} \in \{\text{Somatizing}, \text{Conversational}, \text{Introverted}, \text{Acute Crisis}\}
+\end{equation}
+To eliminate variation collapse and prevent autoregressive cache loops, we inject dynamic entropy seeding:
+\begin{equation}
+    \text{Seed}_{\text{dynamic}} = \text{Seed}_0 + (\text{case\_idx} \times 137)
+\end{equation}
+
+\subsection{4-Tier BIO Auto-Tagger with Offset Drift Repair}
+To overcome the documented LLM character offset drift problem, \texttt{BIOTagger.align\_entity\_offsets()} applies an automated 4-tier verification ladder:
+\begin{enumerate}
+    \item \textbf{Tier 1 (Exact Slice)}: Validates if $\text{narrative}[\text{start}:\text{end}] \equiv \text{entity}[\text{text}]$.
+    \item \textbf{Tier 2 (Local Window)}: Scans a local search window of $\pm 15$ characters around $\text{start}$.
+    \item \textbf{Tier 3 (Global Search)}: Performs exact global substring localization within the narrative.
+    \item \textbf{Tier 4 (Case-Insensitive Boundary)}: Employs case-insensitive word-boundary token matching.
+\end{enumerate}
+Tokens are labeled using the 15-class BIO tag space:
+\begin{equation}
+\begin{aligned}
+    \mathcal{Y}_{\text{BIO}} = \{O\} \cup \{B\text{-}D, I\text{-}D \mid D \in {}&\{\text{LOC, SEN, MOD\_AGG, MOD\_AMEL},\\
+    &\text{CONC, TEMP, MENT}\}\}
+\end{aligned}
+\end{equation}
+
+\subsection{Stratified Deficit-Balancing Splitter}
+To partition small rubric groups ($k = 4$ cases per rubric) without zero-quota distortion, \texttt{src/data/splitter.py} enforces an 80/10/10 split using global deficit balancing. Each rubric receives a base quota of $\lfloor k \times 0.8 \rfloor$ cases in the Training set, while remaining cases are dynamically assigned to Validation or Test sets based on the largest global deficit.
+
+\begin{figure}[htp]
+\centering
+\resizebox{0.90\textwidth}{!}{%
+\begin{tikzpicture}[
+    auto,
+    node distance=0.75cm,
+    font=\small,
+    box/.style={
+        draw,
+        rounded corners=5pt,
+        align=center,
+        thick,
+        inner sep=6pt,
+        drop shadow={opacity=0.12, shadow xshift=1.5pt, shadow yshift=-1.5pt}
+    },
+    stepbox/.style={box, fill=blue!10, draw=blue!60!black, minimum width=10.0cm, minimum height=0.9cm},
+    llmbox/.style={box, fill=teal!12, draw=teal!70!black, minimum width=10.0cm, minimum height=0.9cm},
+    ladderbox/.style={box, fill=purple!12, draw=purple!70!black, minimum width=10.0cm, minimum height=1.25cm},
+    decision/.style={draw, diamond, aspect=2.2, thick, fill=yellow!15, draw=orange!80!black, align=center, inner sep=3pt, font=\footnotesize\bfseries},
+    valbox/.style={box, fill=cyan!12, draw=cyan!70!black, minimum width=10.0cm, minimum height=0.9cm},
+    splitbox/.style={box, fill=orange!15, draw=orange!70!black, minimum width=10.0cm, minimum height=0.9cm},
+    corpusbox/.style={box, fill=green!15, draw=green!60!black, minimum width=10.0cm, minimum height=0.9cm},
+    arrow/.style={-Stealth, thick, draw=gray!80!black},
+    fbarrow/.style={-Stealth, thick, dashed, draw=red!70!black}
+]
+
+    % Vertical Pipeline
+    \node[stepbox] (sql) {
+        \textbf{1. Ground-Truth Sampling (Kent SQLite)} \\
+        \footnotesize Sample $r \in \text{MIND}$ rubrics and high-grade remedies ($g \ge 2$)
+    };
+
+    \node[llmbox, below=of sql] (llama) {
+        \textbf{2. Clinical Narrative Generation (\texttt{LLaMA 3 8B})} \\
+        \footnotesize 4 Clinical Archetypes $\cdot$ Dynamic Entropy Seeding
+    };
+
+    \node[ladderbox, below=of llama] (ladder) {
+        \textbf{3. 4-Tier Character Offset Drift Repair} \\
+        \footnotesize \textbf{T1}: Exact Slice $\;\to\;$ \textbf{T2}: Local Window ($\pm 15$) \\
+        \footnotesize \textbf{T3}: Global Substring Search $\;\to\;$ \textbf{T4}: Case-Insensitive Regex
+    };
+
+    \node[decision, below=0.8cm of ladder] (dec) {Offset\\Aligned?};
+
+    \node[valbox, below=0.8cm of dec] (val) {
+        \textbf{4. Quality \& Diversity Verification} \\
+        \footnotesize JSON Schema (100\%) $\cdot$ BIO Tag Alignment $\cdot$ Lexical Overlap $< 45\%$
+    };
+
+    \node[splitbox, below=of val] (split) {
+        \textbf{5. Stratified Deficit-Balanced Splitter} \\
+        \footnotesize 80\% Train $\cdot$ 10\% Validation $\cdot$ 10\% Test (Zero-quota distortion)
+    };
+
+    \node[corpusbox, below=of split] (corpus) {
+        \textbf{6. HomeoNER Gold Benchmark Corpus} \\
+        \footnotesize \texttt{train.jsonl} (80\%) $\cdot$ \texttt{val.jsonl} (10\%) $\cdot$ \texttt{test.jsonl} (10\%) --- ~22,200 Cases
+    };
+
+    % Downward Flow
+    \draw[arrow] (sql) -- node[right=3pt, font=\scriptsize] {Rubrics \& remedies} (llama);
+    \draw[arrow] (llama) -- node[right=3pt, font=\scriptsize] {Raw case text} (ladder);
+    \draw[arrow] (ladder) -- (dec);
+    \draw[arrow] (dec) -- node[right=3pt, font=\scriptsize] {Yes (Pass)} (val);
+    \draw[arrow] (val) -- node[right=3pt, font=\scriptsize] {Verified cases} (split);
+    \draw[arrow] (split) -- node[right=3pt, font=\scriptsize] {Partitioned sets} (corpus);
+
+    % Route failed alignment outside every process box before resampling.
+    \coordinate (feedback) at ([xshift=0.9cm]ladder.east);
+    \draw[fbarrow]
+        (dec.east)
+        -- node[above=2pt, font=\scriptsize\bfseries, text=red!70!black] {No}
+        (dec.east -| feedback)
+        |- node[pos=0.25, right=3pt, font=\scriptsize\bfseries, text=red!70!black] {Resample}
+        (llama.east);
+
+\end{tikzpicture}
+}
+\caption{Synthetic case generation pipeline (HomeoNER) showing ground-truth rubric sampling from SQLite, multi-archetype clinical synthesis with LLaMA 3 8B, the 4-tier character offset drift repair ladder, automated schema and diversity validation, and stratified deficit-balanced dataset splitting.}
+\label{fig:data_strategy}
+\end{figure}
+
+\section{Conversational Case-Taking Finite State Machine}
+Implemented in \texttt{src/chatbot/state\_machine.py}, the intake agent is governed by a 10-state deterministic finite state machine (FSM):
+\begin{equation}
+\begin{aligned}
+    \mathcal{S} = \{&\text{GREETING}, \text{CHIEF\_COMPLAINT}, \text{LOCATION}, \text{SENSATION}, \text{MOD\_AGG},\\
+    &\text{MOD\_AMEL}, \text{CONC}, \text{MENT}, \text{REVIEW}, \text{DONE}\}
+\end{aligned}
+\end{equation}
+Transitions are driven by patient responses and the 7-dimension slot tracker. If a patient spontaneously supplies multiple dimensions in a single turn (e.g., \emph{"I have burning pain in my right temple worse from light"}), the slot tracker automatically satisfies \texttt{LOCATION}, \texttt{SENSATION}, and \texttt{MOD\_AGG}, and the FSM adaptively skips redundant questioning.
+
+\subsection{Bedside Manner Prompting and Dynamic Suggestion Chips}
+The dialogue manager in \texttt{src/chatbot/dialogue\_manager.py} executes local LLaMA~3 inferences with a compassionate clinical system prompt. To accelerate intake for mobile and elderly users, an intent classifier dynamically synthesizes contextual clinical quick-reply chips (e.g., \emph{"Worse in morning"}, \emph{"Throbbing sensation"}, \emph{"Better with cold compress"}).
+
+\section{Dense Semantic Rubric Retrieval Engine}
+To bridge the vocabulary mismatch between modern patient phrasing and 19th-century rubrics, we constructed a dense vector index in \texttt{src/search/vector\_store.py} using ChromaDB with an HNSW cosine distance metric.
+
+\subsection{Embedding Representation}
+Each of the 74,513 rubric paths is embedded into a 384-dimensional dense vector space using \texttt{sentence-transformers/all-MiniLM-L6-v2}:
+\begin{equation}
+    \mathbf{e}_r = \frac{\text{Transformer}(\text{path}_r)}{\|\text{Transformer}(\text{path}_r)\|_2}, \quad \mathbf{e}_r \in \mathbb{R}^{384}
+\end{equation}
+Given an affirmative symptom query $q_k$, similarity is computed via dot product:
+\begin{equation}
+    \text{Sim}(q_k, r) = \mathbf{e}_{q_k} \cdot \mathbf{e}_r
+\end{equation}
+Retrieved rubrics are categorized into four calibrated match tiers:
+\begin{equation}
+    \text{Tier}(s) = \begin{cases}
+        \text{Strong Match}, & s \ge 0.68 \\
+        \text{Good Match}, & 0.58 \le s < 0.68 \\
+        \text{Fair Match}, & 0.52 \le s < 0.58 \\
+        \text{Noise / Discard}, & s < 0.52
+    \end{cases}
+\end{equation}
+
+\begin{figure}[htp]
+\centering
+\resizebox{0.85\textwidth}{!}{%
+\begin{tikzpicture}[
+    auto,
+    node distance=0.75cm,
+    font=\small,
+    box/.style={
+        draw,
+        rounded corners=5pt,
+        align=center,
+        thick,
+        inner sep=6pt,
+        drop shadow={opacity=0.12, shadow xshift=1.5pt, shadow yshift=-1.5pt}
+    },
+    querybox/.style={box, fill=blue!10, draw=blue!60!black, minimum width=10.5cm, minimum height=0.9cm},
+    embedbox/.style={box, fill=purple!12, draw=purple!70!black, minimum width=10.5cm, minimum height=0.9cm},
+    chromabox/.style={box, fill=cyan!12, draw=cyan!70!black, minimum width=10.5cm, minimum height=0.9cm},
+    tierbox/.style={box, fill=yellow!12, draw=orange!70!black, minimum width=10.5cm, minimum height=0.9cm},
+    joinbox/.style={box, fill=orange!15, draw=orange!70!black, minimum width=10.5cm, minimum height=0.9cm},
+    scorebox/.style={box, fill=red!10, draw=red!70!black, minimum width=10.5cm, minimum height=1.1cm},
+    outbox/.style={box, fill=green!15, draw=green!60!black, minimum width=10.5cm, minimum height=0.9cm},
+    arrow/.style={-Stealth, thick, draw=gray!80!black}
+]
+
+    % Vertical Pipeline
+    \node[querybox] (q) {
+        \textbf{1. Affirmative Clinical Query $q_k$} \\
+        \footnotesize \emph{``Throbbing bursting headache on right side aggravated by sun exposure''}
+    };
+
+    \node[embedbox, below=of q] (emb) {
+        \textbf{2. Dense Bi-Encoder Embedding (\texttt{all-MiniLM-L6-v2})} \\
+        \footnotesize 384-dimensional unit-normalized vector $\mathbf{e}_{q_k} \in \mathbb{R}^{384}$
+    };
+
+    \node[chromabox, below=of emb] (chroma) {
+        \textbf{3. ChromaDB Cosine Retrieval (HNSW Index)} \\
+        \footnotesize Sub-15ms vector search across 74,513 pre-computed rubric embeddings
+    };
+
+    \node[tierbox, below=of chroma] (tier) {
+        \textbf{4. Calibrated Match Confidence Filter} \\
+        \footnotesize
+        \colorbox{green!15}{\textbf{Strong} ($\ge 0.68$)} \enskip
+        \colorbox{blue!15}{\textbf{Good} ($0.58\text{--}0.68$)} \enskip
+        \colorbox{orange!15}{\textbf{Fair} ($0.52\text{--}0.58$)} \enskip
+        \colorbox{gray!20}{\textbf{Noise} ($< 0.52$ Pruned)}
+    };
+
+    \node[joinbox, below=of tier] (join) {
+        \textbf{5. Repertory Knowledge Join (SQLite)} \\
+        \footnotesize Map matched rubrics $\mathcal{R}^*$ to remedies with proving grades $w(g_{r,m}) \in \{3, 2, 1\}$
+    };
+
+    \node[scorebox, below=of join] (score) {
+        \textbf{6. Classical Kentian Remedy Totality Ranker} \\
+        \footnotesize $\text{Score}(m \mid \mathcal{R}^*) = \sum_{r \in \mathcal{R}^*} \mathbb{I}(m \in \mathcal{M}_r) \cdot w(g_{r,m}) \cdot \text{IRF}(r) \cdot \text{Sim}(q_r, r)$ \\
+        \scriptsize Specificity Penalty: $\text{IRF}(r) = \ln(1 + |\mathcal{M}_{\text{total}}| / |\mathcal{M}_r|)$
+    };
+
+    \node[outbox, below=of score] (out) {
+        \textbf{7. Ranked Simillimum Output \& Totality Matrix} \\
+        \footnotesize Top Candidates: \emph{1. Glonoinum (18.4) $\cdot$ 2. Belladonna (16.2) $\cdot$ 3. Natrum mur. (12.8)}
+    };
+
+    % Downward Flow
+    \draw[arrow] (q) -- node[right=3pt, font=\scriptsize] {Query text} (emb);
+    \draw[arrow] (emb) -- node[right=3pt, font=\scriptsize] {Vector $\mathbf{e}_q$} (chroma);
+    \draw[arrow] (chroma) -- node[right=3pt, font=\scriptsize] {Similarity scores} (tier);
+    \draw[arrow] (tier) -- node[right=3pt, font=\scriptsize] {Retrieved rubrics $\mathcal{R}^*$} (join);
+    \draw[arrow] (join) -- node[right=3pt, font=\scriptsize] {Remedy grades} (score);
+    \draw[arrow] (score) -- node[right=3pt, font=\scriptsize] {Ranked scores} (out);
+
+\end{tikzpicture}
+}
+\caption{Dense semantic rubric retrieval and classical Kentian remedy ranking workflow, illustrating neural sentence embedding, ChromaDB HNSW cosine similarity search, confidence tier filtering, relational remedy join, and mathematical totality scoring.}
+\label{fig:ml_pipeline}
+\end{figure}
+
+\section{Classical Kentian Remedy Ranking Engine}
+Given the retrieved candidate rubrics $\mathcal{R}^*$, \texttt{src/search/ranker.py} calculates the totality score for each remedy $m$.
+
+\subsection{Mathematical Scoring Formula}
+The clinical rank score combines rubric coverage, typographic proving prominence, and inverse remedy frequency specificity:
+\begin{equation}
+    \text{Score}(m \mid \mathcal{R}^*) = \sum_{r \in \mathcal{R}^*} \mathbb{I}(m \in \mathcal{M}_r) \cdot w(g_{r,m}) \cdot \text{IRF}(r) \cdot \text{Sim}(q_r, r)
+\end{equation}
+where:
+\begin{itemize}
+    \item $\mathbb{I}(m \in \mathcal{M}_r)$ indicates whether remedy $m$ appears under rubric $r$.
+    \item $w(g_{r,m}) \in \{3.0, 2.0, 1.0\}$ represents the typographic grade weight for Grade 3 (bold), Grade 2 (italics), and Grade 1 (plain).
+    \item $\text{IRF}(r) = \ln\left(1 + \frac{|\mathcal{M}_{\text{total}}|}{|\mathcal{M}_r|}\right)$ penalizes hyper-general polycrests with thousands of entries, preventing them from suppressing highly specific remedies.
+    \item $\text{Sim}(q_r, r)$ scales the contribution by semantic retrieval confidence.
+\end{itemize}
+
+\end{sloppypar}

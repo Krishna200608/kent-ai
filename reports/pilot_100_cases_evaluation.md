@@ -100,5 +100,5 @@ To prevent training collapse, each of the 4 variations per rubric is steered by 
 ## 5. Recommendation for Supervisor / Professor
 
 1. **Quality Approval**: The generated synthetic cases meet all homeopathic clinical standards, natural patient phrasing requirements, and token-level BIO annotation rigor.
-2. **Pipeline Stability**: The atomic checkpointing system ([`data/processed/pilot_checkpoint.json`](file:///d:/Research%20Project/kent-ai/data/processed/pilot_checkpoint.json)) guarantees zero data loss in the event of job preemption or SSH disconnects.
+2. **Pipeline Stability**: The atomic checkpointing system ([`data/processed/pilot_checkpoint.json`]) guarantees zero data loss in the event of job preemption or SSH disconnects.
 3. **Green Light**: We recommend transferring the repository scripts to the College GPU server and launching the full production run (`scripts/generate_cases.py --split`) to create the final 22,200 dataset splits (`train.jsonl`, `val.jsonl`, `test.jsonl`).
