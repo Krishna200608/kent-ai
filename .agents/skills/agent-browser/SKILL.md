@@ -2,69 +2,67 @@
 name: agent-browser
 description: >
   Browser automation and web research skill for kent-ai agent tasks.
-  Use when you need to navigate to a URL, extract content from a webpage,
-  verify a live endpoint, or interact with a web-based tool (e.g., HuggingFace
-  model pages, arXiv, ClinicalTrials.gov). Covers safe browsing, content
-  extraction, and session hygiene.
+  Use when you need to navigate to a URL that requires JavaScript rendering
+  or user interaction (clicking, typing, scrolling). For static HTML pages,
+  prefer read_url_content directly. Covers safe browsing, content extraction,
+  and mandatory session hygiene.
 ---
 
 # Agent Browser Skill — Kent-AI
 
 ## When to Use
-- Fetching a paper abstract or PDF from arXiv / PubMed / ACL Anthology.
-- Verifying a HuggingFace model card (e.g., Bio_ClinicalBERT, LLaMA 3).
-- Checking a live API endpoint or documentation page.
-- Downloading a dataset or supplementary file from a research URL.
+- A documentation page or model card requires JavaScript to render.
+- You need to interact with a web page (click a tab, submit a search form).
+- You need to verify a live web endpoint or download a file not accessible via direct URL.
 
 ## When NOT to Use
-- For database lookups — use the dedicated science skills (pubmed-database,
-  literature-search-arxiv, etc.) instead.
-- For tasks that can be done with `read_url_content` — prefer that for
-  simple static page fetches (no JavaScript required).
+- The page is static HTML (no JavaScript required) → use `read_url_content` instead (faster, no overhead).
+- You only need to query a database API → use the appropriate science skill (e.g., `pubmed-database`, `literature-search-arxiv`).
+- You need to search for research papers → use `research` skill first, which selects the right tool.
 
 ---
 
-## Workflow
+## Tool Selection
 
-### Step 1 — Choose the Right Tool
 | Need | Tool |
 |---|---|
-| Static HTML page | `read_url_content` (faster, no browser overhead) |
+| Static HTML page (docs, GitHub, arXiv abstract) | `read_url_content` |
 | JavaScript-rendered page | `browser_subagent` |
-| Interaction required (click, type) | `browser_subagent` |
-| Bulk URL batch | `read_url_content` in sequence |
+| Clicking, typing, or interacting | `browser_subagent` |
+| Batch URL reading | `read_url_content` in sequence |
 
-### Step 2 — Launch the Browser Subagent
+---
+
+## Browser Subagent Workflow
+
+### Step 1 — Launch with a Complete Task Description
 When using `browser_subagent`, always specify:
-- `TaskName`: Human-readable, e.g., "Fetching Bio_ClinicalBERT Model Card"
-- `Task`: Include the exact URL, what to extract, and when to stop.
-- `RecordingName`: Snake_case, ≤ 3 words, e.g., `model_card_fetch`
-- `ReturnsCondition`: "Return when the page content is fully loaded and the
-  target information has been extracted."
+- **`TaskName`**: Human-readable, e.g., "Fetching Bio_ClinicalBERT Model Card"
+- **`Task`**: Include the exact URL, what content to extract, and the stop condition.
+- **`RecordingName`**: Snake_case, ≤ 3 words, e.g., `model_card_fetch`
 
-### Step 3 — Extract Structured Data
-Ask the subagent to return information in a structured format:
+### Step 2 — Specify Exact Extraction Requirements
+Tell the subagent explicitly what to return:
 ```
-Return a JSON object with keys:
-  - title: page title
-  - summary: 2-3 sentence summary
-  - key_facts: list of relevant facts
-  - url: the final URL visited
+Navigate to <URL>.
+Extract the following: <model name>, <description>, <license>, <usage example>.
+Return a structured summary with those fields.
+Stop when the content is fully visible.
 ```
 
-### Step 4 — Close the Browser
-Always instruct the subagent: "Close all browser tabs when done."
-This is a hard rule per project conventions (Context/CONVENTIONS.md).
+### Step 3 — Mandatory: Close the Browser
+Always end the task instruction with: **"Close all browser tabs when done."**
+This is a hard requirement per project conventions (Context/CONVENTIONS.md — resource hygiene).
 
 ---
 
 ## Safety Rules
 
-- Do NOT submit forms or POST data unless explicitly instructed by the user.
+- Do NOT submit forms or POST data unless explicitly instructed.
 - Do NOT download executable files.
-- Do NOT authenticate to services without user-provided credentials.
-- Do NOT follow more than 3 redirect hops.
+- Do NOT authenticate to any service without user-provided credentials.
 - If a page requires login, report the URL and stop — escalate to the user.
+- Do not follow redirect chains longer than 3 hops.
 
 ---
 
@@ -73,14 +71,20 @@ This is a hard rule per project conventions (Context/CONVENTIONS.md).
 | Resource | URL |
 |---|---|
 | Bio_ClinicalBERT (HuggingFace) | https://huggingface.co/emilyalsentzer/Bio_ClinicalBERT |
-| LLaMA 3 (Meta) | https://ai.meta.com/blog/meta-llama-3/ |
+| LLaMA 3 (Meta AI blog) | https://ai.meta.com/blog/meta-llama-3/ |
 | ChromaDB Docs | https://docs.trychroma.com/ |
-| i2b2 NLP Challenges | https://www.i2b2.org/NLP/DataSets/ |
+| sentence-transformers all-MiniLM-L6-v2 | https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2 |
 | Streamlit Docs | https://docs.streamlit.io/ |
-| Kent's Repertory (reference) | https://www.homeobook.com/kents-repertory/ |
+| Ollama API | https://github.com/ollama/ollama/blob/main/docs/api.md |
 
 ---
 
 ## Output
-Save any extracted content as a markdown file in:
+
+Save extracted content to:
 `Context/browser_research_<topic>_<YYYY-MM-DD>.md`
+
+Follow the Context file authoring rules from `Context/CONTEXT_RULES.md`:
+- Start with title H1 and blockquote (Last updated, Phase).
+- Mark unverified claims with `[UNVERIFIED]`.
+- Do NOT overwrite or modify existing Context files.

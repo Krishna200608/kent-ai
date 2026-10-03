@@ -11,16 +11,19 @@ description: >
 
 ## Purpose
 Drive all new code through a **Red → Green → Refactor** cycle using `pytest`.
-Every new function or class in `src/` must have a corresponding test in `tests/`.
+Every new public function or class in `src/` must have a corresponding test in `tests/`.
 
 ---
 
 ## Mandatory Rules (from Context/CONVENTIONS.md)
 
-1. **Random seeds**: Always set `np.random.seed(42)` and `torch.manual_seed(42)` in test fixtures that touch models.
-2. **No real I/O in unit tests**: Mock `sqlite3`, ChromaDB clients, and file handles with `unittest.mock`.
-3. **Test files mirror source**: `src/data/kent_db.py` → `tests/test_kent_db.py`.
-4. **Fixture data**: Place small fixture JSON/CSV files in `tests/fixtures/`.
+1. **Test framework**: `pytest` — configured in `pyproject.toml`.
+2. **Test file location**: `tests/test_<module>.py`, mirroring `src/`.
+3. **Class-based grouping**: Use `class Test<Module>:` for related tests (e.g., `class TestKentDBReader:`).
+4. **SQLite tests use the real database** — this is intentional per project convention (see Context/CONVENTIONS.md §8). Do NOT mock the SQLite layer for `src/data/kent_db.py` tests. This is a deliberate correctness verification strategy.
+5. **ChromaDB tests use `EphemeralClient`** with a unique collection name per test fixture (e.g., `collection_name=f"test_rubrics_{uuid.uuid4().hex[:8]}"`) to prevent cross-test contamination (GOTCHAS.md §7.4).
+6. **Stub tests**: Unimplemented modules have a single `assert True` placeholder. Replace with real tests as the module is implemented.
+7. **Random seeds for ML tests**: Set `np.random.seed(42)` and `torch.manual_seed(42)` in fixtures that instantiate models.
 
 ---
 
@@ -31,11 +34,12 @@ Every new function or class in `src/` must have a corresponding test in `tests/`
 # tests/test_<module>.py
 import pytest
 
-def test_<function>_returns_expected():
-    # Arrange
-    # Act
-    # Assert
-    assert result == expected   # This MUST fail before writing code
+class Test<Module>:
+    def test_<function>_returns_expected(self):
+        # Arrange
+        # Act
+        # Assert
+        assert result == expected   # This MUST fail before writing code
 ```
 Run: `pytest tests/test_<module>.py -v` — confirm it **fails**.
 
@@ -47,40 +51,50 @@ Run: `pytest tests/test_<module>.py -v` — confirm it **passes**.
 
 ### Step 3 — Refactor
 - Improve code quality (naming, docstrings, extraction) without changing behaviour.
-- Re-run the full suite: `pytest tests/ -v --tb=short`.
+- Re-run the full suite: `.venv\Scripts\pytest.exe tests/ -v`.
 
 ---
 
-## Kent-AI Specific Test Targets
+## Kent-AI Test Targets
 
-| Module | Key Behaviours to Test |
-|---|---|
-| `src/data/kent_db.py` | Query returns list of rubric dicts; handles empty result |
-| `src/models/ner_model.py` | BIO tag output shape matches input token count |
-| `src/search/retriever.py` | Top-k results returned; ChromaDB client is mocked |
-| `src/pipeline/generator.py` | Generated case JSON validates against schema |
-| `src/chatbot/chatbot.py` | Response is non-empty string; no exceptions on valid input |
+| Test File | Module Under Test | Testing Strategy |
+|---|---|---|
+| `tests/test_kent_db.py` | `src/data/kent_db.py` | Real SQLite DB (13 passing tests, no mocks) |
+| `tests/test_bio_tagger.py` | `src/data/bio_tagger.py` | Isolated string inputs, no DB |
+| `tests/test_case_generator.py` | `src/data/case_generator.py` | Mock Ollama REST calls |
+| `tests/test_splitter.py` | `src/data/splitter.py` | Deterministic input lists |
+| `tests/test_symptom_ner.py` | `src/models/symptom_ner.py` | Stub; replace when Phase 3 starts |
+| `tests/test_resolver.py` | `src/models/resolver.py` | Mocked Ollama, rule-based fallback |
+| `tests/test_vector_store.py` | `src/search/vector_store.py` | EphemeralClient + unique collection names |
+| `tests/test_ranker.py` | `src/search/ranker.py` | Fixture rubric/remedy data |
+| `tests/test_pipeline.py` | `src/pipeline/orchestrator.py` | Integration: mock LLM + real ChromaDB |
+| `tests/test_state_machine.py` | `src/chatbot/state_machine.py` | FSM state transitions |
+| `tests/test_dialogue_manager.py` | `src/chatbot/dialogue_manager.py` | Slot tracking, mock LLM |
+| `tests/test_dashboard.py` | `src/dashboard/app.py` | Component rendering, export logic |
 
 ---
 
 ## Running the Suite
 
 ```bash
+# Activate the virtual environment first (Windows)
+.venv\Scripts\activate
+
 # Full suite
-pytest tests/ -v --tb=short
+.venv\Scripts\pytest.exe tests/ -v
 
-# Single module
-pytest tests/test_kent_db.py -v
+# Single test file
+.venv\Scripts\pytest.exe tests/test_kent_db.py -v
 
-# Coverage report
-pytest tests/ --cov=src --cov-report=term-missing
+# With short traceback for debugging
+.venv\Scripts\pytest.exe tests/ -v --tb=short
 ```
 
 ---
 
 ## Definition of Done
-- [ ] Test written **before** implementation code.
+- [ ] Test written **before** implementation code (Red step confirmed).
 - [ ] All new tests pass (`pytest` exit code 0).
-- [ ] Coverage on the changed module >= 80%.
-- [ ] No `print()` statements left in test files.
-- [ ] `Context/PROGRESS.md` updated with test status if a milestone is reached.
+- [ ] Existing 60+ passing tests remain unaffected.
+- [ ] No `print()` statements left in test files (use `logging`).
+- [ ] `Context/PROGRESS.md` updated if a phase milestone is reached.

@@ -5,7 +5,8 @@ description: >
   Use when defining new data structures, extending the Kent's Repertory
   domain model, designing schemas for generated clinical cases, or
   mapping domain concepts to code entities. Grounds all models in the
-  homeopathic repertory and clinical NLP domain.
+  actual homeopathic repertory database schema and the verified BIO label
+  system from Context/DATA.md.
 ---
 
 # Domain Modeling Skill — Kent-AI
@@ -15,119 +16,165 @@ description: >
 Kent-AI operates in the intersection of two domains:
 
 1. **Homeopathic Repertory Domain** — Kent's Repertory: a hierarchical
-   index of symptoms (rubrics) mapped to remedies with degree scores (1–4).
-2. **Clinical NLP Domain** — clinical case narratives containing
-   named entities (symptoms, body parts, modalities, remedies).
+   index of 74,513 rubrics (symptoms) mapped to remedies with degree scores.
+2. **Clinical NLP Domain** — clinical case narratives with named entity spans
+   annotated using a 15-class BIO label system.
 
-Any new data model must be grounded in both domains.
+Any new data model must be grounded in the actual database schema (`Context/DATA.md`)
+and the verified `SyntheticCase` schema (`Context/DATA.md §Synthetic Case Schema`).
 
 ---
 
-## Core Domain Entities
+## Core Domain Entities (from Context/DATA.md)
 
+### Rubric (SQLite `rubrics` table — 74,513 rows)
+
+```python
+# Actual DB columns — do not invent fields
+rubric = {
+    "id": int,            # Primary key
+    "parent_id": int,     # NULL for root rubrics
+    "section_id": int,    # References sections.id (1=MIND, 3=HEAD, ...)
+    "depth": int,         # 0=root, up to 7
+    "label": str,         # Short display label, e.g., "morning"
+    "path": str,          # Full ancestry, e.g., "MIND > ABSENT-MINDED > morning"
+    "text": str,          # Extended description (may be NULL)
+    "order_index": int,
+    "hierarchy_status": str,
+}
 ```
-Rubric
-├── id: int (SQLite PK)
-├── chapter: str          # e.g., "MIND", "HEAD"
-├── section: str          # sub-chapter
-├── rubric_text: str      # the symptom description
-└── remedies: List[RemedyScore]
 
-RemedyScore
-├── remedy_name: str      # e.g., "Sulphur"
-└── degree: int           # 1 (minor) to 4 (major)
+### Remedy (SQLite `remedies` table — 679 rows)
 
-ClinicalCase
-├── case_id: str          # UUID
-├── case_text: str        # free-text narrative
-├── bio_tokens: List[BIOToken]
-├── dimensions: CaseDimensions
-└── retrieved_rubrics: List[RubricMatch]
+```python
+remedy = {
+    "id": int,
+    "abbreviation": str,  # e.g., "Acon.", "Nat-m." — may be NULL for unresolved OCR
+    "normalized": str,    # Lowercase key, e.g., "acon", "nat-m"
+    "full_name": str,     # e.g., "Aconitum napellus" — may be NULL for unresolved
+}
+```
 
-BIOToken
-├── token: str
-├── label: str            # "B-SYM", "I-SYM", "B-MOD", "O", etc.
-└── confidence: float
+### Remedy Grade (from `rubric_remedies` table — 507,179 rows)
 
-CaseDimensions          # 7 required dimensions
-├── chief_complaint: str
-├── onset_duration: str
-├── location: str
-├── modalities: str       # worse/better factors
-├── concomitants: str
-├── mental_generals: str
-└── physical_generals: str
+Kent's Repertory uses a **3-grade typographic system** (not 4):
 
-RubricMatch
-├── rubric: Rubric
-└── score: float          # cosine similarity from ChromaDB
+| Grade | Typography | Meaning |
+|---|---|---|
+| 3 | BOLD CAPITALS | Highest prominence — verified in provings and clinical practice |
+| 2 | Bold Italics | Moderately verified |
+| 1 | Roman (plain text) | Clinical observation only |
+
+> **Important**: The `grade` column (human-reviewed) is NULL for ALL 507,179 rows.
+> Only `grade_candidate` (auto-detected OCR) is populated for 458,354 rows.
+> The DAL always resolves via `COALESCE(grade, grade_candidate, 1)` — default is 1, not 0.
+> Never assume grades are authoritative.
+
+Always guard for `None` on `abbreviation` and `full_name` when iterating rubric remedies
+(GOTCHAS.md §1.2 — unresolved OCR tokens).
+
+---
+
+## BIO Label Space (15 classes — from Context/DATA.md)
+
+The project uses **exactly these 15 BIO classes**. Do not add, rename, or invent others.
+
+| Category | Description | BIO Tags |
+|---|---|---|
+| `LOC` | Anatomical location / organ | `B-LOC`, `I-LOC` |
+| `SEN` | Sensation description | `B-SEN`, `I-SEN` |
+| `MOD_AGG` | Aggravation (worse from) | `B-MOD_AGG`, `I-MOD_AGG` |
+| `MOD_AMEL` | Amelioration (better from) | `B-MOD_AMEL`, `I-MOD_AMEL` |
+| `CONC` | Concomitant symptom | `B-CONC`, `I-CONC` |
+| `TEMP` | Temporal modality | `B-TEMP`, `I-TEMP` |
+| `MENT` | Mental / Emotional state | `B-MENT`, `I-MENT` |
+| Outside any span | — | `O` |
+
+**Forbidden labels** (do NOT use): `B-SYM`, `I-SYM`, `B-MOD`, `I-MOD`, `B-REM`, `I-REM`, `B-DUR`, `I-DUR`.
+
+---
+
+## SyntheticCase Schema (from Context/DATA.md)
+
+Each line in `data/processed/mind_cases.jsonl` (and `train.jsonl`, `val.jsonl`, `test.jsonl`):
+
+```json
+{
+  "case_id": "case_4_1_a1b2c3",
+  "rubric_id": 4,
+  "rubric_path": "MIND > ABSENT-MINDED",
+  "narrative": "Doctor, I feel terribly absent-minded every morning...",
+  "entities": [
+    { "text": "absent-minded", "label": "MENT", "start": 23, "end": 36 },
+    { "text": "every morning", "label": "TEMP", "start": 37, "end": 50 }
+  ],
+  "tokens": ["Doctor", ",", "I", "feel", "terribly", "absent", "-", "minded", "every", "morning", "."],
+  "bio_tags": ["O", "O", "O", "O", "O", "B-MENT", "I-MENT", "I-MENT", "B-TEMP", "I-TEMP", "O"],
+  "metadata": {
+    "model": "llama3:8b",
+    "backend": "ollama",
+    "rubric_id": 4,
+    "top_remedies": ["Cann-i.", "Lach.", "Nux-v."],
+    "case_idx": 1
+  }
+}
+```
+
+Do NOT invent a `ClinicalCase` with different fields. Use this schema.
+
+---
+
+## SymptomProfile (from `src/models/resolver.py`)
+
+The 7-dimension resolver output dataclass:
+
+```python
+@dataclass
+class SymptomProfile:
+    LOC: List[str]       # Anatomical locations extracted
+    SEN: List[str]       # Sensations
+    MOD_AGG: List[str]   # Aggravations
+    MOD_AMEL: List[str]  # Ameliorations
+    CONC: List[str]      # Concomitants
+    TEMP: List[str]      # Temporal modalities
+    MENT: List[str]      # Mental/emotional states
+    negated: List[str]   # Negated symptom strings
+    # get_search_queries() method synthesizes ChromaDB query strings
 ```
 
 ---
 
 ## Modeling Workflow
 
-### Step 1 — Identify Entities and Relationships
-List all nouns in the feature description. Each noun is a candidate entity.
-Draw the relationship: 1:1, 1:N, N:M.
+### Step 1 — Inspect Existing Entities
+Before defining any new entity, check:
+- `Context/DATA.md` — database schema and key constants
+- `src/data/kent_db.py` — what the DAL already returns
+- `src/models/resolver.py` — existing `SymptomProfile`
+- `src/pipeline/report_generator.py` — output report schema
 
-### Step 2 — Map to Existing Code
-Check if an entity already exists:
-- SQLite schema → `data/raw/repertory.sqlite` (use `kent-repertory-inspector`)
-- Python dataclass/dict → `src/data/`, `src/pipeline/`
-- JSON schema → `data/schemas/`
+### Step 2 — Define New Entities
+Only define a new entity if it genuinely does not exist in the above sources.
+Use a Python `@dataclass` for new structured types.
 
-### Step 3 — Define the Schema
+### Step 3 — Validate Against Real Data
+If the entity is persisted or serialised, validate instances against the
+`SyntheticCase` JSON schema in tests.
 
-For any new entity that is persisted or serialised, write a JSON Schema:
-
-```json
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "<EntityName>",
-  "type": "object",
-  "required": ["field1", "field2"],
-  "properties": {
-    "field1": { "type": "string", "description": "..." },
-    "field2": { "type": "integer", "minimum": 1, "maximum": 4 }
-  }
-}
-```
-
-Save to: `data/schemas/<entity_name>.schema.json`
-
-### Step 4 — Write a Python Dataclass
-
-```python
-from dataclasses import dataclass, field
-from typing import List
-
-@dataclass
-class <EntityName>:
-    """
-    <One-line description of the entity>.
-    
-    Attributes:
-        field1: <description>
-        field2: <description>
-    """
-    field1: str
-    field2: int
-```
-
-Place in the appropriate `src/` module per the architecture.
-
-### Step 5 — Validate
-- Validate all generated instances against the JSON schema in tests.
-- Ensure `ClinicalCase.dimensions` covers all 7 required dimensions.
+### Step 4 — Document
+Add any new entity to `Context/ARCHITECTURE.md` (Key Module API Summary section).
 
 ---
 
-## Modeling Rules
+## Key Constants (verified from live database — Context/DATA.md)
 
-- All `case_id` values are UUIDs — use `uuid.uuid4()`.
-- `degree` scores are always integers in [1, 4].
-- BIO labels follow the scheme: `B-<TYPE>`, `I-<TYPE>`, `O`
-  where `<TYPE>` ∈ {`SYM`, `LOC`, `MOD`, `REM`, `DUR`}.
-- `CaseDimensions` must always have all 7 fields populated (no None).
-- Any new entity must have a corresponding entry in `Context/ARCHITECTURE.md`.
+| Constant | Value |
+|---|---|
+| Total sections | 37 |
+| Total rubrics | 74,513 |
+| MIND rubrics (section_id=1) | 4,933 |
+| Total remedies | 679 |
+| Grade classes | 3 (1, 2, 3) |
+| BIO label classes | 15 |
+| ChromaDB embedding dim | 384 |
+| ChromaDB distance metric | Cosine (sim = 1 − distance) |

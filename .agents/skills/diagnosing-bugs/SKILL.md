@@ -22,7 +22,7 @@ Reproduce the bug with the **smallest possible input**.
 
 ```python
 # Scratch script — do NOT commit
-# Place in: tests/debug/repro_<issue>.py
+# Place in: tests/ temporarily, delete after diagnosis
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
@@ -52,24 +52,32 @@ logger.debug("Input received: %s", repr(input_value))
 logger.debug("Intermediate state: %s", repr(intermediate))
 ```
 
-Check existing log files first:
-- `logs/pilot_generation.log` — for case generation issues
-- `logs/chromadb_index.log` — for retrieval issues
-- Any traceback in the terminal output
+Check existing outputs first:
+- Terminal traceback and stdout from `pytest` or script runs
+- `logs/generation.log` — if the bug is in case generation
+- ChromaDB query return values (use `logger.debug` on `.query()` results)
 
 ---
 
-## Step 3 — Verify Against Docs / Schema
+## Step 3 — Verify Against Actual Code & Docs
 
-Before concluding a fix, verify your assumption:
+Before concluding a fix, verify your assumption against the actual repository.
 
 | Issue Type | Verification Source |
 |---|---|
-| ChromaDB query mismatch | `Context/GOTCHAS.md` + ChromaDB docs |
-| BIO tag shape error | `src/models/ner_model.py` docstring |
-| SQLite schema mismatch | Run `kent-repertory-inspector` skill |
-| JSON schema failure | `src/pipeline/schema.py` or `data/schemas/` |
-| Metric regression | Run `eval-metric-parser` skill |
+| SQLite query returns wrong shape | `src/data/kent_db.py` + `Context/DATA.md` (schema, grade COALESCE) |
+| BIO offset mismatch | `src/data/bio_tagger.py` — check `align_entity_offsets()` 4-tier ladder |
+| ChromaDB cosine distance confusion | `Context/GOTCHAS.md` §7.1 (distance ∈ [0,2]; sim = 1 − d) |
+| ChromaDB cross-test contamination | `Context/GOTCHAS.md` §7.4 (EphemeralClient collection isolation) |
+| Case JSON schema failure | `Context/DATA.md` §Synthetic Case Schema + `src/data/case_generator.py` |
+| NER token count mismatch | `Context/GOTCHAS.md` §6.2 (hyphenated terms split to 3 tokens) |
+| LLaMA 3 offset drift | `Context/GOTCHAS.md` §6.1 (±15 char window search in `bio_tagger.py`) |
+| LLM variation collapse | `Context/GOTCHAS.md` §6.5 (dynamic seed = seed + case_idx × 137) |
+| Config key missing | `configs/model.yaml`, `configs/generation.yaml`, etc. (loaded via `src.config.load_config()`) |
+| Resolver 7-dim extraction wrong | `src/models/resolver.py` — check `SymptomProfile` dataclass fields |
+| Ranker grade weighting wrong | `src/search/ranker.py` — grades 1/2/3 only (COALESCE default = 1) |
+| State machine stuck in wrong state | `src/chatbot/state_machine.py` — `IntakeState` enum transitions |
+| Dialogue slot not updated | `src/chatbot/dialogue_manager.py` — slot tracker logic |
 
 ---
 
@@ -94,9 +102,34 @@ Hypothesis: <current best guess>
 
 ---
 
-## Kent-AI Known Gotchas (from Context/GOTCHAS.md)
+## Actual Kent-AI Module Map
 
-- ChromaDB `persist_directory` must exist before instantiation.
-- LLaMA 3 generation can time out on CPU — always set `timeout` param.
-- `kent_db.py` returns raw SQLite rows; always convert to `dict` before downstream use.
-- BIO token count must exactly match the tokeniser output length — off-by-one is the most common NER bug.
+```
+src/data/kent_db.py          — SQLite DAL (real DB in tests — no mocks)
+src/data/bio_tagger.py       — BIO token tagger with offset drift repair
+src/data/case_generator.py   — LLaMA 3 synthetic case pipeline (Ollama REST + Mock)
+src/data/splitter.py         — 80/10/10 stratified deficit splitter
+
+src/models/symptom_ner.py    — Bio_ClinicalBERT NER wrapper (Phase 3 stub)
+src/models/resolver.py       — LLaMA post-processor & negation resolver
+src/models/trainer.py        — Training loop (Phase 3 stub)
+
+src/search/embedder.py       — sentence-transformers embedder (lazy load)
+src/search/vector_store.py   — ChromaDB wrapper with HNSW cosine index
+src/search/ranker.py         — Remedy intersection & grade ranker
+
+src/chatbot/state_machine.py   — FSM with IntakeState enum
+src/chatbot/dialogue_manager.py — Multi-turn dialogue manager
+src/chatbot/prompts.py         — Prompt templates
+
+src/pipeline/orchestrator.py    — End-to-end transcript → report orchestrator
+src/pipeline/report_generator.py — JSON + Markdown report generator
+
+src/dashboard/app.py            — Streamlit 4-workspace clinical portal
+src/dashboard/styles.py         — CSS injection
+src/dashboard/styles.css        — Google Stitch CSS theme
+src/dashboard/dimensions.py     — DIMENSION_MAP single source of truth
+src/dashboard/components/chat_viewer.py  — Multi-turn chat HUD
+src/dashboard/components/rubric_tree.py  — Rubric cards with remedy inspector
+src/dashboard/components/icons.py        — Icon helpers
+```

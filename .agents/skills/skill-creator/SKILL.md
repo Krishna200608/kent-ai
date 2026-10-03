@@ -4,7 +4,8 @@ description: >
   Creates new agent skills for the kent-ai .agents/skills/ directory.
   Use when the user asks to package a workflow, interaction, or process
   as a reusable skill, or when a new recurring task pattern is identified
-  that would benefit from standardised agent instructions.
+  that would benefit from standardised agent instructions. Always inspects
+  the repository and all existing skills before creating anything new.
 ---
 
 # Skill Creator Skill — Kent-AI
@@ -16,20 +17,65 @@ The agent reads `SKILL.md` before executing the skill's workflow.
 
 ---
 
+## Mandatory First Step: Inspect Before Creating
+
+Before drafting a new skill, you MUST:
+
+1. **List all existing skills**:
+   ```
+   .agents/skills/
+   ```
+   Check for any skill that already covers the proposed task, even partially.
+
+2. **Read relevant existing SKILL.md files** if names overlap.
+
+3. **Read the repository context**:
+   - `Context/ARCHITECTURE.md` — to ground any path or module references.
+   - `Context/CONVENTIONS.md` — to ensure the skill enforces project style.
+   - `Context/PROGRESS.md` — to understand current phase and active work.
+
+4. **Only proceed if no existing skill covers the need** and no existing skill would be made contradictory by the new one.
+
+---
+
+## Existing Skills (Do Not Duplicate or Contradict)
+
+**Kent-AI domain skills:**
+- `case-generation-watcher` — Monitors/audits the LLaMA 3 generation pipeline
+- `chromadb-rubric-tester` — Validates ChromaDB index over 74,513 rubrics
+- `context-protocol-sync` — Enforces updates across all Context/ files
+- `eval-metric-parser` — Executes and parses evaluation metrics
+- `kent-repertory-inspector` — Queries and debugs the Kent SQLite database
+
+**Engineering skills:**
+- `tdd` — Red-Green-Refactor TDD workflow with pytest
+- `diagnosing-bugs` — 4-step bug diagnosis ladder
+- `code-review` — Full review checklist
+- `codebase-design` — Architecture enforcement and DDR template
+- `research` — Source-grounded literature and technical research
+- `improve-codebase-architecture` — Safe refactoring workflow
+- `frontend-design` — Streamlit UI conventions and design system
+- `agent-browser` — Browser automation for JS-rendered pages
+- `skill-creator` — This skill (meta: creates new skills)
+- `domain-modeling` — Rubric/entity schema and BIO label conventions
+
+---
+
 ## Skill Creation Workflow
 
 ### Step 1 — Identify the Skill Boundary
 A good skill:
 - Solves one recurring, well-defined task.
 - Has a clear trigger condition ("Use when...").
-- Has a clear termination condition ("Stop when...").
-- Does NOT overlap with an existing skill (check `.agents/skills/`).
+- Has a clear stop condition ("Stop when...").
+- Does NOT duplicate an existing skill (verified above).
+- Does NOT contradict guidance in an existing skill.
 
 ### Step 2 — Draft the SKILL.md
 
 ```markdown
 ---
-name: <skill-name>                  # kebab-case, matches directory name
+name: <skill-name>                  # kebab-case, matches directory name exactly
 description: >
   <One paragraph. Start with the primary use case.
   Include trigger conditions. Include what NOT to use it for.>
@@ -50,22 +96,22 @@ description: >
 ## Workflow
 ### Step 1 — ...
 ### Step 2 — ...
-### Step N — ...
 
-## Output / Definition of Done
+## Definition of Done
 - [ ] <Verifiable completion criterion 1>
 - [ ] <Verifiable completion criterion 2>
 ```
 
-### Step 3 — Validate
+### Step 3 — Validate Before Writing
 
-Before writing the file, verify:
 - [ ] `name` in frontmatter matches the directory name exactly.
-- [ ] `description` starts with a use-case verb ("Use when", "Guides", "Monitors").
-- [ ] No duplicate of an existing skill in `.agents/skills/`.
-- [ ] The skill does NOT instruct the agent to modify source code directly
-      (skills are instructions, not code generators, unless specifically required).
-- [ ] References to `Context/` files use correct relative paths.
+- [ ] `description` starts with a use-case statement ("Use when...", "Guides...", "Monitors...").
+- [ ] Every path referenced (`src/`, `configs/`, `Context/`, `tests/`) actually exists in the repo.
+- [ ] BIO labels used only from the 15-class system (`O`, `B-LOC`, `I-LOC`, ..., `B-MENT`, `I-MENT`).
+- [ ] Config directory referenced as `configs/`, not `config/`.
+- [ ] No invented module names — verify against `Context/ARCHITECTURE.md`.
+- [ ] No duplicate of an existing skill.
+- [ ] No contradiction with an existing skill's guidance.
 
 ### Step 4 — Create the File
 
@@ -73,42 +119,27 @@ Before writing the file, verify:
 .agents/skills/<skill-name>/SKILL.md
 ```
 
-Do NOT create any other files unless the skill requires supporting resources
-(e.g., a `scripts/` or `examples/` subdirectory with a clear purpose).
+Only create additional files if the skill genuinely requires supporting resources
+(e.g., a `scripts/` helper). Keep skills self-contained.
 
-### Step 5 — Register / Announce
+### Step 5 — Report
 
 After creation, report:
 ```
 Created skill: .agents/skills/<skill-name>/SKILL.md
-Trigger: "<first line of description>"
-Conflicts with existing skills: None / <list>
+Trigger      : "<first line of description>"
+Checked for duplicates: None found
+Checked for contradictions: None found
 ```
 
 ---
 
-## Kent-AI Skill Naming Convention
+## Naming Convention
+
+All skill names must be **kebab-case** and **all-lowercase**.
 
 | Pattern | Example |
 |---|---|
 | `<domain>-<action>` | `kent-repertory-inspector` |
 | `<process>-<noun>` | `case-generation-watcher` |
 | `<verb>-<noun>` (generic) | `diagnosing-bugs`, `code-review` |
-
-All skill names must be **kebab-case** and **all-lowercase**.
-
----
-
-## Existing Skills (Do Not Duplicate)
-
-**Kent-AI domain skills:**
-- `case-generation-watcher`
-- `chromadb-rubric-tester`
-- `context-protocol-sync`
-- `eval-metric-parser`
-- `kent-repertory-inspector`
-
-**Engineering skills:**
-- `tdd`, `diagnosing-bugs`, `code-review`, `codebase-design`
-- `research`, `improve-codebase-architecture`, `frontend-design`
-- `agent-browser`, `skill-creator`, `domain-modeling`
