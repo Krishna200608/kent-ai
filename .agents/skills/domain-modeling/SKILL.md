@@ -126,21 +126,51 @@ Do NOT invent a `ClinicalCase` with different fields. Use this schema.
 
 ## SymptomProfile (from `src/models/resolver.py`)
 
-The 7-dimension resolver output dataclass:
+The 7-dimension resolver output dataclass.
+
+> **Important**: The Python field names use descriptive snake_case, **not** the
+> uppercase BIO domain codes. Do NOT write `profile.LOC`, `profile.SEN`, etc. —
+> these are not valid Python attributes.
 
 ```python
 @dataclass
 class SymptomProfile:
-    LOC: List[str]       # Anatomical locations extracted
-    SEN: List[str]       # Sensations
-    MOD_AGG: List[str]   # Aggravations
-    MOD_AMEL: List[str]  # Ameliorations
-    CONC: List[str]      # Concomitants
-    TEMP: List[str]      # Temporal modalities
-    MENT: List[str]      # Mental/emotional states
-    negated: List[str]   # Negated symptom strings
-    # get_search_queries() method synthesizes ChromaDB query strings
+    chief_complaint: str = ""
+    location:       List[str] = field(default_factory=list)  # LOC dimension
+    sensation:      List[str] = field(default_factory=list)  # SEN dimension
+    modality_agg:   List[str] = field(default_factory=list)  # MOD_AGG dimension
+    modality_amel:  List[str] = field(default_factory=list)  # MOD_AMEL dimension
+    concomitant:    List[str] = field(default_factory=list)  # CONC dimension
+    temporal:       List[str] = field(default_factory=list)  # TEMP dimension
+    mental:         List[str] = field(default_factory=list)  # MENT dimension
+    negated:        List[str] = field(default_factory=list)
+    raw_entities:   List[Dict[str, Any]] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]: ...
+    def get_search_queries(self) -> List[str]: ...
+    # get_search_queries() synthesizes composite ChromaDB query strings
+    # e.g. "forehead throbbing worse from sun", "anxiety in morning"
 ```
+
+### Domain Code → Python Field Mapping
+
+| Domain Code | Python Field | Example values |
+|---|---|---|
+| `LOC` | `location` | `["right side of head"]` |
+| `SEN` | `sensation` | `["throbbing", "burning"]` |
+| `MOD_AGG` | `modality_agg` | `["worse in morning"]` |
+| `MOD_AMEL` | `modality_amel` | `["better by pressure"]` |
+| `CONC` | `concomitant` | `["with nausea"]` |
+| `TEMP` | `temporal` | `["at midnight"]` |
+| `MENT` | `mental` | `["anxiety", "irritable"]` |
+
+Additional fields (not BIO dimensions):
+
+| Field | Type | Purpose |
+|---|---|---|
+| `chief_complaint` | `str` | First-sentence summary of the complaint |
+| `negated` | `List[str]` | Symptom strings explicitly denied by the patient |
+| `raw_entities` | `List[Dict]` | Original entity dicts from NER (`text`, `label`, `start`, `end`) |
 
 ---
 

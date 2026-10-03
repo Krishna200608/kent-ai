@@ -55,7 +55,12 @@ security, maintainability, or performance**. Praise good patterns explicitly.
 | `src/search/` | Embeddings, ChromaDB, ranking | Training loops |
 | `src/chatbot/` | State machine, dialogue, prompts | Direct DB access |
 | `src/pipeline/` | Orchestration | Implementation details of any one module |
-| `src/dashboard/` | Streamlit UI rendering | Business logic (delegates to `src/pipeline/`) |
+| `src/dashboard/` | Streamlit UI rendering and UI orchestration | — see note below |
+
+> **Dashboard Boundary**: `src/dashboard/app.py` directly coordinates `KentDB`,
+> `DialogueManager`, `PipelineOrchestrator`, `RubricVectorStore`, `RubricEmbedder`,
+> and `RemedyRanker`. This is the current architecture — do NOT flag these imports
+> as layer violations or refactor them without explicit instruction.
 
 ### 5. Tests (per Context/CONVENTIONS.md §8)
 - [ ] Every new public function has at least one corresponding test.
@@ -74,7 +79,12 @@ security, maintainability, or performance**. Praise good patterns explicitly.
 - [ ] BIO labels use only the 15-class system: `O`, `B-LOC`, `I-LOC`, `B-SEN`, `I-SEN`, `B-MOD_AGG`, `I-MOD_AGG`, `B-MOD_AMEL`, `I-MOD_AMEL`, `B-CONC`, `I-CONC`, `B-TEMP`, `I-TEMP`, `B-MENT`, `I-MENT`.
 - [ ] Special tokens (`[CLS]`, `[SEP]`, `[PAD]`) labeled with `-100`, not `"O"` (GOTCHAS.md §6.4).
 - [ ] Hyphenated terms like `absent-minded` split by `r"\w+|[^\w\s]"` → 3 tokens with correct BIO continuation (GOTCHAS.md §6.2).
-- [ ] `SymptomProfile` resolver output contains all 7 dimensions: `LOC`, `SEN`, `MOD_AGG`, `MOD_AMEL`, `CONC`, `TEMP`, `MENT`.
+- [ ] `SymptomProfile` contains all seven clinical dimensions using the actual
+      Python fields `location`, `sensation`, `modality_agg`, `modality_amel`,
+      `concomitant`, `temporal`, and `mental`; these correspond respectively
+      to BIO/domain codes `LOC`, `SEN`, `MOD_AGG`, `MOD_AMEL`, `CONC`, `TEMP`,
+      and `MENT`. Do NOT access `profile.LOC`, `profile.SEN`, etc. — these are
+      not valid Python attributes.
 
 ---
 

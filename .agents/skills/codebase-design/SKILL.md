@@ -88,8 +88,25 @@ kent-ai/
 | `src/search/` | Embeddings, ChromaDB, ranking | Training loops |
 | `src/chatbot/` | State machine, dialogue, prompts | Direct DB access |
 | `src/pipeline/` | Orchestration of above modules | Implementation details of any one module |
-| `src/dashboard/` | Streamlit UI rendering | Business logic (delegates to `src/pipeline/`) |
+| `src/dashboard/` | Streamlit UI rendering and UI orchestration | — see Dashboard Boundary below |
 | `scripts/` | CLI entry points only | Testable logic (imports from `src/`) |
+
+### Dashboard Boundary
+
+`src/dashboard/` owns Streamlit presentation and UI orchestration.
+
+The current implementation in `src/dashboard/app.py` directly coordinates
+several backend services: `KentDB`, `DialogueManager`, `PipelineOrchestrator`,
+`RubricVectorStore`, `RubricEmbedder`, and `RemedyRanker`. Treat this as the
+current architecture, not as an automatic violation.
+
+**Do NOT refactor these dependencies** solely to enforce a stricter
+`dashboard → pipeline` boundary.
+
+Only introduce a new boundary or move responsibilities when:
+1. explicitly requested by the project owner,
+2. required to fix a demonstrated defect, or
+3. formally adopted through an Architecture Decision Record in `Context/ARCHITECTURE.md`.
 
 ### 2. Single Responsibility
 Each module file = one primary class or one cohesive set of functions.

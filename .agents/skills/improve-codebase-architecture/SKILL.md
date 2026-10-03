@@ -88,6 +88,18 @@ Add a DDR entry (see `codebase-design` skill for the template).
 | `src/search/embedder.py` | Embedding model name must come from `configs/chromadb.yaml`, not hardcoded (lazy load is already correct — do not break it) |
 | `src/dashboard/app.py` | `src/dashboard/dimensions.py` is already the single source of truth for `DIMENSION_MAP` — ensure nothing bypasses it |
 
+### Dashboard Boundary
+
+`src/dashboard/app.py` directly coordinates `KentDB`, `DialogueManager`,
+`PipelineOrchestrator`, `RubricVectorStore`, `RubricEmbedder`, and `RemedyRanker`.
+This is an existing architectural characteristic, not automatically a defect.
+
+**Do NOT refactor the dashboard/backend boundary** to enforce a stricter
+`dashboard → pipeline` layering unless:
+1. explicitly requested by the project owner,
+2. required to fix a demonstrated defect, or
+3. formally adopted through an Architecture Decision Record in `Context/ARCHITECTURE.md`.
+
 ---
 
 ## Forbidden Actions During Refactoring
@@ -97,3 +109,4 @@ Add a DDR entry (see `codebase-design` skill for the template).
 - Do NOT update `Context/PROGRESS.md` milestone status during a refactor — only do that when a feature phase is complete.
 - Do NOT introduce relative imports (`from .module import ...`).
 - Do NOT hardcode a config value that should come from `configs/*.yaml`.
+- Do NOT refactor the `src/dashboard/app.py` backend imports solely to enforce an abstract layer boundary — this requires explicit instruction.
