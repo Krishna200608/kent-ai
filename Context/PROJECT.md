@@ -1,7 +1,7 @@
 # Kent-AI — Project Context
 
-> Last updated: 2026-09-26 by Antigravity (Phase 1 case generation agent)
-> Phase: 1 (active)
+> Last updated: 2026-10-26 by Antigravity
+> Phase: 1 / 7 (Core Pipeline Operational; Production GPU Generation Next)
 
 ---
 
@@ -18,6 +18,7 @@ It takes a patient's natural-language symptom description, extracts structured c
 | Krishna Sikheriya | Lead Developer | IIIT Allahabad |
 | Lokesh Bawariya | Developer | IIIT Allahabad |
 | Naitik Jain | Developer | IIIT Allahabad |
+| Dr. Nikhilanand Arya | Project Supervisor | IIIT Allahabad |
 
 ### Core Technology Stack
 
@@ -63,16 +64,16 @@ It takes a patient's natural-language symptom description, extracts structured c
 | Phase | Name | Status | Days |
 |---|---|---|---|
 | 0 | Scaffolding & Data Layer | ✅ Complete | 1–2 |
-| 1 | Synthetic Case Generation (LLaMA 3) | 🔄 In Progress (Pipeline Ready) | 3–7 |
-| 2 | ChromaDB Rubric Index | ⬜ Planned | 5–6 |
-| 3 | ClinicalBERT NER Training | ⬜ Planned | 8–10 |
-| 4 | LLaMA 3 Post-Processor | ⬜ Planned | 11–12 |
-| 5 | Pipeline & Remedy Ranking | ⬜ Planned | 13–15 |
-| 6 | Conversational Chatbot | ⬜ Planned | 16–19 |
-| 7 | Streamlit Dashboard | ⬜ Planned | 20–24 |
-| 8 | Polish, Docs & Defense | ⬜ Planned | 25–28 |
+| 1 | Synthetic Case Generation (LLaMA 3) | 🔄 Pipeline Ready (Pilot Validated; Production GPU Run Next) | 3–7 |
+| 2 | ChromaDB Rubric Index (74,513 rubrics) | ✅ Complete | 5–6 |
+| 3 | Bio_ClinicalBERT NER Training | ⬜ Planned (Colab / GPU) | 8–10 |
+| 4 | LLaMA 3 Post-Processor & Resolver | ✅ Complete | 11–12 |
+| 5 | Pipeline & Remedy Ranking Engine | ✅ Complete | 13–15 |
+| 6 | Conversational Intake Chatbot | ✅ Complete | 16–19 |
+| 7 | Streamlit Clinical Dashboard (Stitch Standard) | ✅ Complete | 20–24 |
+| 8 | Academic Benchmark, Docs & Defense | ⬜ Planned | 25–28 |
 
-Full roadmap details: [`docs/project_foundation.md`](../docs/project_foundation.md)
+Full roadmap & phase tracking details: [`Context/PROGRESS.md`](PROGRESS.md)
 
 ---
 

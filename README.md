@@ -201,14 +201,16 @@ kent-ai/
 │   ├── raw/                    # Immutable source repertory database (repertory.sqlite)
 │   ├── processed/              # Pilot cases (pilot_100_cases.jsonl) & generation checkpoints
 │   └── embeddings/             # Persistent ChromaDB rubric vectors (74,513 indexed)
-├── docs/                       # Architecture documentation, design system, and setup guides
-│   ├── DESIGN.md               # Google Stitch UI/UX design tokens & glassmorphism theme
+├── docs/                       # Project documentation, evaluation milestones, and guides
+│   ├── Next_Steps.md           # Supervisor meeting brief & roadmap
 │   ├── GPU_SETUP_GUIDE.md      # Step-by-step SSH & College GPU cluster execution guide
-│   └── Report/Content.md       # Master report & 20-slide defense presentation blueprint
-├── logs/                       # Runtime logs (git-ignored, e.g., pilot_generation.log)
+│   ├── DESIGN.md               # Google Stitch UI/UX design tokens & glassmorphism theme
+│   └── Evaluation/             # Semester evaluation deliverables
+│       ├── Pilot/              # 100-case pilot evaluation report & generation log
+│       ├── Mid_Sem/            # Mid-semester report, slides, and presentation materials
+│       └── End_Sem/            # Final semester thesis and evaluation suite
+├── logs/                       # Runtime execution logs (git-ignored)
 ├── notebooks/                  # Exploratory data analysis & validation notebooks
-├── reports/                    # Formal evaluation reports
-│   └── pilot_100_cases_evaluation.md # Statistical audit report of the 100-case pilot run
 ├── scripts/                    # Production execution pipelines
 │   ├── audit_pilot.py          # Statistical auditor (BIO slice accuracy, Jaccard overlap)
 │   ├── build_embeddings.py     # ChromaDB batch indexer across 74,513 rubrics

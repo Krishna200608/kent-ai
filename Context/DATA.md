@@ -1,7 +1,7 @@
 # Kent-AI — Data Context
 
-> Last updated: 2026-09-26 by Antigravity (Phase 0 scaffolding agent)
-> Phase: 0 (complete)
+> Last updated: 2026-10-26 by Antigravity
+> Phase: 1 / 7 (Core Data & Vectors Operational; Production Dataset Next)
 
 ---
 
@@ -282,6 +282,15 @@ Each line in `mind_cases.jsonl`, `train.jsonl`, `val.jsonl`, and `test.jsonl` is
 | `TEMP` | Temporal modality | morning, at night, 3 AM, twilight | `B-TEMP`, `I-TEMP` |
 | `MENT` | Mental / Emotional state | anxiety, weeping, fear of death, rage | `B-MENT`, `I-MENT` |
 | `O` | Outside any entity span | punctuation, stop words, non-symptoms | `O` |
+
+### Processed Datasets & Benchmark Artifacts
+
+| Dataset File | Records | Purpose / Status | Audit Evidence |
+|---|---|---|---|
+| `data/processed/pilot_100_cases.jsonl` | 100 cases | Stratified pilot dataset (25 MIND rubrics × 4 variations) | `docs/Evaluation/Pilot/pilot_100_cases_evaluation.md` (100% schema, 0 drift) |
+| `data/processed/train.jsonl` | ~17,760 (Target) | 80% training split for Bio_ClinicalBERT HomeoNER | Generated via `scripts/run_gpu_generation.sh --split` |
+| `data/processed/val.jsonl` | ~2,220 (Target) | 10% validation split for model selection & early stopping | Generated via `scripts/run_gpu_generation.sh --split` |
+| `data/processed/test.jsonl` | ~2,220 (Target) | 10% test split for academic benchmarking (`scripts/evaluate.py`) | Generated via `scripts/run_gpu_generation.sh --split` |
 
 ---
 

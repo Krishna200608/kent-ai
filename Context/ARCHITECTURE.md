@@ -1,7 +1,7 @@
 # Kent-AI — Architecture Context
 
-> Last updated: 2026-09-26 by Antigravity (Phase 0 scaffolding agent)
-> Phase: 0 (complete)
+> Last updated: 2026-10-26 by Antigravity
+> Phase: 1 / 7 (Core Architecture Verified; 64 Unit Tests Passing)
 
 ---
 
@@ -27,7 +27,7 @@ kent-ai/
 │   │       ├── sections.json              # Section metadata export
 │   │       ├── remedies.json              # Remedy dictionary export
 │   │       └── manifest.json              # Upstream bundle manifest
-│   ├── processed/                         # Generated artifacts: mind_cases.jsonl, train/val/test.jsonl
+│   ├── processed/                         # Generated artifacts: pilot_100_cases.jsonl, train/val/test.jsonl
 │   └── embeddings/kent_rubrics/           # ChromaDB persistent HNSW index (Phase 2)
 │
 ├── src/
@@ -42,8 +42,8 @@ kent-ai/
 │   │   └── splitter.py            # ★ CORE: 80/10/10 stratified deficit splitter — implemented
 │   │
 │   ├── models/
-│   │   ├── symptom_ner.py         # Stub: ClinicalBERT NER wrapper (Phase 3)
-│   │   ├── trainer.py             # Stub: Training loop (Phase 3)
+│   │   ├── symptom_ner.py         # ★ CORE: Bio_ClinicalBERT wrapper with subword inference & mock fallback — implemented
+│   │   ├── trainer.py             # ★ CORE: Bio_ClinicalBERT fine-tuning loop with SeqEval & early stopping — implemented
 │   │   └── resolver.py            # ★ CORE: LLaMA post-processor & negation resolver (Phase 4) — implemented
 │   │
 │   ├── search/
@@ -62,34 +62,54 @@ kent-ai/
 │   │
 │   └── dashboard/
 │       ├── app.py                 # ★ CORE: Streamlit 4-workspace clinical portal with Totality Matrix (Phase 7) — implemented
-│       ├── styles.py              # ★ CORE: Google Stitch CSS injection, pulse glow, cards, custom scrollbar (Phase 7) — implemented
+│       ├── dimensions.py          # ★ CORE: Canonical DIMENSION_MAP & pluralization helpers — implemented
+│       ├── styles.py              # ★ CORE: Google Stitch CSS injection, pulse glow, cards (Phase 7) — implemented
+│       ├── styles.css             # ★ CORE: Google Stitch CSS styles (midnight canvas #0A0F1D) — implemented
 │       └── components/
 │           ├── rubric_tree.py     # ★ CORE: Rubric cards with expandable 3-grade remedy inspector (Phase 7) — implemented
-│           └── chat_viewer.py     # ★ CORE: Multi-turn chat HUD with live slot pills & suggestion chips (Phase 7) — implemented
+│           ├── chat_viewer.py     # ★ CORE: Multi-turn chat HUD with live slot pills & suggestions (Phase 7) — implemented
+│           └── icons.py           # ★ CORE: Icon rendering helpers — implemented
 │
 ├── scripts/
-│   ├── generate_cases.py          # CLI: synthetic case gen (Phase 1)
-│   ├── build_embeddings.py        # CLI: ChromaDB indexer (Phase 2)
-│   ├── train_ner.py               # CLI: ClinicalBERT training (Phase 3)
-│   ├── evaluate.py                # CLI: pipeline evaluation (Phase 5)
-│   └── export_model.py            # CLI: model packaging
+│   ├── generate_cases.py          # CLI: full production case generator with --split and --resume
+│   ├── generate_pilot_sample.py   # CLI: stratified 100-case pilot generator across 25 MIND rubrics
+│   ├── audit_pilot.py             # CLI: statistical audit (BIO offset accuracy, Jaccard diversity)
+│   ├── run_gpu_generation.sh      # Bash: turnkey automated runner for College GPU cluster
+│   ├── build_embeddings.py        # CLI: ChromaDB persistent vector indexer (74,513 rubrics)
+│   ├── train_ner.py               # CLI: Bio_ClinicalBERT HomeoNER training
+│   ├── chat_intake.py             # CLI: interactive patient consultation with 10-state FSM
+│   ├── evaluate.py                # CLI: pipeline benchmark evaluation (F1, MRR, Top-K)
+│   └── export_model.py            # CLI: model artifact packaging
 │
 ├── notebooks/
-│   └── 01_eda_repertory.ipynb     # EDA: sections, MIND depths, grades, search demo
+│   ├── 01_eda_repertory.ipynb     # EDA: sections, MIND depths, grades, search demo
+│   └── 02_case_generation_demo.ipynb # Interactive case generation & BIO inspection
 │
-├── tests/
-│   ├── test_kent_db.py            # ★ 13 tests: DB reader + config loader (all passing)
-│   ├── test_bio_tagger.py         # 1 placeholder test
-│   ├── test_symptom_ner.py        # 1 placeholder test
-│   ├── test_vector_store.py       # 1 placeholder test
-│   └── test_pipeline.py           # 1 placeholder test
+├── tests/                         # ★ 64 passing unit tests across 12 test modules
+│   ├── test_kent_db.py            # SQLite reader, views, FTS5 queries (13 tests)
+│   ├── test_bio_tagger.py         # Subword alignment & character offset repair (5 tests)
+│   ├── test_case_generator.py     # LLaMA 3 prompting & JSON parsing (4 tests)
+│   ├── test_splitter.py           # 80/10/10 deficit-balancing split algorithm (4 tests)
+│   ├── test_symptom_ner.py        # Tokenizer, subword tags & entity extraction (3 tests)
+│   ├── test_vector_store.py       # ChromaDB HNSW cosine retrieval & section filter (6 tests)
+│   ├── test_resolver.py           # SymptomProfile, negation & search queries (4 tests)
+│   ├── test_ranker.py             # Remedy totality scoring & grade weighting (5 tests)
+│   ├── test_pipeline.py           # End-to-end transcript-to-report pipeline (3 tests)
+│   ├── test_state_machine.py      # 10-state intake FSM & slot transitions (6 tests)
+│   ├── test_dialogue_manager.py   # Dialogue context & turn tracking (4 tests)
+│   └── test_dashboard.py          # Slot badges, Totality Matrix & report export (7 tests)
 │
 ├── docs/
-│   ├── architecture.md            # Mermaid flow diagrams
-│   ├── api_reference.md           # Internal module API docs
-│   ├── evaluation_results.md      # Metric tracking (Phase 0 baseline logged)
-│   ├── project_foundation.md      # Full roadmap & design principles
-│   └── Proposals/                 # Original project proposal materials
+│   ├── Next_Steps.md              # Supervisor meeting briefing & roadmap (Dr. Arya)
+│   ├── GPU_SETUP_GUIDE.md         # College GPU cluster SSH execution guide
+│   ├── DESIGN.md                  # Google Stitch UI/UX design tokens & CSS spec
+│   ├── Evaluation/                # Mid-semester evaluation, thesis materials & pilot study
+│   │   ├── Pilot/                 # 100-case pilot evaluation report & generation log
+│   │   ├── Mid_Sem/               # Mid-semester presentation, reports, and PDFs
+│   │   └── End_Sem/               # Final semester thesis and evaluation suite
+│   ├── Papers/                    # Academic literature & reference papers
+│   └── Proposals/                 # Original project proposals
+
 │
 ├── pyproject.toml                 # Build config, deps, pytest settings
 ├── Makefile                       # Shortcut targets: test, lint, serve, etc.
@@ -105,6 +125,39 @@ kent-ai/
 ---
 
 ## Data Flow (End-to-End Pipeline)
+
+```mermaid
+flowchart TD
+    subgraph Input ["Patient Intake Layer"]
+        A[Patient Chat Utterance] --> B[Conversational Intake Agent / State Machine]
+        B --> C[Full Consultation Transcript]
+    end
+
+    subgraph Extraction ["Clinical Information Extraction Layer"]
+        C --> D[Bio_ClinicalBERT NER Model]
+        D -->|BIO Token Spans| E[LLaMA 3 Clinical Resolver]
+        E -->|Negation Handling & Coreference| F[Structured 7-Dimension Clinical Profile]
+    end
+
+    subgraph Retrieval ["Hybrid Rubric Matching Engine"]
+        F --> G[Sentence-Transformers all-MiniLM-L6-v2]
+        G --> H[(ChromaDB Vector Store\n74,513 Kent Rubrics)]
+        F --> I[(SQLite FTS5 Full-Text Index)]
+        H --> J[Candidate Rubric Union & Deduplication]
+        I --> J
+    end
+
+    subgraph Repertorization ["Remedy Ranking & Provenance Layer"]
+        J --> K[Repertory Intersection Ranker]
+        K -->|Grade 3 / 2 / 1 Weighting| L[Ranked Remedy Differential]
+        L --> M[(Kent Repertory SQLite DB\nPages & Citations)]
+    end
+
+    subgraph Presentation ["Clinical Presentation Layer"]
+        M --> N[Patient Report Generator]
+        N --> O[Streamlit Clinician Dashboard]
+    end
+```
 
 ```
 Patient utterance
