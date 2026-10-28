@@ -18,14 +18,18 @@ from src.dashboard.dimensions import (
 def check_ollama_online(api_base: str = "http://127.0.0.1:11434") -> bool:
     """Direct HTTP ping to check if local Ollama daemon is active and responding.
     
-    Checks both 127.0.0.1 (IPv4) and localhost to handle Windows IPv6 resolution latency.
+    Checks 127.0.0.1 (IPv4) first to bypass Windows IPv6 resolution latency.
+    Bypasses system proxies for local addresses.
     """
-    candidates = [api_base, "http://127.0.0.1:11434", "http://localhost:11434"]
-    for base in candidates:
+    candidates = ["http://127.0.0.1:11434", api_base, "http://localhost:11434"]
+    seen = set()
+    unique_candidates = [c for c in candidates if c and not (c in seen or seen.add(c))]
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    for base in unique_candidates:
         try:
             url = f"{base.rstrip('/')}/api/tags"
             req = urllib.request.Request(url, method="GET")
-            with urllib.request.urlopen(req, timeout=1.5) as resp:
+            with opener.open(req, timeout=1.5) as resp:
                 if resp.status == 200:
                     return True
         except Exception:
@@ -178,7 +182,9 @@ def render_chat_interface(dm: DialogueManager) -> None:
                                 st.rerun()
 
     # Console Subheader with live LLM engine status indicator
-    is_llm_online = dm.is_ollama_online() if hasattr(dm, "is_ollama_online") else check_ollama_online()
+    is_llm_online = check_ollama_online(getattr(dm, "api_base", "http://127.0.0.1:11434"))
+    if is_llm_online and hasattr(dm, "api_base"):
+        dm.api_base = "http://127.0.0.1:11434"
     if is_llm_online:
         engine_badge_html = """
         <span style="font-size: 12px; color: #10B981; display: inline-flex; align-items: center; gap: 5px; font-weight: 600;" title="LLaMA 3:8B is online on localhost:11434 and providing dynamic empathetic clinical reasoning.">

@@ -50,6 +50,8 @@ from src.dashboard.dimensions import (
     pluralize,
 )
 
+import src.chatbot.dialogue_manager as dialogue_manager_mod
+importlib.reload(dialogue_manager_mod)
 from src.chatbot.dialogue_manager import DialogueManager
 from src.dashboard.components.chat_viewer import check_ollama_online
 from src.dashboard.components.icons import get_icon
@@ -99,6 +101,10 @@ def initialize_session():
             mock_mode=False,
         )
         st.session_state.dialogue_manager.get_greeting()
+    else:
+        # Ensure 127.0.0.1 is always set over localhost to bypass Windows IPv6 resolution delay
+        if getattr(st.session_state.dialogue_manager, "api_base", None) in ("http://localhost:11434", None):
+            st.session_state.dialogue_manager.api_base = "http://127.0.0.1:11434"
     if "current_report" not in st.session_state:
         st.session_state.current_report = None
     if "repertory_scope" not in st.session_state:

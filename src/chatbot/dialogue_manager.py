@@ -177,8 +177,9 @@ class DialogueManager:
             method="POST",
         )
 
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
         try:
-            with urllib.request.urlopen(req, timeout=60) as resp:
+            with opener.open(req, timeout=60) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 return data.get("message", {}).get("content", "").strip()
         except urllib.error.URLError as err:
@@ -188,14 +189,18 @@ class DialogueManager:
     def is_ollama_online(self) -> bool:
         """Check if local Ollama daemon is currently running and responding.
         
-        Attempts connection on configured base, 127.0.0.1 (IPv4), and localhost.
+        Attempts connection on 127.0.0.1 (IPv4) first to bypass Windows IPv6 resolution latency.
+        Uses empty proxy handler to avoid intercepting loopback requests.
         """
-        candidates = [self.api_base, "http://127.0.0.1:11434", "http://localhost:11434"]
-        for base in candidates:
+        candidates = ["http://127.0.0.1:11434", self.api_base, "http://localhost:11434"]
+        seen = set()
+        unique_candidates = [c for c in candidates if c and not (c in seen or seen.add(c))]
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        for base in unique_candidates:
             try:
                 url = f"{base.rstrip('/')}/api/tags"
                 req = urllib.request.Request(url, method="GET")
-                with urllib.request.urlopen(req, timeout=1.5) as resp:
+                with opener.open(req, timeout=1.5) as resp:
                     if resp.status == 200:
                         self.api_base = base
                         return True

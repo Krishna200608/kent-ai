@@ -159,8 +159,9 @@ class SymptomResolver:
             method="POST",
         )
 
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
         try:
-            with urllib.request.urlopen(req, timeout=3) as resp:
+            with opener.open(req, timeout=3) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 self._ollama_available = True
                 return data.get("response", "")
