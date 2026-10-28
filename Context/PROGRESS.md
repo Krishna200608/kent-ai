@@ -43,10 +43,11 @@ pytest tests/ -v
 
 ## Phase 1 — Synthetic Case Generation 🔄
 
-**Status**: Pipeline Implemented & Verified ✅ (Ready for production batch run on GPU)
-**Date**: 2026-09-26
+**Status**: Actively Running on College GPU (NVIDIA RTX 5000 Ada, 32GB VRAM) 🚀
+**Date**: 2026-10-27
 **Agent**: Antigravity (Gemini 3.8 Flash)
-**Target**: Generate ~22,200 MIND clinical cases using LLaMA 3 8B with crash-safe checkpointing
+**Target**: Generate ~19,732–22,200 MIND clinical cases across 4,933 rubrics using LLaMA 3 8B with crash-safe checkpointing
+**Active Job PID**: `1240645` | **Hardware**: NVIDIA RTX 5000 Ada (95% GPU util, ~20 cases/min)
 
 ### Tasks
 

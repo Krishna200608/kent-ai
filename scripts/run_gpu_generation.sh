@@ -11,6 +11,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${PROJECT_ROOT}"
 
 mkdir -p logs data/processed
+export PATH="$HOME/.local/bin:$PATH"
 
 echo "=================================================================="
 echo "  KENT-AI: PRODUCTION GPU CASE GENERATION PIPELINE"
@@ -37,10 +38,18 @@ else
     echo "[!] Warning: nvidia-smi not found. Generation will default to CPU (much slower)."
 fi
 
-# 3. Check and Start Ollama Daemon
+# 3. Check Repertory Database
+if [ ! -f "data/raw/repertory.sqlite" ] && [ ! -f "data/raw/kent_public_edition/repertory.sqlite" ]; then
+    echo "[*] Repertory database not found. Setting up database..."
+    ./scripts/setup_repertory_db.sh
+fi
+
+# 4. Check and Start Ollama Daemon
 echo "[*] Checking Ollama service..."
 if ! command -v ollama &>/dev/null; then
-    echo "[✗] Ollama is not installed. Install via: curl -fsSL https://ollama.com/install.sh | sh"
+    echo "[✗] Ollama is not installed or not in PATH."
+    echo "    Run: ./scripts/install_ollama_user.sh"
+    echo "    Or ensure ~/.local/bin is in your PATH: export PATH=\"\$HOME/.local/bin:\$PATH\""
     exit 1
 fi
 

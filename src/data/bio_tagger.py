@@ -93,8 +93,11 @@ class BIOTagger:
         Returns:
             Aligned EntitySpan or None if entity text could not be located in narrative.
         """
-        ent_text = entity.get("text", "").strip()
-        label = entity.get("label", "").strip()
+        if not isinstance(entity, dict):
+            return None
+
+        ent_text = str(entity.get("text", "")).strip()
+        label = str(entity.get("label", "")).strip()
         if not ent_text or not label:
             return None
 

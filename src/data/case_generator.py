@@ -297,8 +297,13 @@ class CaseGenerator:
                 else:
                     raise ValueError(f"Unparseable LLM output: {raw_response[:200]}") from err
 
+            if not isinstance(parsed_data, dict):
+                raise ValueError(f"LLM output must be a JSON dictionary, got {type(parsed_data).__name__}")
+
         narrative = str(parsed_data.get("narrative", "")).strip()
         raw_entities = parsed_data.get("entities", [])
+        if not isinstance(raw_entities, list):
+            raw_entities = []
 
         # Tokenize and tag with BIOTagger
         tokens, bio_tags = self.tagger.tag_tokens(narrative, raw_entities)

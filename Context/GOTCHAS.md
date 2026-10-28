@@ -1,7 +1,7 @@
 # Kent-AI — Gotchas & Known Quirks
 
-> Last updated: 2026-09-26 by Antigravity (Phase 0 scaffolding agent)
-> Phase: 0 (complete)
+> Last updated: 2026-10-28 by Antigravity (Phase 1 Case Generation Watcher)
+> Phase: 1 (in-progress)
 
 ---
 
@@ -136,6 +136,17 @@ When generating multiple case variations (e.g., 4 variations) for the same rubri
   1. Condition the user prompt with explicit clinical archetypes (`VARIATION_STYLES`: somatizing, conversational, introverted, acute crisis).
   2. Inject dynamic entropy seeding: `dynamic_seed = self.seed + (case_idx * 137)`.
   This dropped lexical overlap to **13.1%** (86.9% lexical diversity) with 100% BIO slice alignment.
+
+### 6.6 Rare Variation Failures in LLaMA 3 Generation & Gap-Filling
+
+In large-scale generation (>15,000 cases), ~0.05% of variations encounter one of three failure modes:
+1. **JSON Syntax Malformation**: LLaMA 3 emits unescaped double quotes inside freeform narrative text or hits `max_tokens` mid-string, causing `json.JSONDecodeError` (`Expecting ',' delimiter`).
+2. **Entity Schema Drift**: LLaMA 3 occasionally emits a list of plain strings (`"entities": ["anger", "distress"]`) instead of dictionaries, triggering `'str' object has no attribute 'get'` in `BIOTagger.align_entity_offsets()`.
+3. **Transient Server Errors**: Intermittent Ollama daemon hiccups (`HTTP Error 500: Internal Server Error`).
+
+**Solution**:
+- The main pipeline isolates individual variation errors without crashing, continuing progress.
+- Post-generation, run [`scripts/backfill_missing_cases.py`](file:///home/narya/kent-ai/scripts/backfill_missing_cases.py) to audit the corpus, detect any missing `(rubric_id, case_idx)` tuples, generate them with 3-attempt retry backoff, and automatically re-partition the dataset splits.
 
 ---
 

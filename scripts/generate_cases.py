@@ -32,6 +32,8 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[logging.StreamHandler(sys.stdout)],
 )
+logger = logging.getLogger(__name__)
+
 # Clinical variation styles to ensure semantic diversity across cases per rubric
 VARIATION_STYLES = {
     1: "Present as a somatizing patient focusing on physical discomfort and bodily sensations linked to emotional distress.",
