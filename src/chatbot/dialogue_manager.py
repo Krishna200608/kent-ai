@@ -36,7 +36,7 @@ class DialogueManager:
         self.state_machine = state_machine or ConversationStateMachine()
         self.orchestrator = orchestrator
         self.model_name = model_name or cfg.get("model", "llama3:8b")
-        self.api_base = api_base or cfg.get("api_base", "http://localhost:11434")
+        self.api_base = api_base or cfg.get("api_base", "http://127.0.0.1:11434")
         self.temperature = float(cfg.get("temperature", 0.5))
         self.mock_mode = mock_mode
 
@@ -186,14 +186,22 @@ class DialogueManager:
             return self._mock_response_for_state()
 
     def is_ollama_online(self) -> bool:
-        """Check if local Ollama daemon is currently running and responding."""
-        try:
-            url = f"{self.api_base}/api/tags"
-            req = urllib.request.Request(url, method="GET")
-            with urllib.request.urlopen(req, timeout=1.5) as resp:
-                return resp.status == 200
-        except Exception:
-            return False
+        """Check if local Ollama daemon is currently running and responding.
+        
+        Attempts connection on configured base, 127.0.0.1 (IPv4), and localhost.
+        """
+        candidates = [self.api_base, "http://127.0.0.1:11434", "http://localhost:11434"]
+        for base in candidates:
+            try:
+                url = f"{base.rstrip('/')}/api/tags"
+                req = urllib.request.Request(url, method="GET")
+                with urllib.request.urlopen(req, timeout=1.5) as resp:
+                    if resp.status == 200:
+                        self.api_base = base
+                        return True
+            except Exception:
+                continue
+        return False
 
     def _mock_response_for_state(self) -> str:
         """Friendly deterministic response generator for offline fallback testing."""

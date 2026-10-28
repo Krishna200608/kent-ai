@@ -15,15 +15,22 @@ from src.dashboard.dimensions import (
 )
 
 
-def check_ollama_online(api_base: str = "http://localhost:11434") -> bool:
-    """Direct HTTP ping to check if local Ollama daemon is active and responding."""
-    try:
-        url = f"{api_base}/api/tags"
-        req = urllib.request.Request(url, method="GET")
-        with urllib.request.urlopen(req, timeout=1.2) as resp:
-            return resp.status == 200
-    except Exception:
-        return False
+def check_ollama_online(api_base: str = "http://127.0.0.1:11434") -> bool:
+    """Direct HTTP ping to check if local Ollama daemon is active and responding.
+    
+    Checks both 127.0.0.1 (IPv4) and localhost to handle Windows IPv6 resolution latency.
+    """
+    candidates = [api_base, "http://127.0.0.1:11434", "http://localhost:11434"]
+    for base in candidates:
+        try:
+            url = f"{base.rstrip('/')}/api/tags"
+            req = urllib.request.Request(url, method="GET")
+            with urllib.request.urlopen(req, timeout=1.5) as resp:
+                if resp.status == 200:
+                    return True
+        except Exception:
+            continue
+    return False
 
 
 def get_current_step_label(dm: DialogueManager) -> str:

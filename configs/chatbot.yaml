@@ -2,7 +2,7 @@
 chatbot:
   model: "llama3:8b"
   backend: "ollama"
-  api_base: "http://localhost:11434"
+  api_base: "http://127.0.0.1:11434"
   temperature: 0.5
   max_turns: 15
   min_dimensions_required: 4

@@ -120,7 +120,7 @@ class SymptomResolver:
         gen_cfg = cfg.get("generation", {})
 
         self.model_name = model_name or gen_cfg.get("model", "llama3:8b")
-        self.api_base = api_base or gen_cfg.get("api_base", "http://localhost:11434")
+        self.api_base = api_base or gen_cfg.get("api_base", "http://127.0.0.1:11434")
         self.temperature = temperature
         self.mock_mode = mock_mode
 
