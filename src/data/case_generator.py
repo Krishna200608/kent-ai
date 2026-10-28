@@ -81,7 +81,7 @@ class CaseGenerator:
         gen_cfg = config.get("generation", {})
         self.model = gen_cfg.get("model", "llama3:8b")
         self.backend = "mock" if mock_mode else gen_cfg.get("backend", "ollama")
-        self.api_base = gen_cfg.get("api_base", "http://localhost:11434").rstrip("/")
+        self.api_base = gen_cfg.get("api_base", "http://127.0.0.1:11434").rstrip("/")
         self.temperature = float(gen_cfg.get("temperature", 0.7))
         self.top_p = float(gen_cfg.get("top_p", 0.9))
         self.max_tokens = int(gen_cfg.get("max_tokens", 512))
