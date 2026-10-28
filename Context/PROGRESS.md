@@ -156,14 +156,18 @@ pytest tests/test_vector_store.py -v
 
 ---
 
-## Phase 3 — ClinicalBERT NER Training ⬜
+## Phase 3 — ClinicalBERT NER Training 🔄
 
-**Status**: Not started (depends on Phase 1 data)
-**Target**: Token-level F1 ≥ 88% on validation set
-
-### Hardware
-
-- Google Colab T4 free tier (~35–50 min training)
+**Status**: In Progress (Fine-Tuning on College GPU Server)
+**Date**: 2026-10-28
+**Agent**: Antigravity (Gemini 3.8 Flash)
+**Hardware**: NVIDIA RTX 5000 Ada (32GB VRAM, CUDA 12.4 + PyTorch 2.6.0 with FP16)
+**Corpus**:
+- Training Set: `data/processed/train.jsonl` (15,786 cases, 80,049 entities)
+- Validation Set: `data/processed/val.jsonl` (1,973 cases, 9,850 entities)
+- Target: Token-level $F_1 \ge 88\%$ evaluated via SeqEval across 15 BIO labels (7 Kentian dimensions)
+- Total Optimization: 9,870 steps (10 epochs, batch size 16 per device, lr 2e-5, warmup 10%)
+- Speed: ~9.2 steps/sec (~147 cases/sec), expected completion: ~18 minutes
 
 ---
 
