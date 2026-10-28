@@ -221,6 +221,7 @@ class NERTrainer:
         epochs: Optional[int] = None,
         batch_size: Optional[int] = None,
         learning_rate: Optional[float] = None,
+        resume_from_checkpoint: Optional[Union[bool, str]] = None,
     ) -> Dict[str, float]:
         """Execute full training and evaluation loop with early stopping.
         
@@ -291,8 +292,22 @@ class NERTrainer:
             callbacks=[EarlyStoppingCallback(early_stopping_patience=patience)],
         )
 
+        # Check if checkpoints exist to resume seamlessly
+        checkpoints_dir = self.output_dir / "checkpoints"
+        latest_checkpoint = None
+        if resume_from_checkpoint is True or (resume_from_checkpoint is None and checkpoints_dir.exists()):
+            existing_ckpts = sorted(
+                checkpoints_dir.glob("checkpoint-*"),
+                key=lambda p: int(p.name.split("-")[-1]) if p.name.split("-")[-1].isdigit() else 0,
+            )
+            if existing_ckpts:
+                latest_checkpoint = str(existing_ckpts[-1])
+                logger.info("Resuming training from checkpoint: %s", latest_checkpoint)
+        elif isinstance(resume_from_checkpoint, str):
+            latest_checkpoint = resume_from_checkpoint
+
         logger.info("Beginning fine-tuning (%d epochs, batch size %d, fp16=%s)...", num_epochs, per_device_batch_size, use_fp16)
-        train_result = trainer.train()
+        train_result = trainer.train(resume_from_checkpoint=latest_checkpoint)
 
         # Save final best model and tokenizer
         logger.info("Saving best model to %s...", self.output_dir)

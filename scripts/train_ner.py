@@ -81,6 +81,12 @@ def parse_args():
         default=42,
         help="Random seed for reproducibility",
     )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        default=True,
+        help="Automatically resume from latest checkpoint if available",
+    )
     return parser.parse_args()
 
 
@@ -121,6 +127,7 @@ def main():
         epochs=args.epochs,
         batch_size=args.batch_size,
         learning_rate=args.lr,
+        resume_from_checkpoint=args.resume,
     )
 
     logger.info("Training complete! Final Evaluation Metrics:")
