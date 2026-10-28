@@ -41,13 +41,18 @@ pytest tests/ -v
 
 ---
 
-## Phase 1 — Synthetic Case Generation 🔄
+## Phase 1 — Synthetic Case Generation ✅
 
-**Status**: Actively Running on College GPU (NVIDIA RTX 5000 Ada, 32GB VRAM) 🚀
-**Date**: 2026-10-27
+**Status**: Complete (100% Generated & Partitioned) 🎯
+**Date**: 2026-10-28
 **Agent**: Antigravity (Gemini 3.8 Flash)
-**Target**: Generate ~19,732–22,200 MIND clinical cases across 4,933 rubrics using LLaMA 3 8B with crash-safe checkpointing
-**Active Job PID**: `1240645` | **Hardware**: NVIDIA RTX 5000 Ada (95% GPU util, ~20 cases/min)
+**Hardware**: NVIDIA RTX 5000 Ada (32GB VRAM, ~25.5 hours total runtime)
+**Dataset Corpus**:
+- Full Dataset: `data/processed/mind_cases.jsonl` (19,732 cases across 4,933 rubrics, 4 variations each)
+- Train Partition: `data/processed/train.jsonl` (15,786 cases, 80%, 4,933 rubrics, 80,049 entities)
+- Val Partition: `data/processed/val.jsonl` (1,973 cases, 10%, 1,973 rubrics, 9,850 entities)
+- Test Partition: `data/processed/test.jsonl` (1,973 cases, 10%, 1,973 rubrics, 9,955 entities)
+- Total Entities: 99,854 clinical entities across all 7 Kentian dimensions (0 offset drift)
 
 ### Tasks
 
