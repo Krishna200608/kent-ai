@@ -143,7 +143,7 @@ class NERTrainer:
         all_texts: List[str] = []
         all_entities: List[List[Dict[str, Any]]] = []
         for r in records:
-            text = r.get("transcript") or r.get("text") or ""
+            text = r.get("narrative") or r.get("transcript") or r.get("text") or ""
             entities = r.get("entities") or []
             all_texts.append(text)
             all_entities.append(entities)
@@ -255,21 +255,22 @@ class NERTrainer:
         lr = learning_rate or float(self.training_cfg.get("learning_rate", 2e-5))
         weight_decay = float(self.training_cfg.get("weight_decay", 0.01))
         warmup_ratio = float(self.training_cfg.get("warmup_ratio", 0.1))
+        total_steps = (len(train_dataset) // max(1, per_device_batch_size)) * num_epochs
+        warmup_steps = int(total_steps * warmup_ratio)
         patience = int(self.training_cfg.get("early_stopping_patience", 3))
 
         use_fp16 = bool(self.training_cfg.get("fp16", True)) and torch.cuda.is_available()
 
         training_args = TrainingArguments(
             output_dir=str(self.output_dir / "checkpoints"),
-            evaluation_strategy="epoch",
+            eval_strategy="epoch",
             save_strategy="epoch",
             learning_rate=lr,
             per_device_train_batch_size=per_device_batch_size,
             per_device_eval_batch_size=per_device_batch_size,
             num_train_epochs=num_epochs,
             weight_decay=weight_decay,
-            warmup_ratio=warmup_ratio,
-            logging_dir=str(self.output_dir / "logs"),
+            warmup_steps=warmup_steps,
             logging_steps=int(self.training_cfg.get("logging_steps", 50)),
             load_best_model_at_end=True,
             metric_for_best_model="f1",
@@ -285,7 +286,7 @@ class NERTrainer:
             args=training_args,
             train_dataset=train_dataset,
             eval_dataset=val_dataset,
-            tokenizer=tokenizer,
+            processing_class=tokenizer,
             compute_metrics=self.compute_metrics,
             callbacks=[EarlyStoppingCallback(early_stopping_patience=patience)],
         )
