@@ -121,3 +121,74 @@ def test_pipeline_orchestrator_mock_process(mock_pipeline):
 
     js = report.to_json()
     assert "PT-TEST-MOCK" in js
+
+
+def test_pipeline_two_stage_ner_to_resolver(mock_pipeline):
+    """Verify SymptomNER entity extraction flows into SymptomResolver and PatientReport."""
+    transcript = "Doctor, I feel terribly anxious and depressed every morning, worse alone."
+    report = mock_pipeline.process_transcript(transcript)
+
+    assert isinstance(report, PatientReport)
+    # Check that NER extracted entities are attached to the report
+    assert len(report.entities) > 0
+    entity_texts = [e["text"].lower() for e in report.entities]
+    assert any("anxious" in t or "anxiety" in t or "depressed" in t for t in entity_texts)
+
+    # Check that dimensions include mental and temporal
+    assert len(report.dimensions.get("mental", [])) > 0
+    assert len(report.dimensions.get("temporal", [])) > 0
+
+
+def test_pipeline_negation_filtering_in_two_stage(mock_pipeline):
+    """Verify that negated entities are filtered into dimensions['negated']."""
+    transcript = "I have terrible anxiety every morning, but no headache and no nausea."
+    report = mock_pipeline.process_transcript(transcript)
+
+    assert isinstance(report, PatientReport)
+    negated = [n.lower() for n in report.dimensions.get("negated", [])]
+    assert any("headache" in n or "head" in n or "nausea" in n for n in negated)
+    # Negated items must not be included in positive location or sensation
+    assert not any("headache" in loc.lower() for loc in report.dimensions.get("location", []))
+
+
+def test_pipeline_real_ner_inference_if_available():
+    """Verify real Bio_ClinicalBERT inference through pipeline when weights exist."""
+    from src.models.symptom_ner import SymptomNER
+    from src.config import get_project_root
+
+    weights_dir = get_project_root() / "data/models/clinicalbert_homeoNER"
+    if not (weights_dir.exists() and any(weights_dir.glob("*.safetensors"))):
+        pytest.skip("Fine-tuned weights not found on disk.")
+
+    embedder = RubricEmbedder(mock_mode=True)
+    vector_store = RubricVectorStore(
+        collection_name=f"test_real_{uuid.uuid4().hex[:8]}",
+        embedder=embedder,
+        in_memory=True,
+    )
+    vector_store.add_rubrics([{
+        "id": 1,
+        "section_id": 1,
+        "section_name": "MIND",
+        "depth": 0,
+        "label": "ANXIETY",
+        "path": "MIND > ANXIETY",
+        "remedy_count": 10,
+    }])
+
+    ner = SymptomNER(mock_mode=False)
+    resolver = SymptomResolver(mock_mode=True)
+    orchestrator = PipelineOrchestrator(
+        ner=ner,
+        resolver=resolver,
+        vector_store=vector_store,
+        mock_mode=False,
+    )
+
+    transcript = "Doctor, I feel severe anxiety and restlessness every morning."
+    report = orchestrator.process_transcript(transcript)
+
+    assert isinstance(report, PatientReport)
+    assert len(report.entities) > 0
+    assert report.patient_id.startswith("PT-")
+    assert any(e.get("label") == "MENT" for e in report.entities)

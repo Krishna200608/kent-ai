@@ -1,0 +1,69 @@
+{
+  "dataset": "D:\\Research Project\\kent-ai\\data\\processed\\test.jsonl",
+  "total_cases": 200,
+  "elapsed_seconds": 70.29,
+  "cases_per_second": 2.85,
+  "mock_mode": false,
+  "metrics": {
+    "token_level_bio_f1": 0.3312,
+    "token_accuracy": 0.8365,
+    "bio_precision": 0.3784,
+    "bio_recall": 0.2945,
+    "top1_rubric_recall": 0.085,
+    "top5_rubric_recall": 0.23,
+    "top10_rubric_recall": 0.29,
+    "top20_rubric_recall": 0.34,
+    "mean_reciprocal_rank": 0.1508,
+    "simillimum_acc_top1": 0.1271,
+    "simillimum_acc_top3": 0.2155,
+    "simillimum_acc_top5": 0.2762,
+    "remedy_eval_cases": 181
+  },
+  "per_dimension": {
+    "LOC": {
+      "precision": 0.3882,
+      "recall": 0.2619,
+      "f1": 0.3128,
+      "support": 126
+    },
+    "SEN": {
+      "precision": 0.4404,
+      "recall": 0.2927,
+      "f1": 0.3516,
+      "support": 164
+    },
+    "MOD_AGG": {
+      "precision": 0.275,
+      "recall": 0.1528,
+      "f1": 0.1964,
+      "support": 72
+    },
+    "MOD_AMEL": {
+      "precision": 1.0,
+      "recall": 0.2857,
+      "f1": 0.4444,
+      "support": 7
+    },
+    "CONC": {
+      "precision": 0.3158,
+      "recall": 0.3051,
+      "f1": 0.3103,
+      "support": 59
+    },
+    "TEMP": {
+      "precision": 0.4316,
+      "recall": 0.3868,
+      "f1": 0.408,
+      "support": 106
+    },
+    "MENT": {
+      "precision": 0.3622,
+      "recall": 0.304,
+      "f1": 0.3305,
+      "support": 454
+    }
+  },
+  "bio_f1": 0.3312,
+  "top20_recall": 0.34,
+  "mrr": 0.1508
+}

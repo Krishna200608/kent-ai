@@ -89,9 +89,17 @@ class SymptomProfile:
         # 5. Mental symptoms
         for m in mentals:
             queries.append(f"mind {m}")
+            for t in times:
+                queries.append(f"mind {m} {t}")
+            for a in aggs:
+                queries.append(f"mind {m} worse from {a}")
+            for b in amels:
+                queries.append(f"mind {m} better from {b}")
 
-        # Fallback to chief complaint if no queries were formed
+        # 6. Fallback or contextual query
         if not queries and self.chief_complaint:
+            queries.append(self.chief_complaint)
+        elif self.chief_complaint:
             queries.append(self.chief_complaint)
 
         # Remove duplicates while preserving order
@@ -123,9 +131,13 @@ class SymptomResolver:
         self.api_base = api_base or gen_cfg.get("api_base", "http://127.0.0.1:11434")
         self.temperature = temperature
         self.mock_mode = mock_mode
+        self._ollama_available: Optional[bool] = None
 
     def _call_ollama(self, prompt: str) -> str:
         """Call Ollama /api/generate with JSON format."""
+        if self._ollama_available is False:
+            return ""
+
         url = f"{self.api_base}/api/generate"
         payload = {
             "model": self.model_name,
@@ -148,11 +160,14 @@ class SymptomResolver:
         )
 
         try:
-            with urllib.request.urlopen(req, timeout=120) as resp:
+            with urllib.request.urlopen(req, timeout=3) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
+                self._ollama_available = True
                 return data.get("response", "")
-        except urllib.error.URLError as err:
-            logger.warning("Ollama unreachable at %s: %s. Using rule-based fallback.", self.api_base, err)
+        except Exception as err:
+            if self._ollama_available is None:
+                logger.warning("Ollama unreachable at %s: %s. Using rule-based fallback.", self.api_base, err)
+            self._ollama_available = False
             return ""
 
     def _parse_response(self, response_text: str) -> Dict[str, Any]:
@@ -258,7 +273,7 @@ class SymptomResolver:
         parsed = self._parse_response(response_text)
 
         if not parsed:
-            logger.info("Falling back to deterministic rule-based resolution.")
+            logger.debug("Falling back to deterministic rule-based resolution.")
             return self._mock_resolve(transcript, raw_entities)
 
         def _to_list(val: Any) -> List[str]:

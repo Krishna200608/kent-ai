@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 import datetime
+import logging
 import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
 
+from src.models.symptom_ner import SymptomNER
 from src.models.resolver import SymptomProfile, SymptomResolver
 from src.pipeline.report_generator import generate_json_report, generate_markdown_report
 from src.search.embedder import RubricEmbedder
 from src.search.ranker import RemedyRanker
 from src.search.vector_store import RubricVectorStore
+
+logger = logging.getLogger("orchestrator")
 
 
 @dataclass
@@ -24,6 +28,7 @@ class PatientReport:
     matched_rubrics: List[Dict[str, Any]]
     ranked_remedies: List[Dict[str, Any]]
     search_queries: List[str] = field(default_factory=list)
+    entities: List[Dict[str, Any]] = field(default_factory=list)
     timestamp: str = field(
         default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat()
     )
@@ -46,12 +51,14 @@ class PipelineOrchestrator:
 
     def __init__(
         self,
+        ner: Optional[SymptomNER] = None,
         resolver: Optional[SymptomResolver] = None,
         vector_store: Optional[RubricVectorStore] = None,
         ranker: Optional[RemedyRanker] = None,
         mock_mode: bool = False,
     ) -> None:
         self.mock_mode = mock_mode
+        self.ner = ner or SymptomNER(mock_mode=mock_mode)
         self.resolver = resolver or SymptomResolver(mock_mode=mock_mode)
 
         if vector_store:
@@ -84,11 +91,20 @@ class PipelineOrchestrator:
         """
         pid = patient_id or f"PT-{uuid.uuid4().hex[:8].upper()}"
 
-        # 1. Resolve symptoms and 7 dimensions
-        profile: SymptomProfile = self.resolver.resolve(transcript)
+        # 1. Extract clinical entity spans using Bio_ClinicalBERT
+        raw_entities: List[Dict[str, Any]] = []
+        if self.ner is not None:
+            try:
+                raw_entities = self.ner.extract_entities(transcript)
+            except Exception as err:
+                logger.warning("NER extraction failed (%s), proceeding with empty entities.", err)
+                raw_entities = []
+
+        # 2. Resolve symptoms and 7 dimensions with negation & coreference handling
+        profile: SymptomProfile = self.resolver.resolve(transcript, raw_entities=raw_entities)
         queries = profile.get_search_queries()
 
-        # 2. Retrieve candidate rubrics across generated queries
+        # 3. Retrieve candidate rubrics across generated queries
         matched_rubrics_dict: Dict[int, Dict[str, Any]] = {}
 
         for query_str in queries:
@@ -115,7 +131,7 @@ class PipelineOrchestrator:
             reverse=True,
         )
 
-        # 3. Rank remedies according to classical totality
+        # 4. Rank remedies according to classical totality
         ranked_remedies = self.ranker.rank(matched_rubrics, top_n=top_remedies)
 
         return PatientReport(
@@ -125,4 +141,5 @@ class PipelineOrchestrator:
             matched_rubrics=matched_rubrics,
             ranked_remedies=ranked_remedies,
             search_queries=queries,
+            entities=raw_entities,
         )

@@ -1,7 +1,7 @@
 # Kent-AI — Progress Tracker
 
-> Last updated: 2026-10-26 by Antigravity
-> Phase: 1 / 7 (Core Pipeline, Chatbot & Dashboard Operational; Production GPU Generation Next)
+> Last updated: 2026-10-28 by Antigravity
+> Phase: Complete through Phase 5 / Phase B & C (Two-Stage Pipeline & Evaluation Suite Operational; UI Demo & Thesis Defense Next)
 
 ---
 
@@ -207,14 +207,15 @@ pytest tests/test_vector_store.py -v
 |---|---|---|
 | `RemedyRanker` | ✅ Done | `src/search/ranker.py` (Batch SQL retrieval, totality coverage, Kent's 3-grade weighting, inverse remedy frequency specificity) |
 | `ReportGenerator` | ✅ Done | `src/pipeline/report_generator.py` (Structured JSON and formatted clinical Markdown) |
-| `PipelineOrchestrator` | ✅ Done | `src/pipeline/orchestrator.py` (Full transcript $\to$ LLaMA 3 resolver $\to$ ChromaDB $\to$ RemedyRanker $\to$ PatientReport) |
-| Unit & Integration Tests | ✅ Done | `tests/test_ranker.py` (5 tests passing), `tests/test_pipeline.py` (2 tests passing) |
+| `PipelineOrchestrator` (Two-Stage) | ✅ Done | `src/pipeline/orchestrator.py` (Two-Stage: Bio_ClinicalBERT HomeoNER $\to$ LLaMA 3 / rule-based resolver $\to$ ChromaDB HNSW $\to$ RemedyRanker $\to$ PatientReport) |
+| `Evaluation Suite` (Phase C) | ✅ Done | `scripts/evaluate.py` (Token/Entity BIO F1 via SeqEval, Recall@1/5/10/20, MRR, Remedy Accuracy, JSON & Markdown export) |
+| Unit & Integration Tests | ✅ Done | `tests/test_ranker.py` (5 tests), `tests/test_pipeline.py` (5 tests), `tests/test_evaluation.py` (3 tests) — 70/70 test suite pass |
 
 ### Verification & Testing
 
 ```bash
 pytest tests/ -v
-# Output: 44 passed in 3.18s ✅
+# Output: 70 passed in 20.61s (100% test pass rate across 13 test files) ✅
 
 # Live End-to-End Test on Local LLaMA 3 + ChromaDB + KentDB:
 # Input: "Doctor, I feel terribly anxious and depressed every morning, worse when alone. I have no fever and no nausea."
@@ -314,6 +315,8 @@ streamlit run src/dashboard/app.py --server.headless true --server.port 8503
 | 2026-09-26 | 7 | Antigravity | Aligned entire UI/UX to focus on Chapter 1: MIND (4,933 rubrics) with default MIND scopes, badges, telemetry, and vignettes. |
 | 2026-09-28 | 7 | Antigravity | UI/UX Pass 2: canonical dimension map, pluralization fix, calibrated match tiers (0.52 cutoff), rubric hierarchy breadcrumbs, and guarded buttons. |
 | 2026-10-26 | All | Antigravity | Context & documentation sync: pruned stale docs, consolidated pilot report & log into `docs/Evaluation/Pilot/`, updated test suite status (64 passing unit tests across 12 files), and registered supervisor Dr. Nikhilanand Arya. |
+| 2026-10-28 | 5 / B | Antigravity | Phase B two-stage pipeline integration: wired Bio_ClinicalBERT SymptomNER into PipelineOrchestrator, populated report.entities, and added integration tests (tests/test_pipeline.py). |
+| 2026-10-28 | 5 / C | Antigravity | Phase C evaluation suite: implemented scripts/evaluate.py with SeqEval BIO F1, ChromaDB Recall@K, MRR, Remedy Accuracy, markdown/JSON exports, and unit tests (70/70 tests passing). |
 
 ---
 
