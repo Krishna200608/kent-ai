@@ -596,11 +596,18 @@ class DialogueManager:
             try:
                 parsed = json.loads(raw_replies)
                 if isinstance(parsed, list) and len(parsed) > 0:
-                    quick_options = [str(opt).strip(' "\'') for opt in parsed if str(opt).strip()]
+                    raw_opts = [str(opt).strip(' "\'') for opt in parsed if str(opt).strip()]
+                    quick_options = [
+                        opt.capitalize() if opt.islower() else opt
+                        for opt in raw_opts
+                    ]
             except Exception:
                 quoted = re.findall(r'["\']([^"\']+)["\']', raw_replies)
                 if quoted:
-                    quick_options = [q.strip() for q in quoted if q.strip()]
+                    quick_options = [
+                        q.strip().capitalize() if q.strip().islower() else q.strip()
+                        for q in quoted if q.strip()
+                    ]
         else:
             clean_part = text
 

@@ -69,6 +69,12 @@ dimensions:
     - teeth
     - gums
     - tongue
+    - ribs
+    - midsection
+    - groin
+    - thigh
+    - collarbone
+    - nape
     - sides
     - right side
     - left side
@@ -127,6 +133,13 @@ dimensions:
     - weakness
     - dizzy
     - dizziness
+    - knot
+    - knot in stomach
+    - electric shock
+    - tender
+    - tenderness
+    - spasm
+    - spasms
 
   # ---------------------------------------------------------------------------
   # 3. Modalities — Aggravation (MOD_AGG) — "makes it worse"
@@ -183,6 +196,19 @@ dimensions:
     - work stress
     - job stress
     - work
+    - screens
+    - screen
+    - phone
+    - computer
+    - reading
+    - studying
+    - exams
+    - spicy food
+    - dairy
+    - milk
+    - empty stomach
+    - fasting
+    - lack of sleep
     - crowds
     - crowd
     - people
@@ -241,6 +267,12 @@ dimensions:
     - cold compress
     - cold
     - ice
+    - hot shower
+    - warm bath
+    - warm tea
+    - lying still
+    - quiet room
+    - sitting down
     - fresh air
     - open air
     - outdoors
@@ -283,6 +315,14 @@ dimensions:
     - vomiting
     - vomit
     - queasy
+    - acid reflux
+    - heartburn
+    - belching
+    - burping
+    - bloating
+    - hot flashes
+    - cold hands
+    - racing heart
     - chills
     - fever
     - sweating
@@ -398,6 +438,18 @@ dimensions:
     - tension
     - overwhelmed
     - exhausted mentally
+    - brain fog
+    - foggy
+    - spaced out
+    - racing thoughts
+    - overthinking
+    - panic attacks
+    - on edge
+    - tearful
+    - crying easily
+    - cranky
+    - jittery
+    - heartbroken
     - indifference
     - indifferent
     - irritated
