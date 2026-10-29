@@ -1,7 +1,7 @@
 # Kent-AI — Data Context
 
-> Last updated: 2026-10-26 by Antigravity
-> Phase: 1 / 7 (Core Data & Vectors Operational; Production Dataset Next)
+> Last updated: 2026-10-29 by Antigravity
+> Phase: Complete through Phase 5 / Phase B & C (19,732 MIND Cases & 74,513 Rubrics Vectorized)
 
 ---
 
@@ -222,15 +222,15 @@ Kent's Repertory uses a typographic grading system for remedy prominence:
 
 | File | Status | Format | Description |
 |---|---|---|---|
-| `data/processed/pilot_100_cases.jsonl` | Verified ✅ | JSONL | 100 stratified pilot validation cases across 25 MIND rubrics (4 diverse archetypes/rubric) |
+| `data/processed/pilot_100_cases.jsonl` | Verified ✅ | JSONL | 100 stratified pilot validation cases across 25 MIND rubrics (4 diverse archetypes/rubric, 225 KB) |
 | `data/processed/pilot_checkpoint.json` | Verified ✅ | JSON | Atomic checkpoint for 100-case pilot generation |
-| `data/processed/mind_cases.jsonl` | Active | JSONL | Synthetic clinical cases with tokens and BIO tags |
-| `data/processed/generation_checkpoint.json` | Active | JSON | Atomic crash-safe checkpoint (completed IDs, counts, timestamps) |
-| `data/processed/train.jsonl` | Active | JSONL | 80% stratified training partition |
-| `data/processed/val.jsonl` | Active | JSONL | 10% stratified validation partition |
-| `data/processed/test.jsonl` | Active | JSONL | 10% stratified test partition |
-| `data/embeddings/kent_rubrics/` | Phase 2 | ChromaDB | Dense HNSW index of all 74,513 rubrics |
-| `data/models/clinicalbert_homeoNER/` | Phase 3 | HuggingFace | Fine-tuned Bio_ClinicalBERT checkpoint |
+| `data/processed/mind_cases.jsonl` | Verified ✅ | JSONL | Full synthetic case corpus (19,732 cases across all 4,933 MIND rubrics, 43.3 MB) |
+| `data/processed/generation_checkpoint.json` | Verified ✅ | JSON | Completed atomic crash-safe checkpoint (4,933 completed rubric IDs) |
+| `data/processed/train.jsonl` | Verified ✅ | JSONL | 80% stratified training partition (15,786 cases, 80,049 entities, 34.6 MB) |
+| `data/processed/val.jsonl` | Verified ✅ | JSONL | 10% stratified validation partition (1,973 cases, 9,850 entities, 4.3 MB) |
+| `data/processed/test.jsonl` | Verified ✅ | JSONL | 10% stratified test partition (1,973 cases, 9,955 entities, 4.3 MB) |
+| `data/embeddings/kent_rubrics/` | Verified ✅ | ChromaDB | Dense HNSW index of all 74,513 rubrics (100% indexed, persistent vector store) |
+| `data/models/clinicalbert_homeoNER/` | Verified ✅ | HuggingFace | Fine-tuned Bio_ClinicalBERT weights (411 MB model.safetensors, 15 BIO labels) |
 
 ---
 
@@ -288,9 +288,9 @@ Each line in `mind_cases.jsonl`, `train.jsonl`, `val.jsonl`, and `test.jsonl` is
 | Dataset File | Records | Purpose / Status | Audit Evidence |
 |---|---|---|---|
 | `data/processed/pilot_100_cases.jsonl` | 100 cases | Stratified pilot dataset (25 MIND rubrics × 4 variations) | `docs/Evaluation/Pilot/pilot_100_cases_evaluation.md` (100% schema, 0 drift) |
-| `data/processed/train.jsonl` | ~17,760 (Target) | 80% training split for Bio_ClinicalBERT HomeoNER | Generated via `scripts/run_gpu_generation.sh --split` |
-| `data/processed/val.jsonl` | ~2,220 (Target) | 10% validation split for model selection & early stopping | Generated via `scripts/run_gpu_generation.sh --split` |
-| `data/processed/test.jsonl` | ~2,220 (Target) | 10% test split for academic benchmarking (`scripts/evaluate.py`) | Generated via `scripts/run_gpu_generation.sh --split` |
+| `data/processed/train.jsonl` | 15,786 cases | 80% training split for Bio_ClinicalBERT HomeoNER (80,049 entities) | Trained 8 epochs on RTX 5000 Ada; Eval Accuracy 83.04%, restored best epoch 5 |
+| `data/processed/val.jsonl` | 1,973 cases | 10% validation split for model selection & early stopping (9,850 entities) | Early stopping triggered at Epoch 8 (patience=3) |
+| `data/processed/test.jsonl` | 1,973 cases | 10% held-out test split for academic benchmarking (9,955 entities) | Evaluated via `scripts/evaluate.py` (`docs/Evaluation/test_benchmark_results.md`) |
 
 ---
 

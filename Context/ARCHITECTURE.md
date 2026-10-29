@@ -1,7 +1,7 @@
 # Kent-AI — Architecture Context
 
-> Last updated: 2026-10-26 by Antigravity
-> Phase: 1 / 7 (Core Architecture Verified; 64 Unit Tests Passing)
+> Last updated: 2026-10-29 by Antigravity
+> Phase: Complete through Phase 5 / Phase B & C (Two-Stage Pipeline & Evaluation Suite Operational; 70 Unit & Integration Tests Passing)
 
 ---
 
@@ -27,8 +27,9 @@ kent-ai/
 │   │       ├── sections.json              # Section metadata export
 │   │       ├── remedies.json              # Remedy dictionary export
 │   │       └── manifest.json              # Upstream bundle manifest
-│   ├── processed/                         # Generated artifacts: pilot_100_cases.jsonl, train/val/test.jsonl
-│   └── embeddings/kent_rubrics/           # ChromaDB persistent HNSW index (Phase 2)
+│   ├── processed/                         # Generated artifacts: 19,732 cases (mind_cases.jsonl, train/val/test.jsonl)
+│   ├── embeddings/kent_rubrics/           # ChromaDB persistent HNSW index (74,513 rubrics, Phase 2)
+│   └── models/clinicalbert_homeoNER/      # Fine-tuned Bio_ClinicalBERT weights (411MB model.safetensors, Phase 3)
 │
 ├── src/
 │   ├── __init__.py                # Package root; exports __version__ = "0.1.0"
@@ -77,27 +78,29 @@ kent-ai/
 │   ├── run_gpu_generation.sh      # Bash: turnkey automated runner for College GPU cluster
 │   ├── build_embeddings.py        # CLI: ChromaDB persistent vector indexer (74,513 rubrics)
 │   ├── train_ner.py               # CLI: Bio_ClinicalBERT HomeoNER training
+│   ├── monitor_training.py        # CLI: live GPU training progress monitor
 │   ├── chat_intake.py             # CLI: interactive patient consultation with 10-state FSM
-│   ├── evaluate.py                # CLI: pipeline benchmark evaluation (F1, MRR, Top-K)
+│   ├── evaluate.py                # CLI: academic benchmark evaluation (SeqEval BIO F1, Recall@K, MRR, Remedy Acc)
 │   └── export_model.py            # CLI: model artifact packaging
 │
 ├── notebooks/
 │   ├── 01_eda_repertory.ipynb     # EDA: sections, MIND depths, grades, search demo
 │   └── 02_case_generation_demo.ipynb # Interactive case generation & BIO inspection
 │
-├── tests/                         # ★ 64 passing unit tests across 12 test modules
+├── tests/                         # ★ 70 passing unit tests across 13 test modules
 │   ├── test_kent_db.py            # SQLite reader, views, FTS5 queries (13 tests)
-│   ├── test_bio_tagger.py         # Subword alignment & character offset repair (5 tests)
-│   ├── test_case_generator.py     # LLaMA 3 prompting & JSON parsing (4 tests)
+│   ├── test_bio_tagger.py         # Subword alignment & character offset repair (6 tests)
+│   ├── test_case_generator.py     # LLaMA 3 prompting & JSON parsing (3 tests)
 │   ├── test_splitter.py           # 80/10/10 deficit-balancing split algorithm (4 tests)
-│   ├── test_symptom_ner.py        # Tokenizer, subword tags & entity extraction (3 tests)
+│   ├── test_symptom_ner.py        # Tokenizer, subword tags & entity extraction (5 tests)
 │   ├── test_vector_store.py       # ChromaDB HNSW cosine retrieval & section filter (6 tests)
 │   ├── test_resolver.py           # SymptomProfile, negation & search queries (4 tests)
 │   ├── test_ranker.py             # Remedy totality scoring & grade weighting (5 tests)
-│   ├── test_pipeline.py           # End-to-end transcript-to-report pipeline (3 tests)
+│   ├── test_pipeline.py           # End-to-end transcript-to-report pipeline & two-stage flow (5 tests)
+│   ├── test_evaluation.py         # Academic evaluation suite, BIO metrics & report export (3 tests)
 │   ├── test_state_machine.py      # 10-state intake FSM & slot transitions (6 tests)
-│   ├── test_dialogue_manager.py   # Dialogue context & turn tracking (4 tests)
-│   └── test_dashboard.py          # Slot badges, Totality Matrix & report export (7 tests)
+│   ├── test_dialogue_manager.py   # Dialogue context & turn tracking (5 tests)
+│   └── test_dashboard.py          # Slot badges, Totality Matrix & report export (5 tests)
 │
 ├── docs/
 │   ├── Next_Steps.md              # Supervisor meeting briefing & roadmap (Dr. Arya)

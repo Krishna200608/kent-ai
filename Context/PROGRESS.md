@@ -1,6 +1,6 @@
 # Kent-AI — Progress Tracker
 
-> Last updated: 2026-10-28 by Antigravity
+> Last updated: 2026-10-29 by Antigravity
 > Phase: Complete through Phase 5 / Phase B & C (Two-Stage Pipeline & Evaluation Suite Operational; UI Demo & Thesis Defense Next)
 
 ---
@@ -317,6 +317,8 @@ streamlit run src/dashboard/app.py --server.headless true --server.port 8503
 | 2026-10-26 | All | Antigravity | Context & documentation sync: pruned stale docs, consolidated pilot report & log into `docs/Evaluation/Pilot/`, updated test suite status (64 passing unit tests across 12 files), and registered supervisor Dr. Nikhilanand Arya. |
 | 2026-10-28 | 5 / B | Antigravity | Phase B two-stage pipeline integration: wired Bio_ClinicalBERT SymptomNER into PipelineOrchestrator, populated report.entities, and added integration tests (tests/test_pipeline.py). |
 | 2026-10-28 | 5 / C | Antigravity | Phase C evaluation suite: implemented scripts/evaluate.py with SeqEval BIO F1, ChromaDB Recall@K, MRR, Remedy Accuracy, markdown/JSON exports, and unit tests (70/70 tests passing). |
+| 2026-10-28 | 7 / UI | Antigravity | Resolved Ollama offline indicator: prioritized 127.0.0.1 (IPv4) over localhost (bypassing 1.56s Windows IPv6 latency), bypassed institutional HTTP proxy via ProxyHandler({}), and enabled dynamic session state refresh (28a7d4b). |
+| 2026-10-29 | All | Antigravity | Completely synchronized Context/ directory across all 7 files per Context Protocol Sync Matrix: updated dataset row counts (19,732 cases), ChromaDB index count (74,513), 70/70 passing tests, model weights, and added loopback network gotchas. |
 
 ---
 

@@ -1,7 +1,7 @@
 # Kent-AI — Code Conventions
 
-> Last updated: 2026-09-26 by Antigravity (Phase 0 scaffolding agent)
-> Phase: 0 (complete)
+> Last updated: 2026-10-29 by Antigravity
+> Phase: Complete through Phase 5 / Phase B & C
 
 ---
 
@@ -44,6 +44,7 @@ from src.data.kent_db import get_sections, get_remedies
 - **Always use absolute imports** from `src.*`. Never use relative imports (no `from .kent_db import ...`).
 - **Always include `from __future__ import annotations`** at the top of every module (enables PEP 604 `X | Y` syntax on Python 3.10).
 - Imports in `__init__.py` files re-export public API names via `__all__`.
+- **Loopback network calls**: When querying local daemon APIs (Ollama on `127.0.0.1:11434`), always build an explicit proxy bypass opener: `urllib.request.build_opener(urllib.request.ProxyHandler({}))` to avoid institutional proxy interception on Windows.
 
 ---
 
@@ -142,8 +143,9 @@ def get_rubric_path(rubric_id: int, db_path: Optional[Union[str, Path]] = None) 
 
 - Test framework: **pytest** (configured in `pyproject.toml`).
 - Test files live in `tests/` and are named `test_<module>.py`.
+- Test suite status: **70 passing tests across 13 test files** (100% pass rate in ~20-30s).
 - Use **class-based grouping** (`class TestKentDBReader:`) for related tests.
-- **Stub tests** for unimplemented modules contain a single `assert True` placeholder.
+- ChromaDB test fixtures must use unique ephemeral collection names (`f"test_rubrics_{uuid.uuid4().hex[:8]}"`) to prevent inter-test state contamination.
 - Tests run against the **real database** (no mocks for the SQLite layer) — this is intentional for correctness verification.
 - Run: `.venv\Scripts\pytest.exe tests/ -v`
 

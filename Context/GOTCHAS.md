@@ -1,7 +1,7 @@
 # Kent-AI — Gotchas & Known Quirks
 
-> Last updated: 2026-10-28 by Antigravity (Phase 1 Case Generation Watcher)
-> Phase: 1 (in-progress)
+> Last updated: 2026-10-29 by Antigravity
+> Phase: Complete through Phase 5 / Phase B & C
 
 ---
 

@@ -28,7 +28,7 @@ Every context file MUST follow this skeleton:
 ```markdown
 # <TITLE>
 
-> Last updated: YYYY-MM-DD by <agent-name or human-name>
+> Last updated: 2026-10-29 by Antigravity
 > Phase: <current phase number>
 
 ---

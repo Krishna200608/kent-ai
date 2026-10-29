@@ -1,7 +1,7 @@
 # Kent-AI — Project Context
 
-> Last updated: 2026-10-26 by Antigravity
-> Phase: 1 / 7 (Core Pipeline Operational; Production GPU Generation Next)
+> Last updated: 2026-10-29 by Antigravity
+> Phase: Complete through Phase 5 / Phase B & C (Two-Stage Pipeline & Evaluation Suite Operational; UI Demo & Thesis Defense Next)
 
 ---
 
@@ -64,14 +64,14 @@ It takes a patient's natural-language symptom description, extracts structured c
 | Phase | Name | Status | Days |
 |---|---|---|---|
 | 0 | Scaffolding & Data Layer | ✅ Complete | 1–2 |
-| 1 | Synthetic Case Generation (LLaMA 3) | 🔄 Pipeline Ready (Pilot Validated; Production GPU Run Next) | 3–7 |
-| 2 | ChromaDB Rubric Index (74,513 rubrics) | ✅ Complete | 5–6 |
-| 3 | Bio_ClinicalBERT NER Training | ⬜ Planned (Colab / GPU) | 8–10 |
-| 4 | LLaMA 3 Post-Processor & Resolver | ✅ Complete | 11–12 |
-| 5 | Pipeline & Remedy Ranking Engine | ✅ Complete | 13–15 |
-| 6 | Conversational Intake Chatbot | ✅ Complete | 16–19 |
-| 7 | Streamlit Clinical Dashboard (Stitch Standard) | ✅ Complete | 20–24 |
-| 8 | Academic Benchmark, Docs & Defense | ⬜ Planned | 25–28 |
+| 1 | Synthetic Case Generation (LLaMA 3) | ✅ Complete (19,732 cases across 4,933 MIND rubrics generated & partitioned 80/10/10) | 3–7 |
+| 2 | ChromaDB Rubric Index (74,513 rubrics) | ✅ Complete (74,513 rubrics indexed in persistent HNSW cosine vector store) | 5–6 |
+| 3 | Bio_ClinicalBERT NER Training | ✅ Complete (Bio_ClinicalBERT fine-tuned 8 epochs on RTX 5000 Ada, 411MB weights exported) | 8–10 |
+| 4 | LLaMA 3 Post-Processor & Resolver | ✅ Complete (7-dim clinical extraction, negation filtering, coreference resolution) | 11–12 |
+| 5 | Pipeline & Remedy Ranking Engine | ✅ Complete (Phase B Two-Stage Pipeline & Phase C Academic Evaluation Suite operational) | 13–15 |
+| 6 | Conversational Intake Chatbot | ✅ Complete (10-state FSM, adaptive slot skipping, empathetic dialogue manager) | 16–19 |
+| 7 | Streamlit Clinical Dashboard (Stitch Standard) | ✅ Complete (Google Stitch UI tokens, 4 clinical workspaces, Plotly charts, Totality Matrix) | 20–24 |
+| 8 | Academic Benchmark, Docs & Defense | 🔄 Active (Evaluation report compiled; thesis defense & paper write-up underway) | 25–28 |
 
 Full roadmap & phase tracking details: [`Context/PROGRESS.md`](PROGRESS.md)
 
