@@ -117,20 +117,19 @@ def initialize_session():
 
 
 def render_header():
-    """Render top brand navigation bar with consolidated session telemetry pill (Task 4)."""
+    """Render top brand navigation bar with consolidated session telemetry pill."""
     active_scope = st.session_state.get("repertory_scope", "MIND Chapter Focus (4,933 rubrics)")
     is_mind = "MIND" in active_scope
     short_scope = "MIND (4.9k)" if is_mind else "All Chapters (74k)"
     
     dm = st.session_state.get("dialogue_manager")
     is_llm_online = dm.is_ollama_online() if (dm and hasattr(dm, "is_ollama_online")) else check_ollama_online()
-    engine_desc = "llama3:8b (Online)" if is_llm_online else "Offline (Rule-based Fallback)"
+    engine_desc = "LLaMA 3:8B Online" if is_llm_online else "Offline (Rule-based Fallback)"
     
     tooltip_text = (
-        f"Active Scope: {active_scope}&#10;"
-        f"Inference Engine: {engine_desc}&#10;"
-        "Kent Knowledge Base: 74,513 rubrics across 37 chapters&#10;"
-        "Single source of truth configured in sidebar."
+        f"Active Scope: {active_scope} | "
+        f"Inference Engine: {engine_desc} | "
+        "Kent Knowledge Base: 74,513 rubrics across 37 chapters"
     )
     
     st.html(
@@ -151,19 +150,7 @@ def render_header():
                         <span class="status-dot"></span>
                         {get_icon('psychology' if is_mind else 'database', size=14, color='#10B981' if is_mind else '#06B6D4')}
                         <span>Session: <b>{short_scope}</b></span>
-                        <span class="session-pill-tooltip-trigger" style="margin-left: 4px; font-size: 11px; opacity: 0.85;">ⓘ</span>
                     </span>
-                    <div class="session-popover-content">
-                        <div style="font-weight: 700; color: #10B981; margin-bottom: 6px; font-size: 13px; display: flex; align-items: center; gap: 6px;">
-                            {get_icon('sensors', size=14, color='#10B981')} Session Details
-                        </div>
-                        <div style="margin-bottom: 4px; color: #D1D5DB; font-size: 12px;">• <b>Active Scope:</b> {active_scope}</div>
-                        <div style="margin-bottom: 4px; color: {'#10B981' if is_llm_online else '#F59E0B'}; font-size: 12px;">• <b>Engine:</b> {engine_desc}</div>
-                        <div style="margin-bottom: 6px; color: #D1D5DB; font-size: 12px;">• <b>Knowledge Base:</b> 74,513 rubrics (37 Chapters)</div>
-                        <div style="font-size: 11px; color: #9CA3AF; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 5px; margin-top: 6px;">
-                            Configured via sidebar scope control.
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -585,16 +572,16 @@ def render_sidebar():
     """Render Google Stitch clinical telemetry and quick-case loader."""
     with st.sidebar:
         st.html(
-        f"""
-            <div style='text-align: center; margin-bottom: 20px;'>
-                <div style='margin-bottom: 8px; display: inline-flex; justify-content: center; align-items: center; width: 64px; height: 64px; border-radius: 16px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3);'>
-                    {get_icon('local_florist', size=38, color='#10B981')}
+            f"""
+            <div style='text-align: center; margin-bottom: 20px; padding: 4px 8px; word-break: break-word;'>
+                <div style='margin-bottom: 8px; display: inline-flex; justify-content: center; align-items: center; width: 56px; height: 56px; border-radius: 16px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3);'>
+                    {get_icon('local_florist', size=32, color='#10B981')}
                 </div>
-                <div style='font-size: 18px; font-weight: 800; color: #10B981;'>Kent-AI Clinical Suite</div>
-                <div style='font-size: 11px; color: #9CA3AF;'>Classical Homeopathy + Generative AI</div>
+                <div style='font-size: 17px; font-weight: 800; color: #10B981; line-height: 1.25;'>Kent-AI Clinical Suite</div>
+                <div style='font-size: 11px; color: #9CA3AF; margin-top: 2px;'>Classical Homeopathy + Generative AI</div>
             </div>
             """
-    )
+        )
 
         with st.expander("Dr. Kent's Principle on Mental Symptoms", expanded=False):
             st.markdown(

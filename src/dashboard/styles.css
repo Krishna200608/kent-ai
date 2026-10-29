@@ -477,7 +477,7 @@ h1, h2, h3, h4, h5, h6, .brand-title {
     box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
 }
 
-/* Consolidated Task 4 Session Pill & Interactive Tooltip Popover */
+/* Consolidated Session Telemetry Pill */
 .session-badge-wrapper {
     position: relative;
     display: inline-flex;
@@ -485,7 +485,7 @@ h1, h2, h3, h4, h5, h6, .brand-title {
 }
 
 .session-compact-pill {
-    cursor: pointer;
+    cursor: default;
     transition: all 0.2s ease;
     padding: 7px 14px;
 }
@@ -493,32 +493,6 @@ h1, h2, h3, h4, h5, h6, .brand-title {
 .session-compact-pill:hover {
     border-color: rgba(16, 185, 129, 0.7);
     box-shadow: 0 0 16px rgba(16, 185, 129, 0.3);
-}
-
-.session-popover-content {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
-    width: 280px;
-    background: #111827;
-    border: 1px solid rgba(16, 185, 129, 0.4);
-    border-radius: 12px;
-    padding: 14px 16px;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
-    z-index: 1000;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(6px);
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    pointer-events: none;
-    line-height: 1.5;
-}
-
-.session-badge-wrapper:hover .session-popover-content,
-.session-badge-wrapper:focus-within .session-popover-content {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
 }
 
 /* Task 5 Explainability Why Hint */
@@ -736,6 +710,17 @@ header[data-testid="stHeader"] {
 /* Hide deploy button and default footer while keeping sidebar toggle intact */
 .stDeployButton, footer {
     display: none !important;
+}
+
+/* Sidebar sizing & padding protection against clipping on narrow/scaled viewports */
+section[data-testid="stSidebar"] {
+    min-width: 280px !important;
+}
+
+[data-testid="stSidebarUserContent"] {
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
+    padding-top: 1.5rem !important;
 }
 
 /* Adjust main app block top padding so brand-header sits cleanly below the top header */
