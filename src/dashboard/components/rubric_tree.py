@@ -147,9 +147,9 @@ def render_rubric_card(
                 is_in_tray = any(item.get("id") == r_id for item in tray.get("rubrics", []))
                 card_key = f"tray_add_r_{r_id}_{abs(hash(str(path))) % 10000}"
                 if is_in_tray:
-                    st.button("✓ Added", key=card_key, disabled=True, use_container_width=True)
+                    st.button("✓ Added", key=card_key, disabled=True, width="stretch")
                 else:
-                    if st.button("+ Add to case", key=card_key, use_container_width=True):
+                    if st.button("+ Add to case", key=card_key, width="stretch"):
                         if "case_tray" not in st.session_state:
                             st.session_state.case_tray = {"rubrics": [], "remedies": []}
                         st.session_state.case_tray["rubrics"].append({

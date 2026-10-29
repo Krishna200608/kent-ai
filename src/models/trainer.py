@@ -202,9 +202,9 @@ class NERTrainer:
             for prediction, label in zip(predictions, labels)
         ]
 
-        f1 = seqeval.metrics.f1_score(true_labels, true_predictions)
-        precision = seqeval.metrics.precision_score(true_labels, true_predictions)
-        recall = seqeval.metrics.recall_score(true_labels, true_predictions)
+        f1 = seqeval.metrics.f1_score(true_labels, true_predictions, zero_division=0)
+        precision = seqeval.metrics.precision_score(true_labels, true_predictions, zero_division=0)
+        recall = seqeval.metrics.recall_score(true_labels, true_predictions, zero_division=0)
         accuracy = seqeval.metrics.accuracy_score(true_labels, true_predictions)
 
         return {

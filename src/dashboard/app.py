@@ -38,6 +38,10 @@ import src.chatbot.state_machine as state_machine_mod
 importlib.reload(state_machine_mod)
 from src.chatbot.state_machine import IntakeState
 
+import src.chatbot.dialogue_manager as dialogue_manager_mod
+importlib.reload(dialogue_manager_mod)
+from src.chatbot.dialogue_manager import DialogueManager, get_min_dimensions_to_unlock
+
 import src.dashboard.styles as dashboard_styles
 importlib.reload(dashboard_styles)
 from src.dashboard.styles import inject_custom_css
@@ -62,9 +66,6 @@ from src.dashboard.dimensions import (
     pluralize,
 )
 
-import src.chatbot.dialogue_manager as dialogue_manager_mod
-importlib.reload(dialogue_manager_mod)
-from src.chatbot.dialogue_manager import DialogueManager, get_min_dimensions_to_unlock
 from src.dashboard.components.chat_viewer import check_ollama_online
 from src.dashboard.components.icons import get_icon
 from src.data.kent_db import KentDB
@@ -279,7 +280,7 @@ def render_repertorization_chart(remedies: List[Dict[str, Any]]):
         height=400,
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def render_totality_matrix(report: PatientReport, db: KentDB) -> None:
@@ -389,14 +390,14 @@ def render_report_view(report: PatientReport, db: KentDB):
             data=report.to_markdown(),
             file_name=f"{report.patient_id}_repertorization.md",
             mime="text/markdown",
-            use_container_width=True,
+            width="stretch",
         )
         st.download_button(
             "Export Data (JSON)",
             data=report.to_json(),
             file_name=f"{report.patient_id}_data.json",
             mime="application/json",
-            use_container_width=True,
+            width="stretch",
         )
     st.markdown("---")
     
@@ -460,7 +461,7 @@ def render_report_view(report: PatientReport, db: KentDB):
                     "Score": r.get("score"),
                     "Rubrics": f"{r.get('rubric_count')}/{len(report.matched_rubrics)}",
                 })
-            st.dataframe(pd.DataFrame(table_data), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(table_data), width="stretch", hide_index=True)
 
         st.html(
         f"""
@@ -557,7 +558,7 @@ def render_sidebar_case_tray():
 
     col_btn1, col_btn2 = st.columns([3, 2])
     with col_btn1:
-        if rubrics and st.button("Repertorize This Case", type="primary", use_container_width=True, key="tray_repertorize_btn"):
+        if rubrics and st.button("Repertorize This Case", type="primary", width="stretch", key="tray_repertorize_btn"):
             pipeline = get_pipeline()
             db = get_db()
             ranked = pipeline.ranker.rank(rubrics, top_n=10)
@@ -573,7 +574,7 @@ def render_sidebar_case_tray():
             st.toast("Case repertorized! Report displayed below in intake tab.")
             st.rerun()
     with col_btn2:
-        if st.button("Clear Tray", key="clear_all_tray", use_container_width=True):
+        if st.button("Clear Tray", key="clear_all_tray", width="stretch"):
             st.session_state.case_tray = {"rubrics": [], "remedies": []}
             st.rerun()
 
@@ -767,7 +768,7 @@ def main():
 
                 button_label = f"Generate Repertorization ({collected_count}/7)"
                 if can_generate:
-                    if st.button(button_label, type="primary", use_container_width=True):
+                    if st.button(button_label, type="primary", width="stretch"):
                         transcript = dm.get_full_transcript()
                         if transcript.strip():
                             with st.spinner("Analyzing totality and ranking remedies..."):
@@ -778,13 +779,13 @@ def main():
                         else:
                             st.warning("Please chat with Kent-AI first before generating report.")
                 else:
-                    st.button(button_label, type="primary", disabled=True, use_container_width=True, help="Converse with Kent-AI to capture at least one symptom dimension to unlock repertorization.")
+                    st.button(button_label, type="primary", disabled=True, width="stretch", help="Converse with Kent-AI to capture at least one symptom dimension to unlock repertorization.")
                     st.markdown(f"<div style='font-size: 11.5px; color: #9CA3AF; margin-top: 4px;'>Requires at least {min_dims} captured dimension(s) — currently {collected_count}/7.</div>", unsafe_allow_html=True)
 
                 st.markdown("---")
 
                 # One-click copy/download consultation transcript for debugging and analysis
-                with st.popover("Copy Consultation Chat", use_container_width=True, help="Export complete consultation dialogue and captured slots for analysis"):
+                with st.popover("Copy Consultation Chat", width="stretch", help="Export complete consultation dialogue and captured slots for analysis"):
                     st.markdown("##### Consultation Transcript")
                     st.caption("Click the copy icon in the top right of the code box below or download the file to share with developer/assistant.")
                     transcript_text = format_chat_transcript(dm)
@@ -793,7 +794,7 @@ def main():
                         data=transcript_text,
                         file_name=f"kent_ai_consultation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
                         mime="text/plain",
-                        use_container_width=True,
+                        width="stretch",
                         key="sidebar_ctrl_download_txt",
                     )
                     st.code(transcript_text, language="markdown")
@@ -805,7 +806,7 @@ def main():
                     st.warning("Clear all intake symptoms?")
                     col_cf1, col_cf2 = st.columns(2)
                     with col_cf1:
-                        if st.button("Yes, Clear", type="primary", use_container_width=True, key="confirm_reset_yes"):
+                        if st.button("Yes, Clear", type="primary", width="stretch", key="confirm_reset_yes"):
                             dm.reset()
                             dm.get_greeting()
                             st.session_state.current_report = None
@@ -813,11 +814,11 @@ def main():
                             st.toast("Consultation reset.")
                             st.rerun()
                     with col_cf2:
-                        if st.button("Cancel", use_container_width=True, key="confirm_reset_no"):
+                        if st.button("Cancel", width="stretch", key="confirm_reset_no"):
                             st.session_state.confirm_intake_reset = False
                             st.rerun()
                 else:
-                    if st.button("Reset Consultation", type="secondary", use_container_width=True):
+                    if st.button("Reset Consultation", type="secondary", width="stretch"):
                         st.session_state.confirm_intake_reset = True
                         st.rerun()
 
@@ -901,7 +902,7 @@ def main():
                 "Analyze & Repertorize Case",
                 type="primary",
                 disabled=not has_narrative,
-                use_container_width=True,
+                width="stretch",
                 help="Input clinical narrative above to analyze and repertorize." if not has_narrative else "Extract 7 dimensions and compute totality ranking.",
             )
 
@@ -977,7 +978,7 @@ def main():
 
                 col_re_btn, col_re_note = st.columns([1.5, 3])
                 with col_re_btn:
-                    if st.button("Re-run Repertorization", type="secondary", use_container_width=True, help="Re-run totality ranking with active selected symptoms"):
+                    if st.button("Re-run Repertorization", type="secondary", width="stretch", help="Re-run totality ranking with active selected symptoms"):
                         if active_symptoms_list:
                             mod_transcript = ". ".join(active_symptoms_list)
                             with st.spinner("Re-evaluating totality with modified symptoms..."):
@@ -1041,7 +1042,7 @@ def main():
             with col_filt2:
                 hide_empty = st.checkbox("Hide rubrics with 0 remedies", value=True)
 
-            search_clicked = st.button("Search Rubrics", type="primary", use_container_width=True)
+            search_clicked = st.button("Search Rubrics", type="primary", width="stretch")
 
         if (search_clicked or search_query) and search_query.strip():
             with st.spinner("Searching rubrics..."):
@@ -1107,7 +1108,7 @@ def main():
                 )
                 st.session_state.rem_filter_text = rem_search
             with col_rem_clear:
-                if st.button("✕ Clear", help="Clear remedy search filter", use_container_width=True):
+                if st.button("✕ Clear", help="Clear remedy search filter", width="stretch"):
                     st.session_state.rem_filter_text = ""
                     st.session_state.rem_input_widget = ""
                     st.rerun()
@@ -1171,9 +1172,9 @@ def main():
                             is_in_tray = any(item.get("id") == r_id for item in tray.get("remedies", []))
                             rem_btn_key = f"tray_add_rem_{r_id}"
                             if is_in_tray:
-                                st.button("✓ Added to Case", key=rem_btn_key, disabled=True, use_container_width=True)
+                                st.button("✓ Added to Case", key=rem_btn_key, disabled=True, width="stretch")
                             else:
-                                if st.button("+ Add to case", key=rem_btn_key, use_container_width=True):
+                                if st.button("+ Add to case", key=rem_btn_key, width="stretch"):
                                     if "case_tray" not in st.session_state:
                                         st.session_state.case_tray = {"rubrics": [], "remedies": []}
                                     st.session_state.case_tray["remedies"].append({

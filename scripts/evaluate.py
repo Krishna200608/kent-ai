@@ -245,12 +245,12 @@ class PipelineEvaluator:
 
         if all_gold_bio and all_pred_bio:
             try:
-                bio_f1 = float(seqeval.metrics.f1_score(all_gold_bio, all_pred_bio))
-                bio_precision = float(seqeval.metrics.precision_score(all_gold_bio, all_pred_bio))
-                bio_recall = float(seqeval.metrics.recall_score(all_gold_bio, all_pred_bio))
+                bio_f1 = float(seqeval.metrics.f1_score(all_gold_bio, all_pred_bio, zero_division=0))
+                bio_precision = float(seqeval.metrics.precision_score(all_gold_bio, all_pred_bio, zero_division=0))
+                bio_recall = float(seqeval.metrics.recall_score(all_gold_bio, all_pred_bio, zero_division=0))
                 token_accuracy = float(seqeval.metrics.accuracy_score(all_gold_bio, all_pred_bio))
                 classification_dict = seqeval.metrics.classification_report(
-                    all_gold_bio, all_pred_bio, output_dict=True
+                    all_gold_bio, all_pred_bio, output_dict=True, zero_division=0
                 )
             except Exception as err:
                 logger.warning("SeqEval metric computation encountered warning: %s", err)
