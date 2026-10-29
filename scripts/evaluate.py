@@ -427,6 +427,12 @@ def parse_args():
         help="Path to export formatted Markdown evaluation report",
     )
     parser.add_argument(
+        "--model-path",
+        type=str,
+        default=None,
+        help="Path to fine-tuned HomeoNER model directory (default: data/models/clinicalbert_homeoNER)",
+    )
+    parser.add_argument(
         "--limit",
         type=int,
         default=None,
@@ -466,7 +472,11 @@ def main():
     logger.info("Sample Limit: %s | Mock Mode: %s", args.limit, args.mock)
     logger.info("=" * 65)
 
-    evaluator = PipelineEvaluator(mock_mode=args.mock, device=args.device)
+    evaluator = PipelineEvaluator(
+        model_path=args.model_path,
+        mock_mode=args.mock,
+        device=args.device,
+    )
     results = evaluator.evaluate_dataset(
         test_file=test_path,
         limit=args.limit,

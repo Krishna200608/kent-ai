@@ -308,10 +308,12 @@ streamlit run src/dashboard/app.py --server.headless true --server.port 8503
 | Supervisor Consultation & Literature Review | ✅ Done | `Context/research_llm_comparative_study_and_ensemble_2026-10-29.md` (Literature citations: Hu et al. JAMIA 2024, PMID 39923968, PMID 40775967, PMID 41758143; BLURB SOTA analysis) |
 | Publication Roadmap Document (v2.0) | ✅ Done | `docs/Next_Steps.md` (Comprehensive supervisor review doc: completed baseline, model candidate selection, 4 standardized paper tables, 3 ensemble paradigms, GPU commands, and 4-week timeline) |
 | Multi-Model CLI Training Support | ✅ Done | `scripts/train_ner.py` (Added `--model-name` argument to dynamically train `PubMedBERT`, `BioLinkBERT`, `DeBERTa-v3`, `BioBERT` on 15 BIO tag set) |
+| Multi-Model GPU Fine-Tuning Suite | ✅ Done | `scripts/run_gpu_multi_train.sh` (Automated pipeline training PubMedBERT, BioLinkBERT, DeBERTa-v3 with BF16 precision and automated 4-way evaluation on test.jsonl) |
+| 4-Model Held-Out Test Evaluation | ✅ Done | `docs/Evaluation/` (`eval_clinicalbert.md`, `eval_pubmedbert.md`, `eval_biolinkbert.md`, `eval_deberta.md`, `COMPARATIVE_BENCHMARK.md`; N=1,973 test cases) |
 | Streamlit 1.64 Warning Elimination | ✅ Done | `src/dashboard/app.py`, `src/dashboard/components/chat_viewer.py`, `src/dashboard/components/rubric_tree.py` (Replaced all 22 instances of deprecated `use_container_width=True` with `width="stretch"`) |
 | SeqEval Undefined Metric Warning Fix | ✅ Done | `scripts/evaluate.py`, `src/models/trainer.py` (Enforced `zero_division=0` in `f1_score`, `precision_score`, `recall_score`, `classification_report`) |
 | Dynamic Module Reload Safeguards | ✅ Done | `src/dashboard/app.py`, `src/dashboard/components/chat_viewer.py` (Topological reload ordering + `_safe_clean_bot_text` defensive cleaner) |
-| Regression Test Suite & Verification | ✅ Done | `tests/` (**73 passed** in 79.83s, **0 warnings** across all 13 test modules) |
+| Regression Test Suite & Verification | ✅ Done | `tests/` (**73 passed** in 8.33s, **0 warnings** across all 13 test modules) |
 
 ### Verification & Testing
 
@@ -348,6 +350,7 @@ pytest tests/ -v
 | 2026-10-28 | 7 / UI | Antigravity | Resolved Ollama offline indicator: prioritized 127.0.0.1 (IPv4) over localhost (bypassing 1.56s Windows IPv6 latency), bypassed institutional HTTP proxy via ProxyHandler({}), and enabled dynamic session state refresh (28a7d4b). |
 | 2026-10-29 | All | Antigravity | Completely synchronized Context/ directory across all 7 files per Context Protocol Sync Matrix: updated dataset row counts (19,732 cases), ChromaDB index count (74,513), 70/70 passing tests, model weights, and added loopback network gotchas. |
 | 2026-10-29 | 8 / Doc | Antigravity | Supervisor review & comparative study formulation: integrated Dr. Nikhilanand Arya's mandate on multi-model fine-tuning (PubMedBERT, BioLinkBERT, DeBERTa-v3, BioMistral 7B, LLaMA 3.1 8B) and ensemble architectures; updated scripts/train_ner.py with --model-name; eliminated all 22 Streamlit width deprecation warnings and SeqEval undefined metric warnings; rewritten docs/Next_Steps.md v2.0; 73/73 tests passing with 0 warnings. |
+| 2026-10-29 | 8 / GPU | Antigravity | Multi-model fine-tuning & academic test benchmark completed on RTX 5000 Ada: trained PubMedBERT, BioLinkBERT, and DeBERTa-v3 (with native BF16 precision); evaluated all 4 models over 1,973 held-out test cases (test.jsonl); BioLinkBERT achieved top token BIO F1 (34.86%); PubMedBERT achieved top dense rubric recall (41.56% Recall@20) and Simillimum accuracy (35.02%); synthesized comparative study report (docs/Evaluation/COMPARATIVE_BENCHMARK.md). |
 
 ---
 

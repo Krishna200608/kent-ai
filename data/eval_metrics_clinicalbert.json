@@ -1,0 +1,69 @@
+{
+  "dataset": "/home/narya/kent-ai/data/processed/test.jsonl",
+  "total_cases": 1973,
+  "elapsed_seconds": 465.48,
+  "cases_per_second": 4.24,
+  "mock_mode": false,
+  "metrics": {
+    "token_level_bio_f1": 0.334,
+    "token_accuracy": 0.8379,
+    "bio_precision": 0.3882,
+    "bio_recall": 0.293,
+    "top1_rubric_recall": 0.1039,
+    "top5_rubric_recall": 0.2529,
+    "top10_rubric_recall": 0.3168,
+    "top20_rubric_recall": 0.4014,
+    "mean_reciprocal_rank": 0.1746,
+    "simillimum_acc_top1": 0.1307,
+    "simillimum_acc_top3": 0.2533,
+    "simillimum_acc_top5": 0.3404,
+    "remedy_eval_cases": 1836
+  },
+  "per_dimension": {
+    "LOC": {
+      "precision": 0.3939,
+      "recall": 0.2393,
+      "f1": 0.2977,
+      "support": 1241
+    },
+    "SEN": {
+      "precision": 0.3664,
+      "recall": 0.2592,
+      "f1": 0.3036,
+      "support": 1497
+    },
+    "MOD_AGG": {
+      "precision": 0.3264,
+      "recall": 0.2026,
+      "f1": 0.25,
+      "support": 780
+    },
+    "MOD_AMEL": {
+      "precision": 0.26,
+      "recall": 0.1512,
+      "f1": 0.1912,
+      "support": 86
+    },
+    "CONC": {
+      "precision": 0.2902,
+      "recall": 0.246,
+      "f1": 0.2662,
+      "support": 683
+    },
+    "TEMP": {
+      "precision": 0.4559,
+      "recall": 0.415,
+      "f1": 0.4345,
+      "support": 935
+    },
+    "MENT": {
+      "precision": 0.4032,
+      "recall": 0.3187,
+      "f1": 0.356,
+      "support": 4587
+    }
+  },
+  "bio_f1": 0.334,
+  "top20_recall": 0.4014,
+  "mrr": 0.1746
+}

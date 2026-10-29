@@ -260,7 +260,15 @@ class NERTrainer:
         warmup_steps = int(total_steps * warmup_ratio)
         patience = int(self.training_cfg.get("early_stopping_patience", 3))
 
-        use_fp16 = bool(self.training_cfg.get("fp16", True)) and torch.cuda.is_available()
+        # Precision strategy: DeBERTa has a known issue with FP16 GradScaler; use BF16 when available
+        is_deberta = "deberta" in self.model_name.lower()
+        supports_bf16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+        if is_deberta:
+            use_bf16 = supports_bf16
+            use_fp16 = False
+        else:
+            use_bf16 = False
+            use_fp16 = bool(self.training_cfg.get("fp16", True)) and torch.cuda.is_available()
 
         training_args = TrainingArguments(
             output_dir=str(self.output_dir / "checkpoints"),
@@ -277,6 +285,7 @@ class NERTrainer:
             metric_for_best_model="f1",
             greater_is_better=True,
             fp16=use_fp16,
+            bf16=use_bf16,
             save_total_limit=int(self.training_cfg.get("save_total_limit", 2)),
             seed=self.seed,
             report_to="none",

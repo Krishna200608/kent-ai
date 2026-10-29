@@ -192,4 +192,19 @@ Streamlit's internal runner keeps `sys.modules` alive across browser re-runs. If
 
 ---
 
+## 9. Multi-Model GPU Training & HuggingFace Gotchas
+
+### 9.1 DeBERTa-v3 with PyTorch AMP FP16 Gradient Unscaling Error
+When fine-tuning DeBERTa-v3 (`microsoft/deberta-v3-base`) using HuggingFace `Trainer` with `fp16=True`, PyTorch AMP throws:
+`ValueError: Attempting to unscale FP16 gradients.`
+- **Root Cause**: DeBERTa-v2/v3 models use disentangled attention with custom embedding sharing and operations in FP32 where gradients are already unscaled or incompatibly scaled for native PyTorch `GradScaler`.
+- **Verified Workaround**: On NVIDIA Ampere, Ada Lovelace, or Hopper GPUs (e.g. RTX 5000 Ada), use Bfloat16 (`bf16=True, fp16=False`). Bfloat16 uses 8 exponent bits (same dynamic range as FP32) and does not require a loss scaler, completely avoiding gradient unscaling errors. In `src/models/trainer.py`, detect `"deberta"` and activate `bf16=True`.
+
+### 9.2 HuggingFace `hf-xet` Campus Network Transfer Throttling
+Recent versions of `huggingface_hub` install `hf-xet` which replaces standard HTTP range requests with a Content Addressable Storage (CAS) client opening dozens of concurrent chunk connections. On university/institutional networks with deep packet inspection or rate-limiting firewalls, this causes transfers to crawl at 30–50 KB/s.
+- **Root Cause**: Concurrent CAS chunk connection throttling.
+- **Verified Workaround**: Set `export HF_HUB_DISABLE_XET=1` in your shell environment and scripts. Standard direct streaming via HTTPS immediately downloads weights at full line speed (>65 MB/s).
+
+---
+
 _End of file._
