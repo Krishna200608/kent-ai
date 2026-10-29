@@ -304,16 +304,16 @@ def render_chat_interface(dm: DialogueManager) -> None:
                     if role == "assistant":
                         with st.chat_message("assistant", avatar=ASSISTANT_AVATAR):
                             st.html(
-                                f"<div style='font-size: 11.5px; font-weight: 700; color: #10B981; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; letter-spacing: 0.02em;'>"
-                                f"{get_icon('sparkles', size=13, color='#10B981')} Kent-AI"
+                                f"<div style='font-size: 11.5px; font-weight: 700; color: #10B981; margin-bottom: 4px; letter-spacing: 0.02em;'>"
+                                f"Kent-AI"
                                 f"</div>"
                             )
                             st.markdown(c_text)
                     else:
                         with st.chat_message("user", avatar=USER_AVATAR):
                             st.html(
-                                f"<div style='font-size: 11.5px; font-weight: 700; color: #94A3B8; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; letter-spacing: 0.02em;'>"
-                                f"{get_icon('user', size=13, color='#94A3B8')} You"
+                                f"<div style='font-size: 11.5px; font-weight: 700; color: #94A3B8; margin-bottom: 4px; letter-spacing: 0.02em;'>"
+                                f"You"
                                 f"</div>"
                             )
                             st.markdown(c_text)
@@ -329,8 +329,8 @@ def render_chat_interface(dm: DialogueManager) -> None:
         with scroll_area:
             with st.chat_message("user", avatar=USER_AVATAR):
                 st.html(
-                    f"<div style='font-size: 11.5px; font-weight: 700; color: #94A3B8; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; letter-spacing: 0.02em;'>"
-                    f"{get_icon('user', size=13, color='#94A3B8')} You"
+                    f"<div style='font-size: 11.5px; font-weight: 700; color: #94A3B8; margin-bottom: 4px; letter-spacing: 0.02em;'>"
+                    f"You"
                     f"</div>"
                 )
                 st.markdown(input_to_process)
@@ -350,8 +350,8 @@ def render_chat_interface(dm: DialogueManager) -> None:
                 )
                 bot_reply = dm.process_turn(input_to_process)
                 thinking_box.markdown(
-                    f"<div style='font-size: 11.5px; font-weight: 700; color: #10B981; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; letter-spacing: 0.02em;'>"
-                    f"{get_icon('sparkles', size=13, color='#10B981')} Kent-AI"
+                    f"<div style='font-size: 11.5px; font-weight: 700; color: #10B981; margin-bottom: 4px; letter-spacing: 0.02em;'>"
+                    f"Kent-AI"
                     f"</div>\n\n{bot_reply}",
                     unsafe_allow_html=True,
                 )

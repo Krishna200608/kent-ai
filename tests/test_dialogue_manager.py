@@ -60,6 +60,40 @@ def test_dialogue_manager_slot_extraction(mock_dialogue_manager):
     assert "sun" in slots.get("modality_agg", []) or "noise" in slots.get("modality_agg", [])
 
 
+def test_dialogue_manager_transcript_dimensions_coverage(mock_dialogue_manager):
+    """Verify that clinical intake accurately captures all dimensions from real transcript expressions."""
+    dm = mock_dialogue_manager
+    dm.get_greeting()
+
+    # Patient answers covering all 7 dimensions
+    dm.process_turn("Severe anxiety & fearful apprehension")
+    assert any("anxiet" in m or "fear" in m for m in dm.extracted_slots.get("mental", []))
+
+    dm.process_turn("In my stomach and abdomen")
+    assert "stomach" in dm.extracted_slots.get("location", [])
+    assert "abdomen" in dm.extracted_slots.get("location", [])
+
+    dm.process_turn("Heavy and tight")
+    assert "heavy" in dm.extracted_slots.get("sensation", [])
+    assert "tight" in dm.extracted_slots.get("sensation", [])
+
+    dm.process_turn("Movement makes it worse")
+    assert any("move" in a for a in dm.extracted_slots.get("modality_agg", []))
+
+    dm.process_turn("Consistent feeling")
+    assert "consistent" in dm.extracted_slots.get("temporal", [])
+
+    dm.process_turn("Warmth soothes")
+    assert any("warm" in a for a in dm.extracted_slots.get("modality_amel", []))
+
+    dm.process_turn("Dizzy and nauseous")
+    assert any("dizz" in c for c in dm.extracted_slots.get("concomitant", []))
+    assert any("nause" in c for c in dm.extracted_slots.get("concomitant", []))
+
+    # All 7 dimensions must have detected entries
+    assert all(dm.detected_dimensions.values())
+
+
 def test_dialogue_manager_multi_turn_flow(mock_dialogue_manager):
     mock_dialogue_manager.get_greeting()
 

@@ -742,11 +742,29 @@ def main():
 
                 st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
 
-                # Phase 2 item 3: Disable button until minimum data exists (complaint + at least 1 modality)
-                has_complaint = bool(dm.extracted_slots.get("location")) or bool(dm.extracted_slots.get("sensation")) or bool(dm.extracted_slots.get("mental")) or (len(dm.history) >= 3)
-                has_modality = bool(dm.extracted_slots.get("modality_agg")) or bool(dm.extracted_slots.get("modality_amel"))
-                can_generate = has_complaint and has_modality
+                # Phase 2 item 3: Enable repertorization if patient provided complaint + modality OR 2+ dimensions OR finished intake
+                has_complaint = (
+                    bool(dm.extracted_slots.get("location"))
+                    or bool(dm.extracted_slots.get("sensation"))
+                    or bool(dm.extracted_slots.get("mental"))
+                )
+                has_modality = (
+                    bool(dm.extracted_slots.get("modality_agg"))
+                    or bool(dm.extracted_slots.get("modality_amel"))
+                )
+                is_ready = dm.state_machine.current_state == IntakeState.DONE
                 collected_count = len(filled_items)
+
+                can_generate = (
+                    (has_complaint and has_modality)
+                    or (collected_count >= 2)
+                    or is_ready
+                    or (len(dm.history) >= 4 and collected_count >= 1)
+                )
+
+                # Automatically sync dm.patient_report if available and not yet set
+                if getattr(dm, "patient_report", None) and st.session_state.current_report is None:
+                    st.session_state.current_report = dm.patient_report
 
                 button_label = f"Generate Repertorization ({collected_count}/7)"
                 if can_generate:
@@ -761,8 +779,8 @@ def main():
                         else:
                             st.warning("Please chat with Kent-AI first before generating report.")
                 else:
-                    st.button(button_label, type="primary", disabled=True, use_container_width=True, help="Requires at least a primary complaint and one modality before generating repertorization.")
-                    st.markdown(f"<div style='font-size: 11.5px; color: #9CA3AF; margin-top: 4px;'>Requires primary complaint + at least one modality ({collected_count}/7 collected).</div>", unsafe_allow_html=True)
+                    st.button(button_label, type="primary", disabled=True, use_container_width=True, help="Please describe your symptoms to Kent-AI in the chat console to begin repertorization.")
+                    st.markdown(f"<div style='font-size: 11.5px; color: #9CA3AF; margin-top: 4px;'>Converse with Kent-AI to extract totality dimensions ({collected_count}/7 collected).</div>", unsafe_allow_html=True)
 
                 st.markdown("---")
 

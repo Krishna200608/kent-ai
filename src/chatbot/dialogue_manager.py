@@ -78,75 +78,125 @@ class DialogueManager:
         return greeting
 
     def _extract_slots_heuristic(self, text: str) -> Dict[str, List[str]]:
-        """Fast regex heuristic slot extractor to detect patient dimensions."""
+        """Fast, robust clinical slot extractor covering Kent's 7 dimensions."""
         found: Dict[str, List[str]] = {}
-        t_low = text.lower()
+        t_low = text.lower().strip()
+        if not t_low:
+            return found
 
-        # Anatomical locations
+        # 1. Anatomical locations
         locations = [
-            "head", "forehead", "temple", "temples", "vertex", "occiput", "eyes", "eye",
-            "throat", "chest", "heart", "stomach", "abdomen", "back", "neck", "joints",
-            "knee", "knees", "limbs", "hands", "feet", "ears", "nose"
+            "stomach", "abdomen", "belly", "gut", "tummy", "epigastrium",
+            "head", "forehead", "temple", "temples", "vertex", "occiput",
+            "eyes", "eye", "ears", "ear", "nose", "throat", "pharynx",
+            "chest", "heart", "lungs", "back", "spine", "neck", "lumbar",
+            "joints", "knee", "knees", "limbs", "hands", "hand", "feet", "foot",
+            "pelvis", "bladder", "kidneys", "skin", "shoulder", "shoulders"
         ]
         for loc in locations:
             if re.search(r"\b" + re.escape(loc) + r"\b", t_low):
                 found.setdefault("location", []).append(loc)
 
-        # Sensation qualities
+        # 2. Sensation qualities
         sensations = [
-            "throbbing", "pounding", "splitting", "burning", "stitching", "dull", "sharp",
-            "heavy", "pressure", "cramping", "aching", "shooting", "bursting", "sore"
+            "heavy", "heaviness", "tight", "tightness", "constriction", "constricted",
+            "throbbing", "pounding", "splitting", "pulsating", "burning", "heat",
+            "stitching", "sharp", "stabbing", "piercing", "dull", "aching", "ache",
+            "sore", "soreness", "cramping", "cramp", "shooting", "bursting", "pressure",
+            "fullness", "numb", "numbness", "tingling", "fluttering", "flutter"
         ]
         for sen in sensations:
             if re.search(r"\b" + re.escape(sen) + r"\b", t_low):
                 found.setdefault("sensation", []).append(sen)
 
-        # Modalities (Aggravations)
+        # 3. Modalities (Aggravations)
         aggs = [
-            "sun", "sunlight", "warm room", "heat", "cold", "cold air", "motion", "moving",
-            "noise", "light", "touch", "eating", "after eating", "night", "morning"
+            "movement", "moving", "motion", "move", "exercise", "exercising", "exertion",
+            "walking", "running", "stairs", "bending", "standing", "sitting", "lying",
+            "noise", "sound", "loud", "light", "sun", "sunlight", "heat", "warm room",
+            "cold", "cold air", "draft", "wind", "weather", "storm", "damp", "touch",
+            "pressure", "eating", "after eating", "food", "coffee", "night", "morning",
+            "stress", "crowds"
         ]
-        if "worse" in t_low or "aggravat" in t_low:
-            for agg in aggs:
-                if agg in t_low:
-                    found.setdefault("modality_agg", []).append(agg)
+        is_agg = any(
+            re.search(p, t_low) for p in [
+                r"\bworse\b", r"\baggravat\w*", r"\btrigger\w*",
+                r"\bamplif\w*", r"\bintensif\w*", r"\bworsen\w*",
+                r"makes?\s+it\s+worse"
+            ]
+        )
+        for agg in aggs:
+            if re.search(r"\b" + re.escape(agg) + r"\b", t_low):
+                if is_agg or (hasattr(self, "state_machine") and self.state_machine.current_state == IntakeState.MODALITY):
+                    if not any(rel in t_low for rel in ["soothe", "better", "relief", "reliev", "ease", "calm", "help"]):
+                        found.setdefault("modality_agg", []).append(agg)
 
-        # Modalities (Ameliorations)
+        m_x_worse = re.search(r"([a-zA-Z\s]{2,25})\s+(?:makes?\s+it\s+worse|aggravates?|triggers?|worsens?|amplifies?)", t_low)
+        if m_x_worse:
+            phrase = re.sub(r"^(?:that|this|it|which|and|but|also)\s+", "", m_x_worse.group(1).strip())
+            if phrase and phrase not in found.get("modality_agg", []):
+                found.setdefault("modality_agg", []).append(phrase)
+
+        # 4. Modalities (Ameliorations)
         amels = [
-            "rest", "lying down", "dark room", "sleep", "pressure", "cold compress",
-            "warm compress", "fresh air", "open air", "walking"
+            "warmth", "warm", "warm compress", "warm drinks", "sunny spot", "sunshine", "sun",
+            "rest", "resting", "lying down", "sleep", "sleeping", "dark room", "darkness",
+            "quiet", "solitude", "peaceful", "peace", "pressure", "cold compress", "fresh air",
+            "open air", "walking slowly", "gentle motion", "massage"
         ]
-        if "better" in t_low or "reliev" in t_low or "help" in t_low:
-            for amel in amels:
-                if amel in t_low:
+        is_amel = any(
+            re.search(p, t_low) for p in [
+                r"\bbetter\b", r"\brelie\w*", r"\bsooth\w*", r"\beas\w*",
+                r"\bimprov\w*", r"\bhelp\w*", r"\bcalm\w*", r"\bcomfort\w*",
+                r"makes?\s+it\s+better", r"brings?\s+relief"
+            ]
+        )
+        for amel in amels:
+            if re.search(r"\b" + re.escape(amel) + r"\b", t_low):
+                if is_amel or (hasattr(self, "state_machine") and self.state_machine.current_state == IntakeState.MODALITY and is_amel):
                     found.setdefault("modality_amel", []).append(amel)
 
-        # Temporals
+        m_x_better = re.search(r"([a-zA-Z\s]{2,25})\s+(?:makes?\s+it\s+better|soothes?|relieves?|helps?|eases?|calms?)", t_low)
+        if m_x_better:
+            phrase = re.sub(r"^(?:that|this|it|which|and|but|also)\s+", "", m_x_better.group(1).strip())
+            if phrase and phrase not in found.get("modality_amel", []):
+                found.setdefault("modality_amel", []).append(phrase)
+
+        # 5. Concomitants
+        concs = [
+            "dizzy", "dizziness", "dizzy spells", "vertigo", "giddy", "giddiness",
+            "nausea", "nauseous", "nauseated", "vomiting", "vomit", "queasy",
+            "chills", "fever", "sweating", "sweat", "cold sweat", "perspiration",
+            "trembling", "tremor", "palpitations", "faint", "fainting", "faintness",
+            "blur", "blurred vision", "headache", "weakness", "exhaustion", "thirst",
+            "dry mouth", "insomnia", "sleeplessness"
+        ]
+        for conc in concs:
+            if re.search(r"\b" + re.escape(conc) + r"\b", t_low):
+                found.setdefault("concomitant", []).append(conc)
+
+        # 6. Temporals
         temporals = [
-            "morning", "waking", "afternoon", "evening", "night", "midnight", "twilight",
-            "3 am", "3 pm", "winter", "summer", "periodically"
+            "morning", "waking", "after waking", "forenoon", "noon", "midday",
+            "afternoon", "evening", "night", "midnight", "twilight", "bedtime",
+            "3 am", "3 pm", "winter", "summer", "periodically", "periodic",
+            "consistent", "constant", "continuous", "daily", "all day", "spells", "attacks"
         ]
         for temp in temporals:
             if re.search(r"\b" + re.escape(temp) + r"\b", t_low):
                 found.setdefault("temporal", []).append(temp)
 
-        # Mental / Emotional
+        # 7. Mental / Emotional
         mentals = [
-            "anxious", "anxiety", "depressed", "depression", "sad", "weeping", "crying",
-            "irritable", "irritability", "angry", "restless", "fear", "alone", "worried"
+            "anxious", "anxiety", "fear", "fearful", "apprehension", "apprehensive",
+            "panic", "distress", "worry", "worried", "restless", "restlessness", "pacing",
+            "irritable", "irritability", "angry", "anger", "rage", "sad", "sadness",
+            "depressed", "depression", "grief", "weeping", "crying", "alone", "solitude",
+            "absent-minded", "confusion", "memory loss"
         ]
         for ment in mentals:
             if re.search(r"\b" + re.escape(ment) + r"\b", t_low):
                 found.setdefault("mental", []).append(ment)
-
-        # Concomitants
-        concs = [
-            "nausea", "vomiting", "dizziness", "vertigo", "chills", "fever", "sweating",
-            "trembling", "blur"
-        ]
-        for conc in concs:
-            if re.search(r"\b" + re.escape(conc) + r"\b", t_low):
-                found.setdefault("concomitant", []).append(conc)
 
         return found
 
@@ -420,12 +470,37 @@ class DialogueManager:
         # 1. Record patient utterance
         self.history.append({"role": "user", "content": user_utterance})
 
-        # 2. Extract clinical slots
+        # 2. Extract clinical slots via robust regex heuristic
         new_slots = self._extract_slots_heuristic(user_utterance)
+
+        # Also extract via fine-tuned Bio_ClinicalBERT if orchestrator NER is available
+        if self.orchestrator and getattr(self.orchestrator, "ner", None):
+            try:
+                ner_ents = self.orchestrator.ner.extract_entities(user_utterance)
+                lbl_map = {
+                    "LOC": "location",
+                    "SEN": "sensation",
+                    "MOD_AGG": "modality_agg",
+                    "MOD_AMEL": "modality_amel",
+                    "CONC": "concomitant",
+                    "TEMP": "temporal",
+                    "MENT": "mental",
+                }
+                for ent in ner_ents:
+                    k = lbl_map.get(ent.get("label", "").upper())
+                    txt = ent.get("text", "").strip()
+                    if k and txt:
+                        new_slots.setdefault(k, []).append(txt)
+            except Exception as err:
+                logger.debug("Live NER extraction skipped: %s", err)
+
+        # Deduplicate and register into extracted_slots
         for slot_k, vals in new_slots.items():
             for v in vals:
-                if v not in self.extracted_slots.get(slot_k, []):
-                    self.extracted_slots.setdefault(slot_k, []).append(v)
+                v_clean = v.strip().lower()
+                existing = [x.lower() for x in self.extracted_slots.get(slot_k, [])]
+                if v_clean and v_clean not in existing:
+                    self.extracted_slots.setdefault(slot_k, []).append(v_clean)
 
         # 3. Transition FSM
         self.state_machine.next_state(user_utterance, extracted_slots=new_slots)
