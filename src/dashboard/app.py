@@ -36,6 +36,7 @@ importlib.reload(prompts_mod)
 
 import src.chatbot.state_machine as state_machine_mod
 importlib.reload(state_machine_mod)
+from src.chatbot.state_machine import IntakeState
 
 import src.dashboard.styles as dashboard_styles
 importlib.reload(dashboard_styles)
@@ -754,7 +755,7 @@ def main():
 
                 # Unlock threshold is configured in configs/extraction_vocabulary.yaml
                 # → generate_button.min_dimensions_to_unlock (default: 1)
-                is_ready = dm.state_machine.current_state == IntakeState.DONE
+                is_ready = getattr(dm.state_machine, "can_terminate", lambda: False)() or dm.state_machine.current_state == IntakeState.DONE
                 collected_count = len(filled_items)
                 min_dims = get_min_dimensions_to_unlock()
 
