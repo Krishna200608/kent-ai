@@ -22,7 +22,21 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from src.chatbot.prompts import CHATBOT_SYSTEM_PROMPT, CHATBOT_TURN_PROMPT
 from src.chatbot.state_machine import ConversationStateMachine, IntakeState
-from src.config import get_chatbot_config, get_extraction_vocabulary
+
+try:
+    from src.config import get_chatbot_config, get_extraction_vocabulary
+except ImportError:
+    import importlib
+    import src.config as _config_mod
+    importlib.reload(_config_mod)
+    try:
+        from src.config import get_chatbot_config, get_extraction_vocabulary
+    except ImportError:
+        from src.config import get_chatbot_config, load_config
+
+        def get_extraction_vocabulary(filepath: Optional[str] = None) -> Dict[str, Any]:
+            return load_config("extraction_vocabulary.yaml")
+
 from src.pipeline.orchestrator import PatientReport, PipelineOrchestrator
 
 logger = logging.getLogger("dialogue_manager")

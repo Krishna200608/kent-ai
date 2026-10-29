@@ -27,6 +27,16 @@ import plotly.graph_objects as go
 import streamlit as st
 
 import importlib
+
+import src.config as config_mod
+importlib.reload(config_mod)
+
+import src.chatbot.prompts as prompts_mod
+importlib.reload(prompts_mod)
+
+import src.chatbot.state_machine as state_machine_mod
+importlib.reload(state_machine_mod)
+
 import src.dashboard.styles as dashboard_styles
 importlib.reload(dashboard_styles)
 from src.dashboard.styles import inject_custom_css
