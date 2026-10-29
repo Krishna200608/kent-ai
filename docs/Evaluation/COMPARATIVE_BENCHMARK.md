@@ -81,3 +81,4 @@ For production deployment in the Streamlit clinical dashboard:
 1. **Default NER Model**: **`PubMedBERT`** (`data/models/pubmedbert_homeoNER`) as primary extractor, paired with **`BioLinkBERT`** (`data/models/biolinkbert_homeoNER`) for modality disambiguation.
 2. **Dense Retrieval Index**: ChromaDB cosine index over 74,513 rubrics using `all-MiniLM-L6-v2`.
 3. **Totality Ranker**: Kentian hierarchical weighting (Mental 3x > Modality 2x > Sensation 2x > Location 1x).
+
