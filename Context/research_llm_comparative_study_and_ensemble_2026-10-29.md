@@ -175,3 +175,4 @@ Update [`scripts/evaluate.py`](file:///d:/Research%20Project/kent-ai/scripts/eva
 5. **PMID 39923968 (J Biomed Inform, 2025)**: *"Improving entity recognition using ensembles of deep learning and fine-tuned large language models"*.
 6. **PMID 40775967 (Stud Health Technol Inform, 2025)**: *"Beyond GPT-NER: ChatGPT as Ensemble Arbitrator for Discontinuous Named Entity Recognition in Health Corpora"*.
 7. **PMID 41758143 (Pac Symp Biocomput, 2026)**: *"Leveraging Large Language Models for Adverse Drug Event Detection: A Comparative Study of Token and Span-Based Named Entity Recognition"*.
+
