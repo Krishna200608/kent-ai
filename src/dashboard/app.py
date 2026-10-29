@@ -37,7 +37,8 @@ from src.dashboard.components.rubric_tree import render_rubric_card
 
 import src.dashboard.components.chat_viewer as chat_viewer_mod
 importlib.reload(chat_viewer_mod)
-from src.dashboard.components.chat_viewer import render_chat_interface, render_slot_badges
+from datetime import datetime
+from src.dashboard.components.chat_viewer import render_chat_interface, render_slot_badges, format_chat_transcript
 
 import src.dashboard.dimensions as dimensions_mod
 importlib.reload(dimensions_mod)
@@ -775,6 +776,23 @@ def main():
                 else:
                     st.button(button_label, type="primary", disabled=True, use_container_width=True, help="Requires at least a primary complaint and one modality before generating repertorization.")
                     st.markdown(f"<div style='font-size: 11.5px; color: #9CA3AF; margin-top: 4px;'>Requires primary complaint + at least one modality ({collected_count}/7 collected).</div>", unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # One-click copy/download consultation transcript for debugging and analysis
+                with st.popover("📋 Copy Consultation Chat", use_container_width=True, help="Export complete consultation dialogue and captured slots for analysis"):
+                    st.markdown("##### 📋 Complete Consultation Transcript")
+                    st.caption("Click the copy icon in the top right of the code box below or download the file to share with developer/assistant.")
+                    transcript_text = format_chat_transcript(dm)
+                    st.download_button(
+                        label="📥 Download Chat (.txt)",
+                        data=transcript_text,
+                        file_name=f"kent_ai_consultation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                        mime="text/plain",
+                        use_container_width=True,
+                        key="sidebar_ctrl_download_txt",
+                    )
+                    st.code(transcript_text, language="markdown")
 
                 st.markdown("---")
 

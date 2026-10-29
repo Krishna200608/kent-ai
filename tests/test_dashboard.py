@@ -164,4 +164,26 @@ def test_render_rubric_card_safe_id_handling(monkeypatch):
     render_rubric_card({"id": "corrupted_id", "path": "MIND > UNKNOWN"}, db)
     assert any("No remedies cataloged" in w for w in writes)
 
+def test_format_chat_transcript():
+    """Verify format_chat_transcript compiles clean, structured debug output."""
+    from src.chatbot.dialogue_manager import DialogueManager
+    from src.dashboard.components.chat_viewer import format_chat_transcript
+
+    dm = DialogueManager()
+    dm.get_greeting()
+    dm.extracted_slots["location"].append("head")
+    dm.extracted_slots["mental"].extend(["anxiety", "fear"])
+    dm.history.append({"role": "user", "content": "Severe anxiety & fearful apprehension"})
+    dm.history.append({"role": "assistant", "content": "I am here to support you."})
+
+    transcript = format_chat_transcript(dm)
+    assert "# Kent-AI Clinical Consultation Transcript" in transcript
+    assert "Current Stage" in transcript
+    assert "**Totality Coverage**: 2/7 dimensions" in transcript
+    assert "Location" in transcript
+    assert "head" in transcript
+    assert "Mental/Emotional" in transcript
+    assert "anxiety" in transcript
+    assert "Severe anxiety & fearful apprehension" in transcript
+    assert "I am here to support you." in transcript
 
