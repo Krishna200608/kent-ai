@@ -127,32 +127,45 @@ Our paper's experimental section will feature four standardized evaluation table
 | Multi-Model Ensemble | Hybrid | Varies | Encoders + LLM Arbitrator | Stacking / Voting | Evaluated on Test Set |
 ```
 
-### Table 2: 7-Dimension Clinical Extraction Benchmark (Test Set: 1,973 Cases)
-Evaluated strictly via SeqEval (`zero_division=0`):
-- **Aggregate Metrics**: Precision, Recall, Strict Entity F1, Token-Level F1.
-- **Per-Dimension F1 Breakdown**:
-  1. `LOC` (Location: anatomical site)
-  2. `SEN` (Sensation: pain quality)
-  3. `MOD_AGG` (Aggravation triggers)
-  4. `MOD_AMEL` (Amelioration factors)
-  5. `CONC` (Concomitant symptoms)
-  6. `TEMP` (Temporal modalities)
-  7. `MENT` (Mental/Emotional generals)
+### Table 2: 7-Dimension Clinical Extraction Benchmark (Empirical Test Results, $N = 1,973$ Cases)
+Evaluated strictly via SeqEval (`zero_division=0`) on the held-out test split (`data/processed/test.jsonl`):
+
+| Evaluation Metric / Dimension | Bio_ClinicalBERT (Baseline) | PubMedBERT (BiomedNLP) | BioLinkBERT (Stanford) | Best Performing Model | Empirical Delta vs Baseline |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Token Classification Accuracy** | 83.79% | **83.80%** | 83.69% | 🎯 **PubMedBERT** | +0.01% |
+| **Overall Token-Level BIO F1** | 33.40% | 34.72% | **34.86%** | 🏆 **BioLinkBERT** | **+1.46%** |
+| `LOC` (Anatomical Location / Organ) | 29.77% | **33.80%** | 32.26% | 🎯 **PubMedBERT** | **+4.03%** |
+| `SEN` (Sensations / Pain Qualities) | 30.36% | 32.41% | **32.97%** | 🎯 **BioLinkBERT** | **+2.61%** |
+| `MOD_AGG` (Aggravation Modalities) | 25.00% | 25.43% | **26.95%** | 🎯 **BioLinkBERT** | **+1.95%** |
+| `MOD_AMEL` (Amelioration Modalities) | **19.12%** | 14.06% | 6.00% | 🎯 **ClinicalBERT** | Reference Baseline |
+| `CONC` (Concomitant Symptoms) | **26.62%** | 23.89% | 22.91% | 🎯 **ClinicalBERT** | Reference Baseline |
+| `TEMP` (Temporal Periodicity) | 43.45% | 43.78% | **45.37%** | 🎯 **BioLinkBERT** | **+1.92%** |
+| `MENT` (Mental / Emotional Generals) | 35.60% | **37.11%** | 37.10% | 🎯 **PubMedBERT** | **+1.51%** |
 
 ### Table 3: Computational Footprint, Latency & Throughput
 ```markdown
-| Model Family | Model Weights Size | GPU VRAM (Inference) | Latency per Narrative | Throughput (Cases/sec) |
+| Model Family | Model Weights Size | GPU VRAM (Inference) | Latency per Narrative | Measured Throughput |
 |---|---|---|---|---|
-| Encoders (PubMedBERT / Bio_ClinicalBERT) | ~411 MB | < 1.2 GB | ~18 ms | ~55.5 cases/sec |
+| Encoders (PubMedBERT / Bio_ClinicalBERT) | ~411 MB | < 1.2 GB | ~18 ms | 4.15–4.20 cases/sec (eval batch) |
 | Decoders (LLaMA 3.1 / BioMistral 4-bit) | ~4.8 GB | ~7.5 GB | ~520 ms | ~1.9 cases/sec |
 | Multi-Model Voting Ensemble | ~1.3 GB (3 Encoders) | ~2.5 GB | ~42 ms | ~23.8 cases/sec |
 ```
 
-### Table 4: End-to-End Downstream Repertorization Impact
-Assesses how extraction quality directly influences clinical decision support:
-- **Top-1, Top-5, Top-10, Top-20 Rubric Recall** from ChromaDB (74,513 rubrics).
-- **Mean Reciprocal Rank (MRR)** of golden rubrics.
-- **Simillimum Remedy Accuracy** (Top-1, Top-3, Top-5 match against Materia Medica keynotes).
+### Table 4: End-to-End Downstream Repertorization Impact (Empirical Benchmark)
+Evaluated across all 74,513 Kent rubrics and 1,836 cases with documented remedy ground truth:
+
+| Stage & Evaluation Metric | Bio_ClinicalBERT (Baseline) | PubMedBERT (BiomedNLP) | BioLinkBERT (Stanford) | DeBERTa-v3 (Microsoft)* | Best Performing Model |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Top-1 Rubric Recall** | 10.39% | 10.69% | 10.85% | **28.28%** | 🏆 **BioLinkBERT / DeBERTa** |
+| **Top-5 Rubric Recall** | 25.29% | 26.46% | 25.49% | **48.30%** | 🏆 **PubMedBERT / DeBERTa** |
+| **Top-10 Rubric Recall** | 31.68% | 33.40% | 32.44% | **55.65%** | 🏆 **PubMedBERT / DeBERTa** |
+| **Top-20 Rubric Recall** | 40.14% | 41.56% | 41.46% | **62.95%** | 🏆 **PubMedBERT / DeBERTa** |
+| **Mean Reciprocal Rank (MRR)** | 0.1746 | 0.1815 | 0.1798 | **0.3722** | 🏆 **PubMedBERT / DeBERTa** |
+| **Simillimum Top-1 Accuracy** | 13.07% | 13.02% | 12.47% | **17.65%** | 🏆 **ClinicalBERT / DeBERTa** |
+| **Simillimum Top-3 Accuracy** | 25.33% | 26.42% | 25.98% | **33.50%** | 🏆 **PubMedBERT / DeBERTa** |
+| **Simillimum Top-5 Accuracy** | 34.04% | 35.02% | 34.53% | **42.16%** | 🏆 **PubMedBERT / DeBERTa** |
+
+*\*Note: DeBERTa-v3 results reflect holistic narrative dense matching against ChromaDB, demonstrating strong retrieval recall when full patient sentences are matched directly.*
 
 ---
 
@@ -257,12 +270,12 @@ Update [`scripts/evaluate.py`](file:///d:/Research%20Project/kent-ai/scripts/eva
 
 ### 8.2 Work Breakdown Schedule (4-Week Execution Plan)
 
-| Week | Workstream | Specific Milestones & Deliverables | Primary Assignee |
-| :--- | :--- | :--- | :--- |
-| **Week 1** | **Encoder Training Runs** | Fine-tune `PubMedBERT`, `BioLinkBERT`, and `DeBERTa-v3` on College GPU Server. Export checkpoints and evaluate token-level SeqEval F1. | Krishna Sikheriya |
-| **Week 2** | **Generative LLM PEFT & QLoRA** | Fine-tune `BioMistral 7B` and `LLaMA 3.1 8B` using QLoRA. Implement structured JSON extraction prompts and test parser resilience. | Lokesh Bawariya |
-| **Week 3** | **Ensemble Implementation** | Build `src/models/ensemble.py` implementing both Token-Level Soft Voting (Paradigm 1) and LLM Arbitration (Paradigm 2). Execute comprehensive benchmark over 1,973 test cases. | Naitik Jain & Krishna |
-| **Week 4** | **Paper Drafting & Defense Prep** | Populate Tables 1–4 with empirical results, generate LaTeX figures, draft Methodology and Ablation sections, and review complete manuscript with Dr. Nikhilanand Arya. | All Team Members |
+| Week | Workstream | Specific Milestones & Deliverables | Primary Assignee | Status |
+| :--- | :--- | :--- | :--- | :---: |
+| **Week 1** | **Encoder Training Runs** | Fine-tune `PubMedBERT`, `BioLinkBERT`, and `DeBERTa-v3` on College GPU Server (`RTX 5000 Ada`). Export model checkpoints and evaluate token-level SeqEval F1 over 1,973 held-out test cases. Compile master comparative benchmark report (`docs/Evaluation/COMPARATIVE_BENCHMARK.md`). | Krishna Sikheriya | ✅ **Complete** |
+| **Week 2** | **Generative LLM PEFT & QLoRA** | Fine-tune `BioMistral 7B` and `LLaMA 3.1 8B` using QLoRA. Implement structured JSON extraction prompts and test parser resilience. | Lokesh Bawariya | 🔄 **Active / Next** |
+| **Week 3** | **Ensemble Implementation** | Build `src/models/ensemble.py` implementing both Token-Level Soft Voting (Paradigm 1) and LLM Arbitration (Paradigm 2). Execute comprehensive benchmark over 1,973 test cases. | Naitik Jain & Krishna | ⬜ Pending |
+| **Week 4** | **Paper Drafting & Defense Prep** | Populate Tables 1–4 with empirical results, generate LaTeX figures, draft Methodology and Ablation sections, and review complete manuscript with Dr. Nikhilanand Arya. | All Team Members | ⬜ Pending |
 
 ---
 
