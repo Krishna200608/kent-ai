@@ -578,6 +578,15 @@ h1, h2, h3, h4, h5, h6, .brand-title {
     box-shadow: 0 0 8px #06B6D4;
 }
 
+.status-dot-amber {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #F59E0B;
+    box-shadow: 0 0 8px #F59E0B;
+    flex-shrink: 0;
+}
+
 @keyframes pulse-glow {
     0%, 100% {
         opacity: 1;
@@ -828,30 +837,96 @@ button[kind="secondary"]:hover {
     background: rgba(16, 185, 129, 0.6);
 }
 
-/* Polished Chat Messages inside Container */
+/* Polished Chat Messages inside Container (Claude & ChatGPT Aesthetic) */
 [data-testid="stChatMessage"] {
     background: rgba(15, 23, 42, 0.65) !important;
-    border: 1px solid rgba(255, 255, 255, 0.06) !important;
-    border-radius: 12px !important;
-    padding: 12px 16px !important;
-    margin-bottom: 10px !important;
-    transition: border-color 0.2s ease, background 0.2s ease !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 14px !important;
+    padding: 14px 18px !important;
+    margin-bottom: 12px !important;
+    font-size: 14.5px !important;
+    line-height: 1.65 !important;
+    transition: all 0.2s ease !important;
 }
 
 [data-testid="stChatMessage"]:hover {
-    border-color: rgba(255, 255, 255, 0.14) !important;
+    border-color: rgba(255, 255, 255, 0.16) !important;
 }
 
-/* User Message Styling */
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
-    background: rgba(16, 185, 129, 0.08) !important;
+/* User Message Bubble - Claude/ChatGPT dark slate glass */
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]),
+[data-testid="stChatMessage"]:has(img[src*="user_avatar"]) {
+    background: rgba(30, 41, 59, 0.65) !important;
+    border: 1px solid rgba(148, 163, 184, 0.25) !important;
+    border-left: 3px solid #64748B !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Assistant Message Bubble - Emerald obsidian glass */
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]),
+[data-testid="stChatMessage"]:has(img[src*="assistant_avatar"]) {
+    background: rgba(13, 26, 21, 0.75) !important;
     border: 1px solid rgba(16, 185, 129, 0.25) !important;
+    border-left: 3px solid #10B981 !important;
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.1) !important;
 }
 
-/* Assistant Message Styling */
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {
-    background: rgba(17, 24, 39, 0.82) !important;
-    border: 1px solid rgba(6, 182, 212, 0.18) !important;
+/* Avatar icon styling */
+[data-testid="stChatMessage"] img {
+    border-radius: 10px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Sleek Toolbar Popover & Action Buttons */
+[data-testid="stPopover"] > button {
+    background: rgba(17, 24, 39, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #E5E7EB !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    padding: 5px 12px !important;
+    transition: all 0.2s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+[data-testid="stPopover"] > button:hover {
+    background: rgba(16, 185, 129, 0.18) !important;
+    border-color: rgba(16, 185, 129, 0.5) !important;
+    color: #10B981 !important;
+    box-shadow: 0 2px 10px rgba(16, 185, 129, 0.25) !important;
+}
+
+/* Popover Content Card */
+[data-testid="stPopoverBody"] {
+    background: #0D1526 !important;
+    border: 1px solid rgba(16, 185, 129, 0.35) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55) !important;
+    padding: 16px !important;
+}
+
+/* Claude/ChatGPT style suggestion prompt chips */
+div[data-testid="stHorizontalBlock"]:has(button[key*="chip_turn_"]) button {
+    background: rgba(17, 24, 39, 0.75) !important;
+    border: 1px solid rgba(16, 185, 129, 0.3) !important;
+    color: #E5E7EB !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    padding: 9px 14px !important;
+    text-align: left !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+div[data-testid="stHorizontalBlock"]:has(button[key*="chip_turn_"]) button:hover {
+    background: rgba(16, 185, 129, 0.18) !important;
+    border-color: #10B981 !important;
+    color: #FFFFFF !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25) !important;
 }
 
 /* Hide standard Streamlit footer */

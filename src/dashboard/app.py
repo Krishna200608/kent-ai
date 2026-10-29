@@ -780,12 +780,12 @@ def main():
                 st.markdown("---")
 
                 # One-click copy/download consultation transcript for debugging and analysis
-                with st.popover("📋 Copy Consultation Chat", use_container_width=True, help="Export complete consultation dialogue and captured slots for analysis"):
-                    st.markdown("##### 📋 Complete Consultation Transcript")
+                with st.popover("Copy Consultation Chat", use_container_width=True, help="Export complete consultation dialogue and captured slots for analysis"):
+                    st.markdown("##### Consultation Transcript")
                     st.caption("Click the copy icon in the top right of the code box below or download the file to share with developer/assistant.")
                     transcript_text = format_chat_transcript(dm)
                     st.download_button(
-                        label="📥 Download Chat (.txt)",
+                        label="Download Chat (.txt)",
                         data=transcript_text,
                         file_name=f"kent_ai_consultation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
                         mime="text/plain",
