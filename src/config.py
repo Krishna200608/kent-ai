@@ -90,9 +90,17 @@ def get_chatbot_config(filepath: Optional[Path | str] = None) -> Dict[str, Any]:
     return load_config("chatbot.yaml")
 
 
+def get_extraction_vocabulary(filepath: Optional[Path | str] = None) -> Dict[str, Any]:
+    """Load the clinical slot extraction vocabulary from extraction_vocabulary.yaml."""
+    if filepath:
+        return load_yaml(filepath)
+    return load_config("extraction_vocabulary.yaml")
+
+
 # Convenient aliases
 load_model_config = get_model_config
 load_generation_config = get_generation_config
 load_chromadb_config = get_chromadb_config
 load_chatbot_config = get_chatbot_config
+load_extraction_vocabulary = get_extraction_vocabulary
 

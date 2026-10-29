@@ -1,7 +1,13 @@
 """Multi-turn dialogue manager orchestrating context history and slot filling (Phase 6).
 
-Implements a warm, empathetic clinical consultation partner backed by LLaMA 3
-(via local Ollama) or deterministic friendly templates in mock mode.
+Architecture — 3-Tier Clinical Slot Extraction Pipeline:
+    Tier 1 (fast, <1ms):   YAML-backed regex heuristic (configs/extraction_vocabulary.yaml)
+    Tier 2 (primary, ~0.5-1.5s): Fine-tuned Bio_ClinicalBERT NER (when weights available)
+    Tier 3 (LLM, ~2-4s):  LLaMA 3 structured JSON slot extraction as verification/enrichment layer
+
+Each tier enriches the slot set; later tiers override or supplement earlier ones.
+The heuristic is a fast safety net — ClinicalBERT is the preferred primary extractor.
+LLaMA structured extraction is used when the utterance is substantive enough to justify the latency.
 """
 
 from __future__ import annotations
@@ -11,18 +17,78 @@ import logging
 import re
 import urllib.error
 import urllib.request
-from typing import Any, Dict, List, Optional
+from functools import lru_cache
+from typing import Any, Dict, List, Optional, Tuple
 
 from src.chatbot.prompts import CHATBOT_SYSTEM_PROMPT, CHATBOT_TURN_PROMPT
 from src.chatbot.state_machine import ConversationStateMachine, IntakeState
-from src.config import get_chatbot_config
+from src.config import get_chatbot_config, get_extraction_vocabulary
 from src.pipeline.orchestrator import PatientReport, PipelineOrchestrator
 
 logger = logging.getLogger("dialogue_manager")
 
+# Minimum word count in a patient utterance to justify ClinicalBERT inference.
+# Single-word or very short replies ("yes", "no", "3am") skip the model for speed.
+_MIN_WORDS_FOR_BERT = 2
+
+# Minimum word count in a patient utterance to justify LLaMA slot extraction call.
+_MIN_WORDS_FOR_LLM_EXTRACTION = 4
+
+
+@lru_cache(maxsize=1)
+def _load_vocab() -> Dict[str, Any]:
+    """Load extraction vocabulary from YAML (cached for the process lifetime).
+
+    Falls back to an empty dict if the file is missing so the heuristic gracefully
+    degrades to the ClinicalBERT and LLaMA tiers instead of crashing.
+    """
+    try:
+        data = get_extraction_vocabulary()
+        return data.get("dimensions", {})
+    except FileNotFoundError:
+        logger.warning(
+            "extraction_vocabulary.yaml not found. Heuristic extractor will produce no results. "
+            "ClinicalBERT and LLaMA tiers remain active."
+        )
+        return {}
+
+
+@lru_cache(maxsize=1)
+def _load_llm_extraction_config() -> Dict[str, Any]:
+    """Load LLM slot extraction config from YAML (cached)."""
+    try:
+        data = get_extraction_vocabulary()
+        return data.get("llm_extraction", {})
+    except FileNotFoundError:
+        return {}
+
+
+@lru_cache(maxsize=1)
+def _load_generate_button_config() -> Dict[str, Any]:
+    """Load generate button unlock config from YAML (cached)."""
+    try:
+        data = get_extraction_vocabulary()
+        return data.get("generate_button", {})
+    except FileNotFoundError:
+        return {}
+
+
+def get_min_dimensions_to_unlock() -> int:
+    """Return the minimum Kent dimensions required to unlock 'Generate Repertorization'.
+
+    Configured in configs/extraction_vocabulary.yaml → generate_button.min_dimensions_to_unlock.
+    Defaults to 1 so the button unlocks as soon as any complaint is captured.
+    """
+    return int(_load_generate_button_config().get("min_dimensions_to_unlock", 1))
+
 
 class DialogueManager:
-    """Orchestrates intake conversation turns, slot filling, and termination."""
+    """Orchestrates intake conversation turns, slot filling, and termination.
+
+    Slot extraction uses a 3-tier pipeline (see module docstring). The tiers
+    are independent — failure in any tier is silently logged and the next tier
+    continues, ensuring robustness regardless of model availability.
+    """
 
     def __init__(
         self,
@@ -66,7 +132,7 @@ class DialogueManager:
         }
 
     def get_greeting(self) -> str:
-        """Provide a concrete, welcoming initial opening message detailing what will be asked."""
+        """Provide a welcoming initial opening message detailing what will be assessed."""
         greeting = (
             "Hello! I'm Kent-AI, your clinical intake companion. We will examine your "
             "main complaint, including location, sensations, triggers, relief factors, "
@@ -77,135 +143,280 @@ class DialogueManager:
             self.current_suggestions = self.generate_dynamic_suggestions(greeting)
         return greeting
 
+    # =========================================================================
+    # TIER 1: YAML-backed Heuristic Extractor
+    # =========================================================================
+
     def _extract_slots_heuristic(self, text: str) -> Dict[str, List[str]]:
-        """Fast, robust clinical slot extractor covering Kent's 7 dimensions."""
+        """Tier 1 — Fast YAML-vocabulary regex extractor covering Kent's 7 dimensions.
+
+        Why regex + YAML instead of pure ML here:
+        - Sub-millisecond latency ensures UI responsiveness on every turn.
+        - YAML vocabulary is entirely configurable without touching Python code.
+        - Acts as a high-recall safety net when the model tiers are unavailable.
+        - Bio_ClinicalBERT (Tier 2) provides high-precision correction on top.
+        """
         found: Dict[str, List[str]] = {}
         t_low = text.lower().strip()
         if not t_low:
             return found
 
-        # 1. Anatomical locations
-        locations = [
-            "stomach", "abdomen", "belly", "gut", "tummy", "epigastrium",
-            "head", "forehead", "temple", "temples", "vertex", "occiput",
-            "eyes", "eye", "ears", "ear", "nose", "throat", "pharynx",
-            "chest", "heart", "lungs", "back", "spine", "neck", "lumbar",
-            "joints", "knee", "knees", "limbs", "hands", "hand", "feet", "foot",
-            "pelvis", "bladder", "kidneys", "skin", "shoulder", "shoulders"
-        ]
-        for loc in locations:
-            if re.search(r"\b" + re.escape(loc) + r"\b", t_low):
-                found.setdefault("location", []).append(loc)
+        vocab = _load_vocab()
 
-        # 2. Sensation qualities
-        sensations = [
-            "heavy", "heaviness", "tight", "tightness", "constriction", "constricted",
-            "throbbing", "pounding", "splitting", "pulsating", "burning", "heat",
-            "stitching", "sharp", "stabbing", "piercing", "dull", "aching", "ache",
-            "sore", "soreness", "cramping", "cramp", "shooting", "bursting", "pressure",
-            "fullness", "numb", "numbness", "tingling", "fluttering", "flutter"
+        # --- 1. Simple keyword matching for all 7 basic dimensions ---
+        simple_dims = [
+            ("location", "location"),
+            ("sensation", "sensation"),
+            ("concomitant", "concomitant"),
+            ("temporal", "temporal"),
+            ("mental", "mental"),
         ]
-        for sen in sensations:
-            if re.search(r"\b" + re.escape(sen) + r"\b", t_low):
-                found.setdefault("sensation", []).append(sen)
+        for yaml_key, slot_key in simple_dims:
+            for term in vocab.get(yaml_key, []):
+                if re.search(r"\b" + re.escape(term) + r"\b", t_low):
+                    found.setdefault(slot_key, []).append(term)
 
-        # 3. Modalities (Aggravations)
-        aggs = [
-            "movement", "moving", "motion", "move", "exercise", "exercising", "exertion",
-            "walking", "running", "stairs", "bending", "standing", "sitting", "lying",
-            "noise", "sound", "loud", "light", "sun", "sunlight", "heat", "warm room",
-            "cold", "cold air", "draft", "wind", "weather", "storm", "damp", "touch",
-            "pressure", "eating", "after eating", "food", "coffee", "night", "morning",
-            "stress", "crowds"
-        ]
-        is_agg = any(
-            re.search(p, t_low) for p in [
-                r"\bworse\b", r"\baggravat\w*", r"\btrigger\w*",
-                r"\bamplif\w*", r"\bintensif\w*", r"\bworsen\w*",
-                r"makes?\s+it\s+worse"
-            ]
+        # --- 2. Aggravation — directional (requires contextual marker) ---
+        agg_trigger_patterns = vocab.get("aggravation_trigger_patterns", [
+            r"\bworse\b", r"\baggravat\w*", r"\btrigger\w*",
+            r"\bamplif\w*", r"\bintensif\w*", r"\bworsen\w*", r"makes?\s+it\s+worse",
+        ])
+        relief_phrases = vocab.get("relief_phrases", ["soothe", "better", "relief", "reliev", "ease", "calm", "help"])
+
+        is_agg = any(re.search(p, t_low) for p in agg_trigger_patterns)
+        is_in_modality_state = (
+            hasattr(self, "state_machine")
+            and self.state_machine.current_state == IntakeState.MODALITY
         )
-        for agg in aggs:
-            if re.search(r"\b" + re.escape(agg) + r"\b", t_low):
-                if is_agg or (hasattr(self, "state_machine") and self.state_machine.current_state == IntakeState.MODALITY):
-                    if not any(rel in t_low for rel in ["soothe", "better", "relief", "reliev", "ease", "calm", "help"]):
-                        found.setdefault("modality_agg", []).append(agg)
+        has_relief_context = any(r in t_low for r in relief_phrases)
 
-        m_x_worse = re.search(r"([a-zA-Z\s]{2,25})\s+(?:makes?\s+it\s+worse|aggravates?|triggers?|worsens?|amplifies?)", t_low)
+        for agg_term in vocab.get("modality_agg", []):
+            if re.search(r"\b" + re.escape(agg_term) + r"\b", t_low):
+                if (is_agg or is_in_modality_state) and not has_relief_context:
+                    found.setdefault("modality_agg", []).append(agg_term)
+
+        # Free-form "X makes it worse" pattern capture
+        m_x_worse = re.search(
+            r"([a-zA-Z\s]{2,30})\s+(?:makes?\s+it\s+worse|aggravates?|triggers?|worsens?|amplifies?)",
+            t_low,
+        )
         if m_x_worse:
             phrase = re.sub(r"^(?:that|this|it|which|and|but|also)\s+", "", m_x_worse.group(1).strip())
             if phrase and phrase not in found.get("modality_agg", []):
                 found.setdefault("modality_agg", []).append(phrase)
 
-        # 4. Modalities (Ameliorations)
-        amels = [
-            "warmth", "warm", "warm compress", "warm drinks", "sunny spot", "sunshine", "sun",
-            "rest", "resting", "lying down", "sleep", "sleeping", "dark room", "darkness",
-            "quiet", "solitude", "peaceful", "peace", "pressure", "cold compress", "fresh air",
-            "open air", "walking slowly", "gentle motion", "massage"
-        ]
-        is_amel = any(
-            re.search(p, t_low) for p in [
-                r"\bbetter\b", r"\brelie\w*", r"\bsooth\w*", r"\beas\w*",
-                r"\bimprov\w*", r"\bhelp\w*", r"\bcalm\w*", r"\bcomfort\w*",
-                r"makes?\s+it\s+better", r"brings?\s+relief"
-            ]
-        )
-        for amel in amels:
-            if re.search(r"\b" + re.escape(amel) + r"\b", t_low):
-                if is_amel or (hasattr(self, "state_machine") and self.state_machine.current_state == IntakeState.MODALITY and is_amel):
-                    found.setdefault("modality_amel", []).append(amel)
+        # --- 3. Amelioration — directional ---
+        amel_trigger_patterns = vocab.get("amelioration_trigger_patterns", [
+            r"\bbetter\b", r"\brelie\w*", r"\bsooth\w*", r"\beas\w*",
+            r"\bimprov\w*", r"\bhelp\w*", r"\bcalm\w*", r"\bcomfort\w*",
+            r"makes?\s+it\s+better", r"brings?\s+relief",
+        ])
+        is_amel = any(re.search(p, t_low) for p in amel_trigger_patterns)
 
-        m_x_better = re.search(r"([a-zA-Z\s]{2,25})\s+(?:makes?\s+it\s+better|soothes?|relieves?|helps?|eases?|calms?)", t_low)
+        for amel_term in vocab.get("modality_amel", []):
+            if re.search(r"\b" + re.escape(amel_term) + r"\b", t_low):
+                if is_amel or (is_in_modality_state and is_amel):
+                    found.setdefault("modality_amel", []).append(amel_term)
+
+        # Free-form "X soothes / relieves" pattern capture
+        m_x_better = re.search(
+            r"([a-zA-Z\s]{2,30})\s+(?:makes?\s+it\s+better|soothes?|relieves?|helps?|eases?|calms?)",
+            t_low,
+        )
         if m_x_better:
             phrase = re.sub(r"^(?:that|this|it|which|and|but|also)\s+", "", m_x_better.group(1).strip())
             if phrase and phrase not in found.get("modality_amel", []):
                 found.setdefault("modality_amel", []).append(phrase)
 
-        # 5. Concomitants
-        concs = [
-            "dizzy", "dizziness", "dizzy spells", "vertigo", "giddy", "giddiness",
-            "nausea", "nauseous", "nauseated", "vomiting", "vomit", "queasy",
-            "chills", "fever", "sweating", "sweat", "cold sweat", "perspiration",
-            "trembling", "tremor", "palpitations", "faint", "fainting", "faintness",
-            "blur", "blurred vision", "headache", "weakness", "exhaustion", "thirst",
-            "dry mouth", "insomnia", "sleeplessness"
-        ]
-        for conc in concs:
-            if re.search(r"\b" + re.escape(conc) + r"\b", t_low):
-                found.setdefault("concomitant", []).append(conc)
+        return found
 
-        # 6. Temporals
-        temporals = [
-            "morning", "waking", "after waking", "forenoon", "noon", "midday",
-            "afternoon", "evening", "night", "midnight", "twilight", "bedtime",
-            "3 am", "3 pm", "winter", "summer", "periodically", "periodic",
-            "consistent", "constant", "continuous", "daily", "all day", "spells", "attacks"
-        ]
-        for temp in temporals:
-            if re.search(r"\b" + re.escape(temp) + r"\b", t_low):
-                found.setdefault("temporal", []).append(temp)
+    # =========================================================================
+    # TIER 2: Bio_ClinicalBERT NER Extractor
+    # =========================================================================
 
-        # 7. Mental / Emotional
-        mentals = [
-            "anxious", "anxiety", "fear", "fearful", "apprehension", "apprehensive",
-            "panic", "distress", "worry", "worried", "restless", "restlessness", "pacing",
-            "irritable", "irritability", "angry", "anger", "rage", "sad", "sadness",
-            "depressed", "depression", "grief", "weeping", "crying", "alone", "solitude",
-            "absent-minded", "confusion", "memory loss"
-        ]
-        for ment in mentals:
-            if re.search(r"\b" + re.escape(ment) + r"\b", t_low):
-                found.setdefault("mental", []).append(ment)
+    def _extract_slots_clinicalbert(self, text: str) -> Dict[str, List[str]]:
+        """Tier 2 — Fine-tuned Bio_ClinicalBERT NER extraction.
+
+        Why ClinicalBERT as Tier 2 (not Tier 1):
+        - The model adds ~0.5–1.5s CPU latency; the heuristic runs in <1ms.
+        - ClinicalBERT understands context and sub-word morphology that regex misses
+          (e.g. 'amplifying the heaviness' maps MOD_AGG + SEN correctly).
+        - Only runs when utterance has enough words to justify inference cost.
+
+        Returns empty dict if NER is unavailable or utterance is too short.
+        """
+        word_count = len(text.split())
+        if word_count < _MIN_WORDS_FOR_BERT:
+            return {}
+
+        ner = None
+        if self.orchestrator and getattr(self.orchestrator, "ner", None):
+            ner = self.orchestrator.ner
+        else:
+            # Attempt to instantiate NER directly if orchestrator isn't wired up
+            try:
+                from src.models.symptom_ner import SymptomNER
+                ner = SymptomNER()  # will use fine-tuned weights if available
+            except Exception as err:
+                logger.debug("Could not instantiate SymptomNER for Tier 2: %s", err)
+                return {}
+
+        if ner is None or getattr(ner, "mock_mode", True):
+            # Mock mode means no real weights — skip to avoid polluting slots with
+            # keyword-only fallback that duplicates Tier 1 output.
+            return {}
+
+        lbl_map = {
+            "LOC": "location",
+            "SEN": "sensation",
+            "MOD_AGG": "modality_agg",
+            "MOD_AMEL": "modality_amel",
+            "CONC": "concomitant",
+            "TEMP": "temporal",
+            "MENT": "mental",
+        }
+        found: Dict[str, List[str]] = {}
+        try:
+            ner_ents = ner.extract_entities(text)
+            for ent in ner_ents:
+                slot_k = lbl_map.get(ent.get("label", "").upper())
+                ent_text = ent.get("text", "").strip().lower()
+                confidence = ent.get("confidence", 0.0)
+                # Only accept high-confidence spans (≥0.7) to avoid noisy predictions
+                if slot_k and ent_text and confidence >= 0.7:
+                    found.setdefault(slot_k, []).append(ent_text)
+        except Exception as err:
+            logger.debug("ClinicalBERT NER extraction failed (Tier 2): %s", err)
 
         return found
+
+    # =========================================================================
+    # TIER 3: LLaMA Structured JSON Slot Extraction
+    # =========================================================================
+
+    def _extract_slots_llm(self, user_utterance: str) -> Dict[str, List[str]]:
+        """Tier 3 — LLaMA 3 structured JSON slot extraction for verification/enrichment.
+
+        Why LLaMA as Tier 3:
+        - LLaMA understands nuanced phrasing ("feels like a storm inside" → anxiety/MENT)
+          that neither regex nor fine-tuned ClinicalBERT reliably catches.
+        - Used as an enrichment layer — only invoked when the utterance is substantive
+          (>= _MIN_WORDS_FOR_LLM_EXTRACTION words) to avoid latency on short replies.
+        - Parses SLOT_UPDATE JSON from the bot's own reply (zero extra network calls)
+          OR makes a dedicated lightweight extraction call if needed.
+
+        Returns empty dict on failure — non-blocking.
+        """
+        word_count = len(user_utterance.split())
+        llm_cfg = _load_llm_extraction_config()
+
+        if not llm_cfg.get("enabled", True):
+            return {}
+
+        min_words = int(llm_cfg.get("min_word_count", _MIN_WORDS_FOR_LLM_EXTRACTION))
+        if word_count < min_words:
+            return {}
+
+        slot_extraction_prompt = (
+            f"Extract ONLY the clinical symptom information from this single patient statement:\n"
+            f"\"{user_utterance}\"\n\n"
+            f"Return ONLY a valid JSON object with exactly these 7 keys (use lowercase strings, empty list [] if not mentioned):\n"
+            f"{{\"location\": [], \"sensation\": [], \"modality_agg\": [], \"modality_amel\": [], "
+            f"\"concomitant\": [], \"temporal\": [], \"mental\": []}}\n"
+            f"Do NOT add any other text. Do NOT infer. Only extract what is explicitly stated."
+        )
+
+        url = f"{self.api_base}/api/generate"
+        payload = {
+            "model": self.model_name,
+            "prompt": slot_extraction_prompt,
+            "stream": False,
+            "options": {
+                "temperature": 0.0,   # zero temperature for deterministic JSON output
+                "num_predict": 128,   # slot JSON is short
+                "top_p": 1.0,
+            },
+        }
+
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+        try:
+            with opener.open(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                raw_text = data.get("response", "").strip()
+        except Exception as err:
+            logger.debug("LLaMA slot extraction call failed (Tier 3): %s", err)
+            return {}
+
+        # Try to parse the JSON — LLaMA sometimes adds backticks or extra text
+        json_match = re.search(r"\{[^{}]+\}", raw_text, re.DOTALL)
+        if not json_match:
+            logger.debug("LLaMA Tier 3: no JSON object found in response: %r", raw_text[:200])
+            return {}
+
+        try:
+            parsed = json.loads(json_match.group(0))
+        except json.JSONDecodeError as err:
+            logger.debug("LLaMA Tier 3: JSON parse error: %s | raw: %r", err, raw_text[:200])
+            return {}
+
+        found: Dict[str, List[str]] = {}
+        valid_keys = {"location", "sensation", "modality_agg", "modality_amel", "concomitant", "temporal", "mental"}
+        for key, vals in parsed.items():
+            if key in valid_keys and isinstance(vals, list):
+                clean_vals = [str(v).strip().lower() for v in vals if str(v).strip()]
+                if clean_vals:
+                    found[key] = clean_vals
+
+        return found
+
+    # =========================================================================
+    # 3-Tier Merge Orchestrator
+    # =========================================================================
+
+    def _extract_all_slots(self, user_utterance: str) -> Dict[str, List[str]]:
+        """Run all 3 extraction tiers and merge results, deduplicating per dimension.
+
+        Merge order: Tier 1 → Tier 2 → Tier 3.
+        Later tiers supplement (never erase) earlier tiers.
+        """
+        merged: Dict[str, List[str]] = {}
+
+        def _merge_tier(tier_result: Dict[str, List[str]]) -> None:
+            for slot_k, vals in tier_result.items():
+                for v in vals:
+                    v_clean = v.strip().lower()
+                    existing = [x.lower() for x in merged.get(slot_k, [])]
+                    if v_clean and v_clean not in existing:
+                        merged.setdefault(slot_k, []).append(v_clean)
+
+        # Tier 1 — YAML heuristic (always runs, <1ms)
+        _merge_tier(self._extract_slots_heuristic(user_utterance))
+
+        # Tier 2 — Bio_ClinicalBERT (when weights present, ~0.5–1.5s)
+        _merge_tier(self._extract_slots_clinicalbert(user_utterance))
+
+        # Tier 3 — LLaMA structured extraction (when utterance is substantive, ~2–4s)
+        _merge_tier(self._extract_slots_llm(user_utterance))
+
+        return merged
+
+    # =========================================================================
+    # Ollama Chat Helpers
+    # =========================================================================
 
     def _call_ollama_chat(self, user_prompt: str) -> str:
         """Call Ollama /api/chat with full conversational context."""
         url = f"{self.api_base}/api/chat"
 
         messages = [{"role": "system", "content": CHATBOT_SYSTEM_PROMPT}]
-        for turn in self.history[-6:]:  # Keep recent history
+        for turn in self.history[-6:]:  # keep recent context window
             messages.append(turn)
         messages.append({"role": "user", "content": user_prompt})
 
@@ -226,8 +437,8 @@ class DialogueManager:
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
         try:
             with opener.open(req, timeout=60) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
@@ -237,13 +448,12 @@ class DialogueManager:
             return self._mock_response_for_state()
 
     def is_ollama_online(self) -> bool:
-        """Check if local Ollama daemon is currently running and responding.
-        
-        Attempts connection on 127.0.0.1 (IPv4) first to bypass Windows IPv6 resolution latency.
-        Uses empty proxy handler to avoid intercepting loopback requests.
+        """Check if local Ollama daemon is responding.
+
+        Tries 127.0.0.1 first to bypass Windows IPv6 resolution latency on localhost.
         """
         candidates = ["http://127.0.0.1:11434", self.api_base, "http://localhost:11434"]
-        seen = set()
+        seen: set = set()
         unique_candidates = [c for c in candidates if c and not (c in seen or seen.add(c))]
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
         for base in unique_candidates:
@@ -258,8 +468,12 @@ class DialogueManager:
                 continue
         return False
 
+    # =========================================================================
+    # Fallback Responses (offline / mock mode)
+    # =========================================================================
+
     def _mock_response_for_state(self) -> str:
-        """Friendly deterministic response generator for offline fallback testing."""
+        """Deterministic, clinically focused offline fallback responses per state."""
         state = self.state_machine.current_state
 
         if state == IntakeState.REVIEW:
@@ -270,27 +484,51 @@ class DialogueManager:
                     summary_lines.append(f"• **{dim_title}**: {', '.join(v)}")
             summary_block = "\n".join(summary_lines) if summary_lines else "• Primary complaint noted."
             return (
-                "Thank you for sharing all of this with me. Let me make sure I've got your case right:\n\n"
+                "Thank you for sharing all of this with me. Let me confirm what we've captured:\n\n"
                 f"{summary_block}\n\n"
-                "Does this summary sound accurate, or would you like to add or adjust any details?"
+                "Does this accurately reflect your symptoms, or would you like to add or correct any detail?"
             )
 
         if state == IntakeState.CLARIFICATION:
-            return "Please go ahead and describe the additional symptom, sensation, or detail you'd like to add."
+            return "Please describe the additional symptom or detail you'd like to add."
 
         templates = {
-            IntakeState.CHIEF_COMPLAINT: "I'm really sorry you're feeling unwell. Could you tell me a little more about what's been troubling you most?",
-            IntakeState.LOCATION: "I hear you, and that sounds uncomfortable. Whereabouts in your body does this feel most intense?",
-            IntakeState.SENSATION: "Thank you for sharing that. How would you describe the feeling—is it more of a throbbing, burning, heavy, or sharp ache?",
-            IntakeState.MODALITY: "That helps me picture it. Have you noticed anything that makes it worse, like movement or noise, or anything that brings relief?",
-            IntakeState.CONCOMITANT: "I'm noting that down. Does anything else happen alongside this, such as nausea, dizziness, or chills?",
-            IntakeState.MENTAL: "Dealing with this must be draining. How has this been affecting your mood, stress, or peace of mind lately?",
-            IntakeState.DONE: "Thank you so much. I have all the details needed, and your homeopathic repertory analysis is now complete!",
+            IntakeState.CHIEF_COMPLAINT: (
+                "I understand — thank you for sharing that. "
+                "Could you tell me a bit more about what you've been experiencing?"
+            ),
+            IntakeState.LOCATION: (
+                "Noted. Where in your body do you feel this most intensely?"
+            ),
+            IntakeState.SENSATION: (
+                "Thank you. How would you describe the sensation — "
+                "is it throbbing, burning, heavy, tight, or something else?"
+            ),
+            IntakeState.MODALITY: (
+                "That helps. Has anything made this worse — such as movement, cold, heat, or noise? "
+                "And what brings you any relief?"
+            ),
+            IntakeState.CONCOMITANT: (
+                "Noted. Does anything else occur alongside this — "
+                "such as nausea, dizziness, chills, or sweating?"
+            ),
+            IntakeState.MENTAL: (
+                "I appreciate you sharing that. How has this been affecting your mood "
+                "or emotional state — any anxiety, irritability, or low energy?"
+            ),
+            IntakeState.DONE: (
+                "Thank you — I have all the details I need. "
+                "Your homeopathic repertory analysis is now ready to view."
+            ),
         }
-        return templates.get(state, "I understand. Please tell me more about that.")
+        return templates.get(state, "Please tell me more about that.")
 
-    def _parse_and_strip_quick_replies(self, text: str) -> tuple[str, List[str]]:
-        """Extract QUICK_REPLIES JSON from model output and return clean response and options."""
+    # =========================================================================
+    # Quick Reply / Suggestion Chip Generation
+    # =========================================================================
+
+    def _parse_and_strip_quick_replies(self, text: str) -> Tuple[str, List[str]]:
+        """Extract QUICK_REPLIES JSON from LLaMA output and return clean text + options."""
         if not text:
             return "", []
 
@@ -298,26 +536,64 @@ class DialogueManager:
         match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
         if match:
             raw_replies = match.group(1).strip()
-            clean_text = text[:match.start()].strip()
+            clean_text = text[: match.start()].strip()
             try:
                 parsed = json.loads(raw_replies)
                 if isinstance(parsed, list) and len(parsed) > 0:
                     clean_options = [str(opt).strip(' "\'') for opt in parsed if str(opt).strip()]
                     return clean_text, clean_options[:4]
             except Exception:
-                quoted = re.findall(r'["\']([^"\']+)["\']', raw_replies)
+                quoted = re.findall(r'["\'"]([^"\']+)["\']', raw_replies)
                 if quoted:
                     return clean_text, quoted[:4]
             return clean_text, []
         return text.strip(), []
 
+    def _parse_and_strip_slot_update(self, text: str) -> Tuple[str, Dict[str, List[str]]]:
+        """Extract SLOT_UPDATE JSON from LLaMA chatbot reply.
+
+        When LLaMA produces both a conversational reply AND a SLOT_UPDATE block,
+        this extracts the structured slots without making a separate API call.
+        """
+        if not text:
+            return text, {}
+
+        pattern = r"SLOT_UPDATE:\s*(\{[^{}]+\})"
+        match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+        if not match:
+            return text, {}
+
+        clean_text = text[: match.start()].strip()
+        raw_json = match.group(1)
+
+        try:
+            parsed = json.loads(raw_json)
+        except json.JSONDecodeError:
+            return clean_text, {}
+
+        valid_keys = {"location", "sensation", "modality_agg", "modality_amel", "concomitant", "temporal", "mental"}
+        found: Dict[str, List[str]] = {}
+        for key, vals in parsed.items():
+            if key in valid_keys and isinstance(vals, list):
+                clean_vals = [str(v).strip().lower() for v in vals if str(v).strip()]
+                if clean_vals:
+                    found[key] = clean_vals
+
+        return clean_text, found
+
     def generate_dynamic_suggestions(self, bot_message: str) -> List[str]:
-        """Dynamically generate 3-4 natural first-person instant answers to the current question."""
+        """Generate 3-4 contextual first-person instant-reply suggestions for the patient.
+
+        Suggestions are keyed on the current bot question text (not the state directly)
+        so they adapt to what the bot actually asked, not just which state we're in.
+        The vocabulary used here is intentionally kept in Python (not YAML) because
+        these are UI presentation strings, not clinical extraction keywords.
+        """
         text = (bot_message or "").lower()
         slots = self.extracted_slots
 
-        # 1. Opening / Chief Complaint (Highest Priority on Initial Turns - MIND Focus)
-        if any(p in text for p in ["how are you", "bothering you", "troubling you", "bring you in", "bothers you most", "what brings", "primary symptoms"]):
+        # Opening / Chief Complaint
+        if any(p in text for p in ["troubling you", "primary symptoms", "bring you in", "bothers you", "what brings", "how are you"]):
             return [
                 "Severe anxiety & fearful apprehension",
                 "Emotional pain & sadness, worse alone",
@@ -325,7 +601,7 @@ class DialogueManager:
                 "Absent-mindedness & memory lapses",
             ]
 
-        # 2. Concomitants / Other Associated Symptoms (Checked before review because of 'anything else')
+        # Concomitants
         if any(w in text for w in ["alongside", "other symptom", "at the same time", "also notice", "nausea, dizziness"]):
             return [
                 "Accompanied by nausea",
@@ -334,69 +610,34 @@ class DialogueManager:
                 "No other physical symptoms",
             ]
 
-        # 3. Location / Anatomy Inquiry
+        # Location
         if any(w in text for w in ["where", "location", "part of your", "which side", "whereabouts", "where in"]):
             known_locs = " ".join(slots.get("location", [])).lower()
             if "head" in known_locs or "head" in text or "migraine" in text or "temple" in text:
-                return [
-                    "Forehead and temples",
-                    "Top of head (vertex)",
-                    "Back of head (occiput)",
-                    "Behind my eyes",
-                ]
+                return ["Forehead and temples", "Top of head (vertex)", "Back of head (occiput)", "Behind my eyes"]
             elif "stomach" in known_locs or "abdomen" in known_locs or "stomach" in text or "nausea" in text:
-                return [
-                    "Pit of stomach (epigastrium)",
-                    "Lower abdomen & cramping",
-                    "All across my stomach",
-                    "Around my navel area",
-                ]
+                return ["Pit of stomach (epigastrium)", "Lower abdomen & cramping", "All across my stomach", "Around my navel area"]
             elif "chest" in known_locs or "chest" in text or "heart" in text or "breath" in text:
-                return [
-                    "Center of my chest",
-                    "Left side around heart",
-                    "Upper chest and lungs",
-                    "Tightness across my ribs",
-                ]
+                return ["Center of my chest", "Left side around heart", "Upper chest and lungs", "Tightness across my ribs"]
             elif "throat" in known_locs or "throat" in text:
-                return [
-                    "Right side of throat",
-                    "Left side and tonsils",
-                    "Deep down in the throat",
-                    "Larynx and voice box",
-                ]
+                return ["Right side of throat", "Left side and tonsils", "Deep down in the throat", "Larynx and voice box"]
             elif "back" in known_locs or "back" in text or "spine" in text or "lumbar" in text:
-                return [
-                    "Lower lumbar area",
-                    "Upper back between shoulders",
-                    "Along the entire spine",
-                    "Sacrum and tailbone",
-                ]
+                return ["Lower lumbar area", "Upper back between shoulders", "Along the entire spine", "Sacrum and tailbone"]
             elif "joint" in known_locs or "knee" in known_locs or "joint" in text or "limb" in text:
-                return [
-                    "Knees and ankles",
-                    "Hands and wrists",
-                    "Shoulders and elbows",
-                    "Small finger joints",
-                ]
+                return ["Knees and ankles", "Hands and wrists", "Shoulders and elbows", "Small finger joints"]
             else:
-                return [
-                    "In my head and temples",
-                    "In my stomach and abdomen",
-                    "In my chest and throat",
-                    "In my lower back and joints",
-                ]
+                return ["In my head and temples", "In my stomach and abdomen", "In my chest and throat", "In my lower back and joints"]
 
-        # 4. Sensation / Character of Pain Inquiry
-        if any(w in text for w in ["sensation", "feel like", "kind of pain", "type of", "throbbing", "burning", "stabbing", "describe the"]):
+        # Sensation
+        if any(w in text for w in ["sensation", "feel like", "kind of pain", "type of", "throbbing", "burning", "stabbing", "describe the", "how does it"]):
             return [
-                "Pulsating, throbbing beat",
-                "Sharp, stabbing pain",
-                "Dull, heavy aching pressure",
-                "Burning like hot embers",
+                "Sharp, electric stabs",
+                "Dull, heavy pressure",
+                "Vibrating, humming noise",
+                "Pulsating, throbbing rhythm",
             ]
 
-        # 5. Modality (Aggravation / Amelioration / Worse / Better)
+        # Modality
         if any(w in text for w in ["makes it worse", "make it worse", "aggravat", "flare", "trigger", "worse from", "bring relief", "brings relief", "comfort", "soothe", "better from", "relieved by"]):
             return [
                 "Worse in heat & bright sun",
@@ -405,7 +646,7 @@ class DialogueManager:
                 "Better resting in a dark room",
             ]
 
-        # 6. Temporal / Time of Day
+        # Temporal
         if any(w in text for w in ["what time", "time of day", "when does", "morning or night", "waking up", "periodicity", "hour", "clock"]):
             return [
                 "Worse in morning on waking",
@@ -414,8 +655,8 @@ class DialogueManager:
                 "Worse after midnight (2-3 AM)",
             ]
 
-        # 7. Mental / Emotional State / Mood
-        if any(w in text for w in ["mood", "stress", "emotion", "feeling mentally", "anxious", "mind", "irritab", "peace of mind"]):
+        # Mental/Emotional
+        if any(w in text for w in ["mood", "stress", "emotion", "feeling mentally", "anxious", "mind", "irritab", "peace of mind", "emotional"]):
             return [
                 "Restless, anxious, and uneasy",
                 "Irritable and easily angered",
@@ -423,7 +664,7 @@ class DialogueManager:
                 "My mood is relatively calm",
             ]
 
-        # 8. Review / Summary Confirmation
+        # Review / Confirmation
         if any(w in text for w in ["accurate", "summarize", "anything else", "sound right", "add anything", "confirm", "covers it", "got it right"]):
             return [
                 "Yes, that covers all my symptoms!",
@@ -449,7 +690,7 @@ class DialogueManager:
         ])
 
     def get_current_suggestions(self) -> List[str]:
-        """Return the current dynamic instant answer suggestions for the patient."""
+        """Return the current dynamic instant-reply suggestions for the patient."""
         if not self.current_suggestions and self.history:
             last_bot_msg = self.history[-1]["content"] if self.history[-1]["role"] == "assistant" else ""
             if last_bot_msg:
@@ -458,43 +699,37 @@ class DialogueManager:
             self.history[-1]["content"] if self.history else ""
         )
 
+    # =========================================================================
+    # Core Turn Processing
+    # =========================================================================
+
     def process_turn(self, user_utterance: str) -> str:
         """Process one conversational turn from the patient.
-        
+
+        Steps:
+            1. Record patient utterance.
+            2. Run 3-tier slot extraction (YAML heuristic → ClinicalBERT → LLaMA).
+            3. Merge new slots into session accumulated slots (deduplication).
+            4. Transition FSM to next state.
+            5. Generate bot response (LLaMA or offline fallback).
+            6. Parse SLOT_UPDATE from bot reply if present (zero-cost Tier 3 enrichment).
+            7. Parse QUICK_REPLIES from bot reply.
+            8. Record clean bot response to history.
+            9. Handover to pipeline orchestrator when DONE.
+
         Args:
             user_utterance: Patient's message.
-            
+
         Returns:
-            Friendly response message from Kent-AI.
+            Friendly clinical response message from Kent-AI.
         """
         # 1. Record patient utterance
         self.history.append({"role": "user", "content": user_utterance})
 
-        # 2. Extract clinical slots via robust regex heuristic
-        new_slots = self._extract_slots_heuristic(user_utterance)
+        # 2. 3-tier slot extraction
+        new_slots = self._extract_all_slots(user_utterance)
 
-        # Also extract via fine-tuned Bio_ClinicalBERT if orchestrator NER is available
-        if self.orchestrator and getattr(self.orchestrator, "ner", None):
-            try:
-                ner_ents = self.orchestrator.ner.extract_entities(user_utterance)
-                lbl_map = {
-                    "LOC": "location",
-                    "SEN": "sensation",
-                    "MOD_AGG": "modality_agg",
-                    "MOD_AMEL": "modality_amel",
-                    "CONC": "concomitant",
-                    "TEMP": "temporal",
-                    "MENT": "mental",
-                }
-                for ent in ner_ents:
-                    k = lbl_map.get(ent.get("label", "").upper())
-                    txt = ent.get("text", "").strip()
-                    if k and txt:
-                        new_slots.setdefault(k, []).append(txt)
-            except Exception as err:
-                logger.debug("Live NER extraction skipped: %s", err)
-
-        # Deduplicate and register into extracted_slots
+        # 3. Merge into accumulated session slots
         for slot_k, vals in new_slots.items():
             for v in vals:
                 v_clean = v.strip().lower()
@@ -502,12 +737,12 @@ class DialogueManager:
                 if v_clean and v_clean not in existing:
                     self.extracted_slots.setdefault(slot_k, []).append(v_clean)
 
-        # 3. Transition FSM
+        # 4. Transition FSM
         self.state_machine.next_state(user_utterance, extracted_slots=new_slots)
         current_state = self.state_machine.current_state
         goal_desc = self.state_machine.get_current_goal_description()
 
-        # 4. Generate bot response
+        # 5. Generate bot response
         if self.mock_mode:
             raw_reply = self._mock_response_for_state()
         else:
@@ -533,16 +768,26 @@ class DialogueManager:
             if not raw_reply:
                 raw_reply = self._mock_response_for_state()
 
-        # 5. Extract dynamic quick replies and clean the text
+        # 6. Extract inline SLOT_UPDATE from bot reply (free Tier 3 enrichment)
+        raw_reply, inline_slots = self._parse_and_strip_slot_update(raw_reply)
+        if inline_slots:
+            for slot_k, vals in inline_slots.items():
+                for v in vals:
+                    v_clean = v.strip().lower()
+                    existing = [x.lower() for x in self.extracted_slots.get(slot_k, [])]
+                    if v_clean and v_clean not in existing:
+                        self.extracted_slots.setdefault(slot_k, []).append(v_clean)
+
+        # 7. Extract QUICK_REPLIES or generate dynamic suggestions
         clean_reply, quick_replies = self._parse_and_strip_quick_replies(raw_reply)
         if not quick_replies:
             quick_replies = self.generate_dynamic_suggestions(clean_reply)
         self.current_suggestions = quick_replies
 
-        # 6. Record clean bot response
+        # 8. Record clean bot response
         self.history.append({"role": "assistant", "content": clean_reply})
 
-        # 7. Handover to pipeline if consultation is DONE
+        # 9. Handover to pipeline orchestrator when intake is complete
         if current_state == IntakeState.DONE and self.orchestrator:
             try:
                 transcript = self.get_full_transcript()
@@ -570,4 +815,3 @@ class DialogueManager:
         self.extracted_slots = {k: [] for k in self.extracted_slots}
         self.patient_report = None
         self.current_suggestions = []
-

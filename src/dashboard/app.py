@@ -53,7 +53,7 @@ from src.dashboard.dimensions import (
 
 import src.chatbot.dialogue_manager as dialogue_manager_mod
 importlib.reload(dialogue_manager_mod)
-from src.chatbot.dialogue_manager import DialogueManager
+from src.chatbot.dialogue_manager import DialogueManager, get_min_dimensions_to_unlock
 from src.dashboard.components.chat_viewer import check_ollama_online
 from src.dashboard.components.icons import get_icon
 from src.data.kent_db import KentDB
@@ -742,25 +742,13 @@ def main():
 
                 st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
 
-                # Phase 2 item 3: Enable repertorization if patient provided complaint + modality OR 2+ dimensions OR finished intake
-                has_complaint = (
-                    bool(dm.extracted_slots.get("location"))
-                    or bool(dm.extracted_slots.get("sensation"))
-                    or bool(dm.extracted_slots.get("mental"))
-                )
-                has_modality = (
-                    bool(dm.extracted_slots.get("modality_agg"))
-                    or bool(dm.extracted_slots.get("modality_amel"))
-                )
+                # Unlock threshold is configured in configs/extraction_vocabulary.yaml
+                # → generate_button.min_dimensions_to_unlock (default: 1)
                 is_ready = dm.state_machine.current_state == IntakeState.DONE
                 collected_count = len(filled_items)
+                min_dims = get_min_dimensions_to_unlock()
 
-                can_generate = (
-                    (has_complaint and has_modality)
-                    or (collected_count >= 2)
-                    or is_ready
-                    or (len(dm.history) >= 4 and collected_count >= 1)
-                )
+                can_generate = is_ready or (collected_count >= min_dims)
 
                 # Automatically sync dm.patient_report if available and not yet set
                 if getattr(dm, "patient_report", None) and st.session_state.current_report is None:
@@ -779,8 +767,8 @@ def main():
                         else:
                             st.warning("Please chat with Kent-AI first before generating report.")
                 else:
-                    st.button(button_label, type="primary", disabled=True, use_container_width=True, help="Please describe your symptoms to Kent-AI in the chat console to begin repertorization.")
-                    st.markdown(f"<div style='font-size: 11.5px; color: #9CA3AF; margin-top: 4px;'>Converse with Kent-AI to extract totality dimensions ({collected_count}/7 collected).</div>", unsafe_allow_html=True)
+                    st.button(button_label, type="primary", disabled=True, use_container_width=True, help="Converse with Kent-AI to capture at least one symptom dimension to unlock repertorization.")
+                    st.markdown(f"<div style='font-size: 11.5px; color: #9CA3AF; margin-top: 4px;'>Requires at least {min_dims} captured dimension(s) — currently {collected_count}/7.</div>", unsafe_allow_html=True)
 
                 st.markdown("---")
 

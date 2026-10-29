@@ -1,0 +1,423 @@
+# =============================================================================
+# Kent-AI — Clinical Slot Extraction Vocabulary Configuration
+# =============================================================================
+# All keyword lists for the 7 Kent dimensions used during heuristic slot
+# extraction. Editing this file is the ONLY place you need to add/remove
+# clinical terms. The codebase reads this at startup.
+# =============================================================================
+
+dimensions:
+
+  # ---------------------------------------------------------------------------
+  # 1. Anatomical Location (LOC)
+  # ---------------------------------------------------------------------------
+  location:
+    - stomach
+    - abdomen
+    - belly
+    - gut
+    - tummy
+    - epigastrium
+    - head
+    - forehead
+    - temple
+    - temples
+    - vertex
+    - occiput
+    - scalp
+    - eyes
+    - eye
+    - ears
+    - ear
+    - nose
+    - sinuses
+    - throat
+    - pharynx
+    - larynx
+    - neck
+    - chest
+    - heart
+    - lungs
+    - back
+    - spine
+    - lumbar
+    - sacrum
+    - coccyx
+    - shoulder
+    - shoulders
+    - arms
+    - elbow
+    - wrists
+    - hands
+    - hand
+    - fingers
+    - joints
+    - knee
+    - knees
+    - ankles
+    - feet
+    - foot
+    - toes
+    - pelvis
+    - bladder
+    - kidneys
+    - liver
+    - spleen
+    - skin
+    - face
+    - jaw
+    - teeth
+    - gums
+    - tongue
+    - sides
+    - right side
+    - left side
+
+  # ---------------------------------------------------------------------------
+  # 2. Sensation Quality (SEN)
+  # ---------------------------------------------------------------------------
+  sensation:
+    - heavy
+    - heaviness
+    - tight
+    - tightness
+    - constriction
+    - constricted
+    - throbbing
+    - pounding
+    - splitting
+    - pulsating
+    - pulsing
+    - burning
+    - heat
+    - hot
+    - stitching
+    - sharp
+    - stabbing
+    - piercing
+    - cutting
+    - dull
+    - aching
+    - ache
+    - sore
+    - soreness
+    - cramping
+    - cramp
+    - shooting
+    - bursting
+    - pressure
+    - pressing
+    - fullness
+    - bloating
+    - numb
+    - numbness
+    - tingling
+    - pins and needles
+    - fluttering
+    - flutter
+    - tearing
+    - gnawing
+    - rawness
+    - raw
+    - itching
+    - itchy
+    - stiffness
+    - stiff
+    - weak
+    - weakness
+    - dizzy
+    - dizziness
+
+  # ---------------------------------------------------------------------------
+  # 3. Modalities — Aggravation (MOD_AGG) — "makes it worse"
+  # ---------------------------------------------------------------------------
+  modality_agg:
+    - movement
+    - moving
+    - motion
+    - move
+    - exercise
+    - exercising
+    - exertion
+    - walking
+    - running
+    - climbing
+    - stairs
+    - bending
+    - standing
+    - sitting
+    - lying
+    - turning
+    - noise
+    - sound
+    - loud
+    - music
+    - light
+    - sun
+    - sunlight
+    - bright light
+    - heat
+    - warm room
+    - stuffy room
+    - cold
+    - cold air
+    - draft
+    - wind
+    - weather
+    - storm
+    - damp
+    - wet
+    - humidity
+    - touch
+    - pressure
+    - eating
+    - after eating
+    - food
+    - coffee
+    - alcohol
+    - night
+    - morning
+    - midnight
+    - afternoon
+    - stress
+    - crowds
+    - crowd
+    - people
+    - alone
+    - consolation
+    - before menses
+    - during menses
+
+  # Context patterns that indicate aggravation direction
+  aggravation_trigger_patterns:
+    - "\\bworse\\b"
+    - "\\baggravat\\w*"
+    - "\\btrigger\\w*"
+    - "\\bamplif\\w*"
+    - "\\bintensif\\w*"
+    - "\\bworsen\\w*"
+    - "makes?\\s+it\\s+worse"
+    - "\\bflare\\w*"
+
+  # Relief phrases that cancel aggravation context
+  relief_phrases:
+    - soothe
+    - better
+    - relief
+    - reliev
+    - ease
+    - calm
+    - help
+
+  # ---------------------------------------------------------------------------
+  # 4. Modalities — Amelioration (MOD_AMEL) — "makes it better"
+  # ---------------------------------------------------------------------------
+  modality_amel:
+    - warmth
+    - warm
+    - warm compress
+    - warm drinks
+    - hot drinks
+    - sunny spot
+    - sunshine
+    - sun
+    - heat
+    - rest
+    - resting
+    - lying down
+    - sleep
+    - sleeping
+    - dark room
+    - darkness
+    - quiet
+    - solitude
+    - peaceful
+    - peace
+    - pressure
+    - firm pressure
+    - cold compress
+    - cold
+    - ice
+    - fresh air
+    - open air
+    - outdoors
+    - walking slowly
+    - gentle motion
+    - motion
+    - massage
+    - stretching
+    - eating
+    - after eating
+    - company
+    - conversation
+
+  # Context patterns that indicate amelioration direction
+  amelioration_trigger_patterns:
+    - "\\bbetter\\b"
+    - "\\brelie\\w*"
+    - "\\bsooth\\w*"
+    - "\\beas\\w*"
+    - "\\bimprov\\w*"
+    - "\\bhelp\\w*"
+    - "\\bcalm\\w*"
+    - "\\bcomfort\\w*"
+    - "makes?\\s+it\\s+better"
+    - "brings?\\s+relief"
+
+  # ---------------------------------------------------------------------------
+  # 5. Concomitants (CONC) — simultaneously occurring symptoms
+  # ---------------------------------------------------------------------------
+  concomitant:
+    - dizzy
+    - dizziness
+    - dizzy spells
+    - vertigo
+    - giddy
+    - giddiness
+    - nausea
+    - nauseous
+    - nauseated
+    - vomiting
+    - vomit
+    - queasy
+    - chills
+    - fever
+    - sweating
+    - sweat
+    - cold sweat
+    - perspiration
+    - trembling
+    - tremor
+    - shaking
+    - palpitations
+    - heart pounding
+    - faint
+    - fainting
+    - faintness
+    - lightheaded
+    - lightheadedness
+    - blur
+    - blurred vision
+    - headache
+    - weakness
+    - exhaustion
+    - fatigue
+    - thirst
+    - dry mouth
+    - insomnia
+    - sleeplessness
+    - loss of appetite
+
+  # ---------------------------------------------------------------------------
+  # 6. Temporals (TEMP) — time of day / periodicity patterns
+  # ---------------------------------------------------------------------------
+  temporal:
+    - morning
+    - waking
+    - after waking
+    - forenoon
+    - noon
+    - midday
+    - afternoon
+    - evening
+    - night
+    - midnight
+    - twilight
+    - bedtime
+    - sunrise
+    - sunset
+    - 3 am
+    - 3 pm
+    - 4 am
+    - 4 pm
+    - winter
+    - summer
+    - spring
+    - autumn
+    - fall
+    - periodically
+    - periodic
+    - consistent
+    - constant
+    - continuous
+    - daily
+    - all day
+    - spells
+    - attacks
+    - every day
+    - every night
+    - always
+
+  # ---------------------------------------------------------------------------
+  # 7. Mental / Emotional (MENT)
+  # ---------------------------------------------------------------------------
+  mental:
+    - anxious
+    - anxiety
+    - fear
+    - fearful
+    - apprehension
+    - apprehensive
+    - panic
+    - distress
+    - worry
+    - worried
+    - restless
+    - restlessness
+    - pacing
+    - irritable
+    - irritability
+    - angry
+    - anger
+    - rage
+    - sad
+    - sadness
+    - depressed
+    - depression
+    - grief
+    - weeping
+    - crying
+    - alone
+    - solitude
+    - absent-minded
+    - confusion
+    - memory loss
+    - forgetful
+    - forgetfulness
+    - hopeless
+    - hopelessness
+    - despair
+    - dread
+    - nervous
+    - tension
+    - overwhelmed
+    - exhausted mentally
+    - indifference
+    - indifferent
+    - irritated
+
+# =============================================================================
+# LLaMA Structured Slot Extraction (Tier 3)
+# Used as verification/enrichment after heuristic + ClinicalBERT passes
+# =============================================================================
+llm_extraction:
+  enabled: true
+  # Only invoke LLaMA slot extraction when utterance word count exceeds this
+  min_word_count: 4
+  # Extraction system prompt injected alongside the main chatbot system prompt
+  slot_extraction_suffix: |
+    ADDITIONALLY: After your conversational reply, on a new line, output a SLOT_UPDATE JSON object
+    strictly extracting ONLY what the patient JUST said in their last message.
+    Do NOT hallucinate or infer beyond what they explicitly stated.
+    Format exactly:
+    SLOT_UPDATE: {"location": [], "sensation": [], "modality_agg": [], "modality_amel": [], "concomitant": [], "temporal": [], "mental": []}
+    Leave arrays empty [] if that dimension was not mentioned. Use lowercase strings.
+
+# =============================================================================
+# Generate Repertorization Button — unlock condition
+# =============================================================================
+generate_button:
+  # Minimum number of Kent dimensions that must be captured before the
+  # 'Generate Repertorization' button unlocks. Set to 1 to unlock as soon
+  # as any complaint is registered.
+  min_dimensions_to_unlock: 1
