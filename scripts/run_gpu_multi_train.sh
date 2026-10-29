@@ -115,3 +115,4 @@ echo ""
 echo "To evaluate on held-out test split (test.jsonl):"
 echo "  python scripts/evaluate.py --test-file data/processed/test.jsonl"
 echo "=================================================================="
+
