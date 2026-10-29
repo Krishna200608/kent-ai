@@ -58,6 +58,12 @@ def parse_args():
         help="Directory to save fine-tuned model checkpoints",
     )
     parser.add_argument(
+        "--model-name",
+        type=str,
+        default=None,
+        help="HuggingFace model identifier (e.g. microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext, michiyasunaga/BioLinkBERT-base, microsoft/deberta-v3-base)",
+    )
+    parser.add_argument(
         "--epochs",
         type=int,
         default=None,
@@ -109,6 +115,7 @@ def main():
     config = get_model_config(root / args.config)
     trainer = NERTrainer(
         config=config,
+        model_name=args.model_name,
         output_dir=args.output_dir,
         seed=args.seed,
     )
