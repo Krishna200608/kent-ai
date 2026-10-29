@@ -68,7 +68,7 @@ class NERTrainer:
 
         self.model_name = model_name or self.model_cfg.get("name", self.DEFAULT_MODEL_NAME)
         root = get_project_root()
-        self.output_dir = Path(output_dir or (root / self.model_cfg.get("output_dir", "data/models/clinicalbert_homeoNER")))
+        self.output_dir = (Path(output_dir) if Path(output_dir).is_absolute() else (root / output_dir)) if output_dir else (root / self.model_cfg.get("output_dir", "data/models/clinicalbert_homeoNER"))
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         self.max_seq_length = int(self.model_cfg.get("max_seq_length", 256))
