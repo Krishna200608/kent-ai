@@ -1,7 +1,7 @@
 # Kent-AI — Architecture Context
 
 > Last updated: 2026-10-29 by Antigravity
-> Phase: Complete through Phase 5 / Phase B & C (Two-Stage Pipeline & Evaluation Suite Operational; 70 Unit & Integration Tests Passing)
+> Phase: Complete through Phase 7 / Phase 8 Active (Multi-Model Comparative Benchmark & Ensembling Operational; 73 Unit & Integration Tests Passing, 0 Warnings)
 
 ---
 
@@ -77,7 +77,7 @@ kent-ai/
 │   ├── audit_pilot.py             # CLI: statistical audit (BIO offset accuracy, Jaccard diversity)
 │   ├── run_gpu_generation.sh      # Bash: turnkey automated runner for College GPU cluster
 │   ├── build_embeddings.py        # CLI: ChromaDB persistent vector indexer (74,513 rubrics)
-│   ├── train_ner.py               # CLI: Bio_ClinicalBERT HomeoNER training
+│   ├── train_ner.py               # CLI: multi-model HomeoNER training with --model-name parameterization
 │   ├── monitor_training.py        # CLI: live GPU training progress monitor
 │   ├── chat_intake.py             # CLI: interactive patient consultation with 10-state FSM
 │   ├── evaluate.py                # CLI: academic benchmark evaluation (SeqEval BIO F1, Recall@K, MRR, Remedy Acc)
@@ -87,7 +87,7 @@ kent-ai/
 │   ├── 01_eda_repertory.ipynb     # EDA: sections, MIND depths, grades, search demo
 │   └── 02_case_generation_demo.ipynb # Interactive case generation & BIO inspection
 │
-├── tests/                         # ★ 70 passing unit tests across 13 test modules
+├── tests/                         # ★ 73 passing unit tests across 13 test modules (0 warnings)
 │   ├── test_kent_db.py            # SQLite reader, views, FTS5 queries (13 tests)
 │   ├── test_bio_tagger.py         # Subword alignment & character offset repair (6 tests)
 │   ├── test_case_generator.py     # LLaMA 3 prompting & JSON parsing (3 tests)
@@ -99,8 +99,8 @@ kent-ai/
 │   ├── test_pipeline.py           # End-to-end transcript-to-report pipeline & two-stage flow (5 tests)
 │   ├── test_evaluation.py         # Academic evaluation suite, BIO metrics & report export (3 tests)
 │   ├── test_state_machine.py      # 10-state intake FSM & slot transitions (6 tests)
-│   ├── test_dialogue_manager.py   # Dialogue context & turn tracking (5 tests)
-│   └── test_dashboard.py          # Slot badges, Totality Matrix & report export (5 tests)
+│   ├── test_dialogue_manager.py   # Dialogue context, dynamic suggestions & token cleaning (7 tests)
+│   └── test_dashboard.py          # Slot badges, Totality Matrix, report export & transcript formatter (6 tests)
 │
 ├── docs/
 │   ├── Next_Steps.md              # Supervisor meeting briefing & roadmap (Dr. Arya)

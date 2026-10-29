@@ -293,9 +293,37 @@ streamlit run src/dashboard/app.py --server.headless true --server.port 8503
 
 ---
 
-## Phase 8 — Polish, Docs & Defense ⬜
+## Phase 8 — Multi-Model Comparative Benchmark, Ensembling & Publication Defense 🔄
 
-**Status**: Not started
+**Status**: Active (Supervisor Directive Integrated; Multi-Model Training CLI, Comparative Benchmark Design & Ensemble Plan Operational)  
+**Date**: 2026-10-29  
+**Agent**: Antigravity (Gemini 3.8 Flash)  
+**Project Supervisor**: Dr. Nikhilanand Arya  
+**Target**: Benchmark at least 3 best-performing models against `Bio_ClinicalBERT`, formulate ensemble architectures, and compile empirical results for top-tier journal publication (*JBI*, *IEEE JBHI*, *JAMIA*).
+
+### Deliverables & Directives
+
+| Task | Status | Key File(s) |
+|---|---|---|
+| Supervisor Consultation & Literature Review | ✅ Done | `Context/research_llm_comparative_study_and_ensemble_2026-10-29.md` (Literature citations: Hu et al. JAMIA 2024, PMID 39923968, PMID 40775967, PMID 41758143; BLURB SOTA analysis) |
+| Publication Roadmap Document (v2.0) | ✅ Done | `docs/Next_Steps.md` (Comprehensive supervisor review doc: completed baseline, model candidate selection, 4 standardized paper tables, 3 ensemble paradigms, GPU commands, and 4-week timeline) |
+| Multi-Model CLI Training Support | ✅ Done | `scripts/train_ner.py` (Added `--model-name` argument to dynamically train `PubMedBERT`, `BioLinkBERT`, `DeBERTa-v3`, `BioBERT` on 15 BIO tag set) |
+| Streamlit 1.64 Warning Elimination | ✅ Done | `src/dashboard/app.py`, `src/dashboard/components/chat_viewer.py`, `src/dashboard/components/rubric_tree.py` (Replaced all 22 instances of deprecated `use_container_width=True` with `width="stretch"`) |
+| SeqEval Undefined Metric Warning Fix | ✅ Done | `scripts/evaluate.py`, `src/models/trainer.py` (Enforced `zero_division=0` in `f1_score`, `precision_score`, `recall_score`, `classification_report`) |
+| Dynamic Module Reload Safeguards | ✅ Done | `src/dashboard/app.py`, `src/dashboard/components/chat_viewer.py` (Topological reload ordering + `_safe_clean_bot_text` defensive cleaner) |
+| Regression Test Suite & Verification | ✅ Done | `tests/` (**73 passed** in 79.83s, **0 warnings** across all 13 test modules) |
+
+### Verification & Testing
+
+```bash
+# Verify multi-model training CLI support:
+python scripts/train_ner.py --help
+# Options include: --model-name (e.g. microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext) ✅
+
+# Full unit and regression test suite:
+pytest tests/ -v
+# Output: 73 passed in 79.83s, 0 warnings ✅
+```
 
 ---
 
@@ -319,6 +347,7 @@ streamlit run src/dashboard/app.py --server.headless true --server.port 8503
 | 2026-10-28 | 5 / C | Antigravity | Phase C evaluation suite: implemented scripts/evaluate.py with SeqEval BIO F1, ChromaDB Recall@K, MRR, Remedy Accuracy, markdown/JSON exports, and unit tests (70/70 tests passing). |
 | 2026-10-28 | 7 / UI | Antigravity | Resolved Ollama offline indicator: prioritized 127.0.0.1 (IPv4) over localhost (bypassing 1.56s Windows IPv6 latency), bypassed institutional HTTP proxy via ProxyHandler({}), and enabled dynamic session state refresh (28a7d4b). |
 | 2026-10-29 | All | Antigravity | Completely synchronized Context/ directory across all 7 files per Context Protocol Sync Matrix: updated dataset row counts (19,732 cases), ChromaDB index count (74,513), 70/70 passing tests, model weights, and added loopback network gotchas. |
+| 2026-10-29 | 8 / Doc | Antigravity | Supervisor review & comparative study formulation: integrated Dr. Nikhilanand Arya's mandate on multi-model fine-tuning (PubMedBERT, BioLinkBERT, DeBERTa-v3, BioMistral 7B, LLaMA 3.1 8B) and ensemble architectures; updated scripts/train_ner.py with --model-name; eliminated all 22 Streamlit width deprecation warnings and SeqEval undefined metric warnings; rewritten docs/Next_Steps.md v2.0; 73/73 tests passing with 0 warnings. |
 
 ---
 

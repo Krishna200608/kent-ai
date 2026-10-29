@@ -56,6 +56,7 @@ It takes a patient's natural-language symptom description, extracts structured c
 | [`CONVENTIONS.md`](CONVENTIONS.md) | Code style, import patterns, testing patterns |
 | [`PROGRESS.md`](PROGRESS.md) | Phase-by-phase status tracker with exit criteria |
 | [`GOTCHAS.md`](GOTCHAS.md) | Non-obvious pitfalls, known data quirks, landmines |
+| [`research_llm_comparative_study_and_ensemble_2026-10-29.md`](research_llm_comparative_study_and_ensemble_2026-10-29.md) | Multi-model comparative study design, BLURB SOTA review, ensemble formulations per supervisor guidance |
 
 ---
 
@@ -71,7 +72,7 @@ It takes a patient's natural-language symptom description, extracts structured c
 | 5 | Pipeline & Remedy Ranking Engine | ✅ Complete (Phase B Two-Stage Pipeline & Phase C Academic Evaluation Suite operational) | 13–15 |
 | 6 | Conversational Intake Chatbot | ✅ Complete (10-state FSM, adaptive slot skipping, empathetic dialogue manager) | 16–19 |
 | 7 | Streamlit Clinical Dashboard (Stitch Standard) | ✅ Complete (Google Stitch UI tokens, 4 clinical workspaces, Plotly charts, Totality Matrix) | 20–24 |
-| 8 | Academic Benchmark, Docs & Defense | 🔄 Active (Evaluation report compiled; thesis defense & paper write-up underway) | 25–28 |
+| 8 | Multi-Model Comparative Benchmark & Ensembling | 🔄 Active (Supervisor directive integrated: PubMedBERT, BioLinkBERT, DeBERTa-v3, BioMistral, LLaMA 3.1, ensemble evaluation) | 25–28 |
 
 Full roadmap & phase tracking details: [`Context/PROGRESS.md`](PROGRESS.md)
 

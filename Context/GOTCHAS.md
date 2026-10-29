@@ -171,4 +171,25 @@ ChromaDB SQLite backend will fail with "too many SQL variables" if upserting tho
 
 ---
 
+## 8. Runtime & Dashboard Deprecation Gotchas
+
+### 8.1 Streamlit 1.64 `use_container_width` Deprecation
+In Streamlit 1.64+, passing `use_container_width=True` to `st.button`, `st.popover`, `st.download_button`, `st.dataframe`, and `st.plotly_chart` emits a runtime deprecation warning:
+`Please replace 'use_container_width' with 'width'... use width='stretch'`.
+- **Root Cause**: Streamlit modernized its layout engine with a unified `width: "content" | "stretch" | int` parameter.
+- **Verified Workaround**: Always use `width="stretch"` across all buttons, popovers, download widgets, dataframes, and charts in `src/dashboard/`.
+
+### 8.2 SeqEval `UndefinedMetricWarning` on Empty Entity Classes
+When computing evaluation metrics on datasets or mock batches where certain entity classes have zero predicted samples, `seqeval.metrics` emits:
+`UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use zero_division parameter to control this behavior.`
+- **Root Cause**: Division by zero when precision denominator ($TP + FP = 0$) is encountered for rare classes.
+- **Verified Workaround**: Always pass `zero_division=0` to `seqeval.metrics.f1_score`, `precision_score`, `recall_score`, and `classification_report` in `scripts/evaluate.py` and `src/models/trainer.py`.
+
+### 8.3 Streamlit Hot Reload & Module Dependency Desynchronization
+Streamlit's internal runner keeps `sys.modules` alive across browser re-runs. If child modules (e.g. `chat_viewer.py`) are dynamically reloaded via `importlib.reload()` before their parent dependencies (`dialogue_manager.py`), child modules can bind to stale class definitions, triggering `AttributeError: type object 'DialogueManager' has no attribute '...'`.
+- **Root Cause**: Non-topological module reload order in `src/dashboard/app.py`.
+- **Verified Workaround**: Reload dependencies in strict topological order (`src.config` $\rightarrow$ `src.chatbot.prompts` $\rightarrow$ `src.chatbot.state_machine` $\rightarrow$ `src.chatbot.dialogue_manager` $\rightarrow$ `src.dashboard.styles` $\rightarrow$ `src.dashboard.components.*`). Additionally, provide defensive `getattr()` fallback helpers in child components.
+
+---
+
 _End of file._

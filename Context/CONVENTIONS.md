@@ -143,7 +143,7 @@ def get_rubric_path(rubric_id: int, db_path: Optional[Union[str, Path]] = None) 
 
 - Test framework: **pytest** (configured in `pyproject.toml`).
 - Test files live in `tests/` and are named `test_<module>.py`.
-- Test suite status: **70 passing tests across 13 test files** (100% pass rate in ~20-30s).
+- Test suite status: **73 passing tests across 13 test files** (100% pass rate in ~20-30s, 0 warnings).
 - Use **class-based grouping** (`class TestKentDBReader:`) for related tests.
 - ChromaDB test fixtures must use unique ephemeral collection names (`f"test_rubrics_{uuid.uuid4().hex[:8]}"`) to prevent inter-test state contamination.
 - Tests run against the **real database** (no mocks for the SQLite layer) — this is intentional for correctness verification.
@@ -179,6 +179,27 @@ def get_rubric_path(rubric_id: int, db_path: Optional[Union[str, Path]] = None) 
 - Commit messages follow: `<type>: <description>` (e.g., `feat:`, `fix:`, `docs:`, `test:`, `refactor:`).
 - Large binary files (`.sqlite`, `.gz`, model weights) are `.gitignored`.
 - The `.venv/` directory is never committed.
+
+---
+
+## 12. Streamlit 1.64 Layout & Widget Conventions
+
+- **Container Width**: Never use `use_container_width=True` on Streamlit widgets. Streamlit 1.64 deprecates this parameter. Always specify `width="stretch"` on `st.button`, `st.popover`, `st.download_button`, `st.dataframe`, and `st.plotly_chart`.
+- **Module Reload Hierarchy**: When re-importing application components in `app.py`, reload dependencies in strict topological order (`config` $\rightarrow$ `prompts` $\rightarrow$ `state_machine` $\rightarrow$ `dialogue_manager` $\rightarrow$ `styles` $\rightarrow$ `components.*`).
+- **Sanitization Helpers**: All client components must provide defensive `getattr()` or regex sanitizers when rendering LLM responses.
+
+---
+
+## 13. SeqEval & Classification Metric Conventions
+
+- Always pass `zero_division=0` to all `seqeval.metrics` calls (`f1_score`, `precision_score`, `recall_score`, `classification_report`). This ensures deterministic 0.0 scores instead of emitting runtime `UndefinedMetricWarning` on small or mock test splits.
+
+---
+
+## 14. Multi-Model CLI Training Conventions
+
+- All token classification training scripts must expose `--model-name` to accept arbitrary HuggingFace backbone identifiers (e.g., `microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext`, `michiyasunaga/BioLinkBERT-base`, `microsoft/deberta-v3-base`).
+- Default model identifier must point to `emilyalsentzer/Bio_ClinicalBERT` for backwards compatibility.
 
 ---
 
