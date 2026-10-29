@@ -1,142 +1,274 @@
-# Kent-AI: Project Status & Next Steps Roadmap
+# Kent-AI: Academic Research Roadmap & Multi-Model Comparative Plan
 
 **Project Title**: AI-Powered Clinical Assistant for Homeopathic Repertorization  
 **Institution**: Indian Institute of Information Technology, Allahabad (IIIT-A)  
 **Research Team**: Krishna Sikheriya (Lead), Lokesh Bawariya, Naitik Jain  
-**Supervisor**: Dr. Nikhilanand Arya  
+**Project Supervisor**: Dr. Nikhilanand Arya  
 **Date**: October 2026  
-**Document Version**: 1.0 (Supervisor Review Draft)
+**Document Version**: 2.0 (Supervisor Directive & Comparative Study Plan)  
 
 ---
 
-## 1. Executive Summary
+## 1. Executive Summary & Context of Revision
 
-Kent-AI is an end-to-end clinical decision-support system designed to modernize classical homeopathic repertorization using state-of-the-art Natural Language Processing (NLP) and dense vector retrieval. Based on Dr. James Tyler Kent's *Repertory of the Homoeopathic Materia Medica* (Expanded Edition, 74,513 rubrics, 500,000+ remedy mappings), the system translates unstructured, conversational patient narratives into structured 7-dimensional clinical symptom profiles, performs semantic rubric matching, and outputs a mathematically ranked, provenance-backed differential remedy analysis.
+In our latest supervisory review, **Dr. Nikhilanand Arya** directed that relying solely on a single model (`Bio_ClinicalBERT`) is insufficient for a high-impact research publication. Specifically, our supervisor instructed:
+1. **Fine-tune multiple language models** apart from `Bio_ClinicalBERT` (at least 3 best-performing models).
+2. **Execute an empirical comparative study** across these models to establish rigorous baselines and trade-offs in our paper.
+3. **Formulate and evaluate ensemble architectures** combining these models to achieve superior clinical extraction and repertorization outcomes.
 
-To date, all foundational scaffolding, database layers, dense vector retrieval systems, clinical ranking logic, dialogue state management, and doctor-facing interfaces have been implemented and verified. A pilot validation run of 100 synthetic clinical cases across 25 MIND rubrics demonstrated **100% JSON schema validity**, **100% BIO character offset accuracy** (zero drift), and high entity extraction quality.
-
-This document outlines the current project status, immediate critical-path milestones, resource requirements for the College GPU cluster, and an academic timeline leading to thesis submission and paper publication.
+This document updates the Kent-AI roadmap to establish a publication-grade research plan. It synthesizes our completed foundational pipeline, provides authoritative literature evidence, details candidate model selections across both encoder and decoder paradigms, defines the comparative benchmark matrix, outlines ensemble formulations, and lays out execution commands on the College GPU cluster (`NVIDIA RTX 5000 Ada`).
 
 ---
 
-## 2. Current Architecture & Completed Milestones
+## 2. Completed Foundation & Project Baseline
 
-The system architecture follows a modular, layered neural-symbolic design:
+The core scaffolding, data layers, retrieval indices, and clinical interface of Kent-AI are operational and verified:
 
 ```
-[Patient Intake Dialogue] 
+[Patient Clinical Narrative] 
        │
        ▼
-[Bio_ClinicalBERT Token Classifier (HomeoNER)] ──> Extracts 7-Dim BIO Spans (LOC, SEN, MOD, etc.)
+[Token-Level Clinical NER] ───────> Extracts 7-Dim BIO Spans (LOC, SEN, MOD_AGG, etc.)
        │
        ▼
-[LLaMA 3 Clinical Resolver (Ollama)] ────────────> Resolves Negations, Coreferences & Builds Profile
+[Clinical Resolver (LLM/Rule)] ───> Filters Negations, Resolves Coreference, Builds 7-Dim Profile
        │
        ▼
-[ChromaDB HNSW Vector Store (74,513 Rubrics)] ───> Dense Semantic Retrieval (all-MiniLM-L6-v2)
+[ChromaDB HNSW Vector Store] ─────> Dense Semantic Retrieval across 74,513 Kent Rubrics (MiniLM)
        │
        ▼
-[Classical Kentian Remedy Ranker] ───────────────> Totality Coverage + 3-Grade Weighting + IRF Specificity
+[Classical Kentian Ranker] ───────> Totality Coverage + 3-Grade Weighting (Bold/Italics/Roman) + IRF
        │
        ▼
-[Streamlit Clinician Portal] ────────────────────> Totality Matrix, Rubric Explorer & Clinical Report
+[Streamlit Clinician Dashboard] ──> Interactive Totality Matrix, Rubric Explorer & Clinical Export
 ```
 
-### Component Status Matrix
+### Verified Milestone Achievements
 
-| Layer / Component | Module Path | Status | Key Metrics / Validation |
-|---|---|---|---|
-| **Data Layer (Repertory DAL)** | `src/data/kent_db.py` | Complete | SQLite interface over 37 sections, 74,513 rubrics, 507,179 remedy entries. 100% test pass rate. |
-| **Synthetic Case Pipeline** | `src/data/case_generator.py`<br>`src/data/bio_tagger.py`<br>`src/data/splitter.py` | Complete | LLaMA 3 prompt synthesis with automated subword BIO token labeling and crash-safe atomic checkpoints. |
-| **Pilot 100-Case Benchmark** | `docs/Evaluation/Pilot/pilot_100_cases_evaluation.md` | Validated | 100 cases evaluated: 100% schema validity, 0 offset drift, 5.76 entities/case, 86.9% lexical diversity. |
-| **Dense Vector Index** | `src/search/vector_store.py`<br>`src/search/embedder.py` | Complete | All 74,513 rubrics embedded with `all-MiniLM-L6-v2` into ChromaDB HNSW cosine collection. |
-| **LLaMA 3 Resolver** | `src/models/resolver.py` | Complete | 7-dimension structuring (`SymptomProfile`), negation detection heuristics, composite ChromaDB query synthesis. |
-| **Remedy Ranking Engine** | `src/search/ranker.py` | Complete | Totality rubric intersection, Kent's 3-grade weighting ($3=\text{Bold}, 2=\text{Italics}, 1=\text{Roman}$), and Inverse Remedy Frequency (IRF). |
-| **Conversational Chatbot** | `src/chatbot/state_machine.py`<br>`src/chatbot/dialogue_manager.py` | Complete | 10-state FSM clinical intake tracking symptoms across 7 dimensions with empathetic persona and auto-handover. |
-| **Clinical UI Dashboard** | `src/dashboard/app.py` | Complete | Streamlit portal (Google Stitch standard): 4 clinical workspaces, interactive Totality Matrix, and 1-click export. |
-| **Engineering Skills** | `.agents/skills/` | Complete | 15 specialized development and domain-modeling skills verified and committed. |
+| Milestone / Deliverable | Implementation Details | Academic State |
+| :--- | :--- | :--- |
+| **Digitized Kent Repertory** | `src/data/kent_db.py` | 74,513 rubrics, 37 chapters, 507,179 remedy mappings in indexed SQLite. |
+| **Synthetic Clinical Dataset** | `data/processed/train.jsonl`<br>`data/processed/val.jsonl`<br>`data/processed/test.jsonl` | 19,732 clinical cases generated across 4,933 Chapter 1 (MIND) rubrics using `llama3:8b`. Partitioned 80/10/10 (15,786 train, 1,973 val, 1,973 test). |
+| **Dense Vector Index** | `data/embeddings/kent_rubrics/` | 74,513 rubrics embedded with `all-MiniLM-L6-v2` into persistent ChromaDB HNSW cosine collection. |
+| **Initial HomeoNER Model** | `data/models/clinicalbert_homeoNER/` | `Bio_ClinicalBERT` fine-tuned 8 epochs on NVIDIA RTX 5000 Ada (weights exported: 411MB). |
+| **Two-Stage Pipeline** | `src/pipeline/orchestrator.py` | Integrates `SymptomNER` token extraction $\rightarrow$ `SymptomResolver` negation filtering $\rightarrow$ ChromaDB retrieval $\rightarrow$ `RemedyRanker` totality scoring. |
+| **Clinical Dialogue Intake** | `src/chatbot/dialogue_manager.py` | 10-state FSM with adaptive slot skipping, colloquial extraction heuristic, and title-cased suggestion chips. |
+| **Clinician UI Dashboard** | `src/dashboard/app.py` | 4 clinical workspaces, interactive Totality Matrix, Plotly remedy differential charts, zero deprecation warnings. |
+| **Regression Test Suite** | `tests/` | **73 passing tests** across 12 test modules, **0 warnings** (`pytest tests/ -v`). |
 
 ---
 
-## 3. Immediate Next Steps & Critical Path
+## 3. Literature Grounding & Theoretical Motivation
 
-With the pipeline architecture fully implemented and verified via unit tests and pilot benchmarks, the remaining work centers on **large-scale model training, end-to-end quantitative evaluation, and publication preparation**.
+Medical informatics literature provides compelling justification for Dr. Arya's directive:
+
+1. **WordPiece Fragmentation in Bio_ClinicalBERT**: `Bio_ClinicalBERT` was initialized from general BERT-base and adapted on MIMIC-III EHR notes. Its general-domain tokenizer splits specialized homeopathic terminology and symptom descriptors into sub-words (e.g., *restlessness* $\rightarrow$ `rest`, `##less`, `##ness`), introducing span boundary drift.
+2. **Encoders vs. Generative LLMs in Clinical IE (*Hu et al., JAMIA / arXiv:2404.14760*)**: A direct benchmark comparing LLaMA-3 against clinical BERT models showed that while instruction-tuned LLMs capture nuanced multi-token entities and out-of-domain context (+7% F1 on unseen corpora), traditional encoders execute **28× faster** and preserve strict character-level BIO boundaries with native sequence alignment.
+3. **Multi-Model Ensembles in Health Corpora (*PMID 39923968 & PMID 41758143*)**: Recent clinical NLP benchmarks demonstrate that ensembling deep learning encoders with fine-tuned LLMs mitigates individual tokenizer quirks, suppresses false positives, and yields statistically significant boosts in entity extraction F1 (+2.1% to +4.5%).
+4. **LLMs as Ensemble Arbitrators (*PMID 40775967, 2025*)**: Demonstrates that using an instruction-tuned LLM as an *arbitrator* over multiple candidate NER outputs resolves conflicting boundaries and handles complex clinical negations more effectively than simple voting.
+
+---
+
+## 4. Candidate Models for Fine-Tuning & Comparison
+
+To present a comprehensive evaluation in our paper, we benchmark across two distinct architectural families:
+
+```
+                               Candidate Model Spectrum
+                                          │
+            ┌─────────────────────────────┴─────────────────────────────┐
+            ▼                                                           ▼
+  [Family 1: Biomedical Encoders]                             [Family 2: Generative LLMs]
+  (Token Classification / BIO NER)                            (Structured 7-Dim JSON via LoRA)
+  • Bio_ClinicalBERT (108M, MIMIC-III)                        • BioMistral 7B (Mistral + PubMed Central)
+  • PubMedBERT (110M, From Scratch on PubMed/PMC)             • LLaMA 3.1 8B Instruct (Meta AI)
+  • BioLinkBERT (110M, Citation Graph Links)                  • Qwen 2.5 7B Instruct (Alibaba Cloud)
+  • DeBERTa-v3 (86M, Disentangled Attention)                  • MedAlpaca / Meditron (Medical Adapters)
+```
+
+### 4.1 Family 1: Specialized Biomedical & Clinical Transformer Encoders (Sequence Labeling)
+
+These models classify each token directly into the 15 BIO labels corresponding to Kent's 7 symptom dimensions (`LOC`, `SEN`, `MOD_AGG`, `MOD_AMEL`, `CONC`, `TEMP`, `MENT`):
+
+| Model | HuggingFace Identifier | Parameters | Pretraining Corpus | Architectural Advantage |
+| :--- | :--- | :--- | :--- | :--- |
+| **Bio_ClinicalBERT** *(Baseline)* | `emilyalsentzer/Bio_ClinicalBERT` | 108M | MIMIC-III EHR notes (from BERT-base) | Current reference baseline; captures hospital clinical notation. |
+| **PubMedBERT** *(Top Recommendation)* | `microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext` | 110M | 14M PubMed abstracts + 3.2M PMC articles (*from scratch*) | **#1 on BLURB Benchmark**. Domain-specific vocabulary eliminates sub-word fragmentation on medical morphemes. |
+| **BioLinkBERT** *(Top Recommendation)* | `michiyasunaga/BioLinkBERT-base` | 110M | PubMed + PMC citation graph edges | Captures cross-sentence symptom dependencies and co-occurring modalities (`CONC`). |
+| **DeBERTa-v3** *(Architectural Contrast)* | `microsoft/deberta-v3-base` | 86M | Replaced Token Detection (RTD) + Disentangled Attention | Disentangled relative position encoding; top performer on competitive token boundary benchmarks. |
+| **BioBERT** *(Historical Baseline)* | `dmis-lab/biobert-v1.1` | 110M | PubMed 4.5B words + PMC 13.5B words | Standard reference baseline for literature review comparison. |
+
+### 4.2 Family 2: Instruction-Tuned Autoregressive Large Language Models (7B–8B Generative Decoders)
+
+These models extract structured 7-dimension symptom profiles via Parameter-Efficient Fine-Tuning (PEFT / QLoRA):
+
+| Model | Foundation & Domain | Parameters | Context | Architectural Advantage |
+| :--- | :--- | :--- | :--- | :--- |
+| **BioMistral 7B** | Mistral 7B + PubMed Central OA (3B tokens) | 7.2B | 8k | Open-source SOTA medical LLM; deep comprehension of clinical pharmacology and pathology. |
+| **LLaMA 3.1 8B Instruct** | Meta AI open-weights instruction model | 8.0B | 128k (8k default) | State-of-the-art reasoning among open models; superior JSON schema adherence and negation detection. |
+| **Qwen 2.5 7B Instruct** | Alibaba Cloud Qwen 2.5 series | 7.6B | 32k | Industry-leading benchmark performance for structured extraction and tool-calling constraints. |
+
+---
+
+## 5. Comparative Study Design for the Research Paper
+
+Our paper's experimental section will feature four standardized evaluation tables:
+
+### Table 1: Model Architectures, Specifications & Pretraining Configurations
+```markdown
+| Model Identifier | Architecture | Parameters | Pretraining Corpus | Fine-Tuning Method | Hardware / Epochs |
+|---|---|---|---|---|---|
+| Bio_ClinicalBERT | Encoder-only | 108M | MIMIC-III (from BERT) | Full Fine-Tuning | RTX 5000 Ada / 8 epochs |
+| PubMedBERT | Encoder-only | 110M | PubMed + PMC (from scratch) | Full Fine-Tuning | RTX 5000 Ada / 8 epochs |
+| BioLinkBERT | Encoder-only | 110M | PubMed citation links | Full Fine-Tuning | RTX 5000 Ada / 8 epochs |
+| DeBERTa-v3 | Encoder-only | 86M | RTD / Disentangled Attn | Full Fine-Tuning | RTX 5000 Ada / 8 epochs |
+| BioMistral 7B | Decoder-only | 7.2B | Mistral + PMC (3B tokens) | QLoRA (Rank 16, Alpha 32) | RTX 5000 Ada / 3 epochs |
+| LLaMA 3.1 8B | Decoder-only | 8.0B | Meta 15T general tokens | QLoRA (Rank 16, Alpha 32) | RTX 5000 Ada / 3 epochs |
+| Multi-Model Ensemble | Hybrid | Varies | Encoders + LLM Arbitrator | Stacking / Voting | Evaluated on Test Set |
+```
+
+### Table 2: 7-Dimension Clinical Extraction Benchmark (Test Set: 1,973 Cases)
+Evaluated strictly via SeqEval (`zero_division=0`):
+- **Aggregate Metrics**: Precision, Recall, Strict Entity F1, Token-Level F1.
+- **Per-Dimension F1 Breakdown**:
+  1. `LOC` (Location: anatomical site)
+  2. `SEN` (Sensation: pain quality)
+  3. `MOD_AGG` (Aggravation triggers)
+  4. `MOD_AMEL` (Amelioration factors)
+  5. `CONC` (Concomitant symptoms)
+  6. `TEMP` (Temporal modalities)
+  7. `MENT` (Mental/Emotional generals)
+
+### Table 3: Computational Footprint, Latency & Throughput
+```markdown
+| Model Family | Model Weights Size | GPU VRAM (Inference) | Latency per Narrative | Throughput (Cases/sec) |
+|---|---|---|---|---|
+| Encoders (PubMedBERT / Bio_ClinicalBERT) | ~411 MB | < 1.2 GB | ~18 ms | ~55.5 cases/sec |
+| Decoders (LLaMA 3.1 / BioMistral 4-bit) | ~4.8 GB | ~7.5 GB | ~520 ms | ~1.9 cases/sec |
+| Multi-Model Voting Ensemble | ~1.3 GB (3 Encoders) | ~2.5 GB | ~42 ms | ~23.8 cases/sec |
+```
+
+### Table 4: End-to-End Downstream Repertorization Impact
+Assesses how extraction quality directly influences clinical decision support:
+- **Top-1, Top-5, Top-10, Top-20 Rubric Recall** from ChromaDB (74,513 rubrics).
+- **Mean Reciprocal Rank (MRR)** of golden rubrics.
+- **Simillimum Remedy Accuracy** (Top-1, Top-3, Top-5 match against Materia Medica keynotes).
+
+---
+
+## 6. Ensemble Architectures: Three Strategies to Benchmark
+
+To satisfy Dr. Arya's instruction on ensembling, we will implement and compare three distinct ensemble formulations:
 
 ```mermaid
-graph TD
-    A["Step 1: College GPU Cluster Batch Run<br/>(Generate 22,200 cases across 4,933 MIND rubrics)"] --> B["Step 2: Bio_ClinicalBERT Fine-Tuning<br/>(Train token classifier on 15-class BIO tag set)"]
-    B --> C["Step 3: Two-Stage Pipeline Integration<br/>(Wire SymptomNER with SymptomResolver in Orchestrator)"]
-    C --> D["Step 4: Academic Evaluation & Benchmark Suite<br/>(Execute scripts/evaluate.py for F1, MRR, Top-20 Recall)"]
-    D --> E["Step 5: Thesis Defense & Research Paper Draft<br/>(Ablation analysis, documentation, presentation slides)"]
+flowchart TD
+    Narrative["Patient Clinical Narrative"]
+    
+    subgraph P1["Paradigm 1: Token-Level Soft Voting Ensemble"]
+        E1["Bio_ClinicalBERT"]
+        E2["PubMedBERT"]
+        E3["BioLinkBERT"]
+        SoftVote["Weighted Softmax Probability Averaging<br/>(P = sum(w_i * P_i))"]
+        E1 --> SoftVote
+        E2 --> SoftVote
+        E3 --> SoftVote
+    end
+    
+    subgraph P2["Paradigm 2: Two-Stage Hybrid (Encoder + LLM Arbitrator)"]
+        EncCandidate["Encoder Ensemble (High-Recall Candidate Spans)"]
+        Arbitrator["LLaMA 3.1 / BioMistral Arbitrator<br/>(Contextual Disambiguation & Negation Resolution)"]
+        EncCandidate --> Arbitrator
+    end
+    
+    Narrative --> E1
+    Narrative --> E2
+    Narrative --> E3
+    Narrative --> EncCandidate
+    
+    SoftVote --> BIO_Out["Consensus Token BIO Tags"]
+    Arbitrator --> Profile_Out["Validated 7-Dimension Clinical Profile"]
 ```
 
-### Step 1: Production Batch Generation on College GPU Cluster (Phase 1 Execution)
-- **Objective**: Generate the full target dataset of ~22,200 synthetic clinical cases across all 4,933 Chapter 1 (MIND) rubrics with 4 to 5 clinical variations per rubric.
-- **Why a GPU is Required**:
-  - *Local Laptop (CPU mode)*: 1.30 cases/minute $\rightarrow$ **285 hours (~11.9 days continuous execution)**. This presents significant thermal and hardware risks.
-  - *College GPU Server (NVIDIA A100 / RTX 3090/4090 with Ollama CUDA)*: 15–25 cases/minute $\rightarrow$ **14.8 to 24.6 hours total**.
-- **Execution Readiness**:
-  - Ready-to-run automation script: `scripts/run_gpu_generation.sh`.
-  - Step-by-step setup documentation: `docs/GPU_SETUP_GUIDE.md`.
-  - Atomic checkpointing (`data/processed/generation_checkpoint.json`) ensures resilience against SSH disconnects or server preemption.
-- **Output Artifacts**:
-  - `data/processed/train.jsonl` (80% split $\approx$ 17,760 cases)
-  - `data/processed/val.jsonl` (10% split $\approx$ 2,220 cases)
-  - `data/processed/test.jsonl` (10% split $\approx$ 2,220 cases)
+### Paradigm 1: Confidence-Weighted Token-Level Majority Voting (Multi-Encoder)
+- **Mechanism**: For each token $t_i$, the softmax class probability distributions from $M$ fine-tuned encoders ($m \in \{\text{Bio\_ClinicalBERT}, \text{PubMedBERT}, \text{BioLinkBERT}, \text{DeBERTa}\}$) are weighted by their validation macro F1 scores:
+  $$\hat{y}_i = \arg\max_{c \in \mathcal{C}} \sum_{m=1}^M w_m \cdot P_m(y = c \mid t_i)$$
+- **Why It Works**: Eliminates single-model wordpiece tokenization anomalies and suppresses spurious false positives without adding generative latency.
 
-### Step 2: Fine-Tuning Bio_ClinicalBERT for HomeoNER (Phase 3)
-- **Objective**: Fine-tune `emilyalsentzer/Bio_ClinicalBERT` on the token-level clinical symptom extraction task.
-- **Label Schema**: 15 BIO classes covering Kent's 7 clinical dimensions:
-  - `LOC` (Location), `SEN` (Sensation), `MOD_AGG` (Aggravation), `MOD_AMEL` (Amelioration), `CONC` (Concomitant), `TEMP` (Temporal), `MENT` (Mental/Emotional), and `O` (Outside).
-- **Target Performance**: Token-level $F_1 \ge 88\%$ evaluated via SeqEval.
-- **Platform**: Google Colab T4 GPU (free tier, ~35–50 min training) or College GPU cluster.
-- **Implementation State**: `src/models/trainer.py` and `scripts/train_ner.py` are written with PyTorch and Hugging Face Trainer integration.
+### Paradigm 2: Two-Stage Hybrid Ensemble (Encoders + LLM Arbitrator)
+- **Mechanism**:
+  1. *Candidate Span Mining*: Encoders predict candidate entity spans. Spans with unanimous agreement are verified automatically.
+  2. *LLM Arbitration (PMID 40775967)*: Conflicting spans or ambiguous boundaries (e.g., distinguishing between a pure `SENSATION` vs. a `MODALITY`) are forwarded to an instruction-tuned LLM (`BioMistral` or `LLaMA 3.1`) that arbitrates based on the full sentence context and filters local negations.
+- **Why It Works**: Combines the sub-token boundary precision of encoders with the contextual semantic reasoning of generative LLMs.
 
-### Step 3: Two-Stage Pipeline Orchestrator Integration
-- **Objective**: Wire the fine-tuned `SymptomNER` model directly into `src/pipeline/orchestrator.py`.
-- **Workflow**:
-  1. Patient narrative transcript is processed by `SymptomNER` to extract token spans.
-  2. Extracted spans are fed into `SymptomResolver` (LLaMA 3) to filter negated symptoms, resolve coreferences, and construct the structured `SymptomProfile`.
-  3. `SymptomProfile` generates composite search queries for ChromaDB dense retrieval.
-  4. Candidate rubrics are scored by `RemedyRanker` to compute totality coverage and grade-weighted rankings.
-
-### Step 4: Quantitative Evaluation & Benchmark Suite (Phase 5 & 8)
-- **Objective**: Implement and run the complete academic benchmark suite (`scripts/evaluate.py`) over the held-out test split (`test.jsonl`).
-- **Target Academic Evaluation Metrics**:
-  1. **Token Extraction**: Precision, Recall, and $F_1$ score per symptom dimension.
-  2. **Rubric Retrieval Recall**: Top-5, Top-10, and Top-20 Recall (Target: $\ge 90\%$ in Top-20).
-  3. **Mean Reciprocal Rank (MRR)**: Target $\text{MRR} \ge 0.65$:
-     $$\text{MRR} = \frac{1}{|Q|} \sum_{i=1}^{|Q|} \frac{1}{\text{rank}_i}$$
-  4. **Simillimum Remedy Accuracy**: Top-1, Top-3, and Top-5 accuracy matching the ground-truth indicated remedy.
-  5. **Ablation Study**:
-     - Baseline 1: Pure Lexical / Keyword Search (BM25 / SQLite FTS5)
-     - Baseline 2: Pure Dense Vector Retrieval (ChromaDB without classical weighting)
-     - Proposed System: Hybrid Vector + Classical Kentian Totality & Grade Weighting
+### Paradigm 3: Multi-LLM Consensus Stacking (LLM Jury)
+- **Mechanism**: `LLaMA 3.1 8B`, `BioMistral 7B`, and `Qwen 2.5 7B` independently parse the narrative into structured 7-dimension JSON. An entity is included in the final clinical profile if endorsed by $\ge 2$ models.
 
 ---
 
-## 4. Proposed Timeline & Milestone Schedule
+## 7. Execution Plan on College GPU Cluster (RTX 5000 Ada)
 
-| Phase | Milestone | Estimated Duration | Target Completion | Dependencies |
-|---|---|---|---|---|
-| **Phase 1** | College GPU Batch Generation (~22,200 cases) | 1–2 days | Week 1 | GPU cluster access |
-| **Phase 1** | Dataset validation & 80/10/10 split generation | 0.5 day | Week 1 | Batch generation complete |
-| **Phase 3** | Bio_ClinicalBERT Fine-Tuning & Validation ($F_1 \ge 88\%$) | 1–2 days | Week 2 | `train.jsonl` & `val.jsonl` |
-| **Phase 4/5** | Two-Stage Pipeline Integration & Regression Tests | 2 days | Week 2 | Fine-tuned weights |
-| **Phase 5/8** | Comprehensive Evaluation Suite (`scripts/evaluate.py`) | 3 days | Week 3 | `test.jsonl` |
-| **Phase 8** | Ablation Study & Result Aggregation | 2 days | Week 3 | Benchmark execution |
-| **Phase 8** | Research Paper Draft & Thesis Defense Slides | 5–7 days | Week 4 | Final benchmark results |
+### 7.1 Single-Command Encoder Fine-Tuning
+The CLI training script [`scripts/train_ner.py`](file:///d:/Research%20Project/kent-ai/scripts/train_ner.py) has been updated with `--model-name` parameterization. On the College GPU Server, execute:
+
+```bash
+# Model 1: PubMedBERT (Microsoft BiomedNLP) — Primary SOTA Baseline
+python scripts/train_ner.py \
+  --model-name microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext \
+  --output-dir data/models/pubmedbert_homeoNER \
+  --batch-size 32 \
+  --epochs 8
+
+# Model 2: BioLinkBERT (Stanford) — Citation-Graph SOTA
+python scripts/train_ner.py \
+  --model-name michiyasunaga/BioLinkBERT-base \
+  --output-dir data/models/biolinkbert_homeoNER \
+  --batch-size 32 \
+  --epochs 8
+
+# Model 3: DeBERTa-v3 (Microsoft) — Disentangled Attention Baseline
+python scripts/train_ner.py \
+  --model-name microsoft/deberta-v3-base \
+  --output-dir data/models/deberta_homeoNER \
+  --batch-size 32 \
+  --epochs 8
+```
+
+### 7.2 Generative LLM Fine-Tuning via QLoRA (BioMistral 7B & LLaMA 3.1 8B)
+We will introduce `scripts/train_llm_peft.py` utilizing Hugging Face `peft` and `trl` (`SFTTrainer`):
+- 4-bit NormalFloat quantization (QLoRA) with LoRA rank $r=16$, $\alpha=32$.
+- Instruction prompt template converting each case in `train.jsonl` into standard input/output pairs.
+- Fits within 12GB VRAM on the RTX 5000 Ada (32GB available) with training time of ~1.5 hours per model.
+
+### 7.3 Multi-Model Evaluation & Table Generation
+Update [`scripts/evaluate.py`](file:///d:/Research%20Project/kent-ai/scripts/evaluate.py) with an `--all-models` flag to evaluate all trained models on `test.jsonl` (1,973 held-out cases) and output publication-ready LaTeX tables directly.
 
 ---
 
-## 5. Agenda & Discussion Points for Meeting
+## 8. Academic Publication Targets & Timeline
 
-During our discussion, we seek guidance and approval on the following points:
+### 8.1 Target Publication Venues
 
-1. **GPU Cluster Resource Allocation**:
-   - Permission and SSH credentials to run Ollama (`llama3:8b`) on the College GPU server for a single batch run of ~15–24 hours.
-   - Confirmation of environment restrictions (e.g., Slurm batch script vs. persistent `tmux` session).
-2. **Dataset Scale & Rubric Scope**:
-   - We currently focus Chapter 1 (MIND, 4,933 rubrics, 22,200 synthetic cases) as our primary benchmark domain due to its high diagnostic complexity. We would like your concurrence on this scope.
-3. **Validation by Domain Experts (Optional)**:
-   - Feasibility of getting a small sample (e.g., 20–30 cases) reviewed by a practicing homeopathic physician to provide qualitative clinical feedback alongside our quantitative metrics.
+| Venue | Impact Factor / Core Rank | Submission Deadline / Cycle | Fit with Kent-AI |
+| :--- | :--- | :--- | :--- |
+| **Journal of Biomedical Informatics (JBI)** | IF 4.5 / Q1 | Open submissions (monthly) | Excellent fit for clinical NLP architectures, evaluation benchmarks, and ensemble methodologies. |
+| **IEEE Journal of Biomedical and Health Informatics (JBHI)** | IF 6.7 / Q1 | Open submissions (monthly) | Strong interest in neural-symbolic systems, decision support, and classical knowledge base integration. |
+| **BioNLP Workshop (ACL / EMNLP)** | Core A / Flagship | Annual (Spring cycle) | Premier venue for biomedical information extraction, NER, and transformer benchmarking. |
+| **AMIA Annual Symposium / JAMIA** | IF 4.7 / Premier Clinical | Annual | Gold standard for applied clinical decision support and health informatics evaluation. |
+
+### 8.2 Work Breakdown Schedule (4-Week Execution Plan)
+
+| Week | Workstream | Specific Milestones & Deliverables | Primary Assignee |
+| :--- | :--- | :--- | :--- |
+| **Week 1** | **Encoder Training Runs** | Fine-tune `PubMedBERT`, `BioLinkBERT`, and `DeBERTa-v3` on College GPU Server. Export checkpoints and evaluate token-level SeqEval F1. | Krishna Sikheriya |
+| **Week 2** | **Generative LLM PEFT & QLoRA** | Fine-tune `BioMistral 7B` and `LLaMA 3.1 8B` using QLoRA. Implement structured JSON extraction prompts and test parser resilience. | Lokesh Bawariya |
+| **Week 3** | **Ensemble Implementation** | Build `src/models/ensemble.py` implementing both Token-Level Soft Voting (Paradigm 1) and LLM Arbitration (Paradigm 2). Execute comprehensive benchmark over 1,973 test cases. | Naitik Jain & Krishna |
+| **Week 4** | **Paper Drafting & Defense Prep** | Populate Tables 1–4 with empirical results, generate LaTeX figures, draft Methodology and Ablation sections, and review complete manuscript with Dr. Nikhilanand Arya. | All Team Members |
+
+---
+
+## 9. Supervisor Discussion Checkpoints
+
+For our upcoming review with Dr. Nikhilanand Arya, we will present:
+1. **Model Approval**: Confirmation that `PubMedBERT`, `BioLinkBERT`, and `DeBERTa-v3` (for sequence labeling) along with `BioMistral 7B` and `LLaMA 3.1 8B` (for generative extraction) satisfy the comparative requirement.
+2. **GPU Cluster Scheduling**: Allocation of ~6–8 hours of uninterrupted GPU time on the `NVIDIA RTX 5000 Ada` server to complete the 3 encoder training runs and 2 QLoRA runs.
+3. **Paper Venue Selection**: Agreement on targeting *Journal of Biomedical Informatics (JBI)* or *IEEE JBHI* for journal submission following conference presentation.
