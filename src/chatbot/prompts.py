@@ -158,8 +158,10 @@ Recent Conversation (last 4 turns):
 
 Patient just said: "{user_utterance}"
 
-Reply as Kent-AI in EXACTLY 2 sentences (acknowledgment + one focused clinical question).
-Then on a new line output 3–4 short first-person reply options (≤6 words each):
-QUICK_REPLIES: ["answer 1", "answer 2", "answer 3", "answer 4"]"""
+CRITICAL OUTPUT FORMAT:
+- First, write your conversational reply as Kent-AI in EXACTLY 2 clinical sentences (brief acknowledgment + one clear question).
+- On the next line at the very end, output 3 to 4 patient reply options strictly formatted as:
+QUICK_REPLIES: ["reply 1", "reply 2", "reply 3", "reply 4"]
+Do NOT wrap QUICK_REPLIES in brackets, code blocks, or extra text. Never put a bracket before QUICK_REPLIES."""
 
 

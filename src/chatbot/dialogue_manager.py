@@ -538,62 +538,100 @@ class DialogueManager:
         return templates.get(state, "Please tell me more about that.")
 
     # =========================================================================
-    # Quick Reply / Suggestion Chip Generation
+    # Quick Reply / Suggestion Chip Generation & Text Sanitization
     # =========================================================================
+
+    @staticmethod
+    def clean_message_text(text: str) -> str:
+        """Strip all metadata markers, leaked JSON, code fences, and dangling brackets from bot text."""
+        if not text:
+            return ""
+
+        # 1. Remove SLOT_UPDATE and QUICK_REPLIES blocks anywhere in the text
+        text = re.sub(r"\[?\s*SLOT_UPDATE\s*:\s*\{[^{}]*\}\s*\]?", "", text, flags=re.IGNORECASE | re.DOTALL)
+        text = re.sub(r"\[?\s*QUICK_REPLIES\s*:\s*\[.*?\]\s*\]?", "", text, flags=re.IGNORECASE | re.DOTALL)
+
+        # 2. Remove any trailing JSON array or object
+        text = re.sub(r"\[\s*\"[^\"]+\"\s*(?:,\s*\"[^\"]+\"\s*)*\]\s*$", "", text.strip(), flags=re.DOTALL)
+        text = re.sub(r"\{[^{}]*\}\s*$", "", text.strip(), flags=re.DOTALL)
+
+        # 3. Remove markdown fences like ```json ... ``` or hanging ```
+        text = re.sub(r"```(?:json)?\s*$", "", text.strip(), flags=re.IGNORECASE)
+
+        # 4. Remove labels if they appear on their own lines or at the end
+        text = re.sub(r"(?:QUICK_REPLIES|SLOT_UPDATE)\s*:\s*$", "", text.strip(), flags=re.IGNORECASE)
+
+        # 5. Split into lines and filter out any lines that are just lone punctuation/brackets
+        cleaned_lines = []
+        for line in text.split("\n"):
+            stripped = line.strip()
+            # Drop lines consisting only of brackets, braces, code fences, or punctuation
+            if stripped in ("[", "]", "{", "}", "(", ")", "```", "```json", "QUICK_REPLIES:", "SLOT_UPDATE:"):
+                continue
+            if re.match(r"^\[\s*(?:QUICK_REPLIES|SLOT_UPDATE)?:?\]?$", stripped, re.IGNORECASE):
+                continue
+            cleaned_lines.append(line)
+
+        text = "\n".join(cleaned_lines).strip()
+
+        # 6. Strip any trailing dangling punctuation or unclosed opening brackets
+        while text and text[-1] in "[\n\r\t `:,-({":
+            text = text[:-1].rstrip()
+
+        return text.strip()
 
     def _parse_and_strip_quick_replies(self, text: str) -> Tuple[str, List[str]]:
         """Extract QUICK_REPLIES JSON from LLaMA output and return clean text + options."""
         if not text:
             return "", []
 
-        pattern = r"QUICK_REPLIES:\s*(\[.*?\])"
+        quick_options: List[str] = []
+
+        # Match QUICK_REPLIES: ["...", "..."] with optional wrapping brackets
+        pattern = r"(?:\[\s*)?QUICK_REPLIES:\s*(\[.*?\])(?:\s*\])?"
         match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
         if match:
             raw_replies = match.group(1).strip()
-            clean_text = text[: match.start()].strip()
+            clean_part = text[: match.start()]
             try:
                 parsed = json.loads(raw_replies)
                 if isinstance(parsed, list) and len(parsed) > 0:
-                    clean_options = [str(opt).strip(' "\'') for opt in parsed if str(opt).strip()]
-                    return clean_text, clean_options[:4]
+                    quick_options = [str(opt).strip(' "\'') for opt in parsed if str(opt).strip()]
             except Exception:
-                quoted = re.findall(r'["\'"]([^"\']+)["\']', raw_replies)
+                quoted = re.findall(r'["\']([^"\']+)["\']', raw_replies)
                 if quoted:
-                    return clean_text, quoted[:4]
-            return clean_text, []
-        return text.strip(), []
+                    quick_options = [q.strip() for q in quoted if q.strip()]
+        else:
+            clean_part = text
+
+        clean_text = self.clean_message_text(clean_part)
+        return clean_text, quick_options[:4]
 
     def _parse_and_strip_slot_update(self, text: str) -> Tuple[str, Dict[str, List[str]]]:
-        """Extract SLOT_UPDATE JSON from LLaMA chatbot reply.
-
-        When LLaMA produces both a conversational reply AND a SLOT_UPDATE block,
-        this extracts the structured slots without making a separate API call.
-        """
+        """Extract SLOT_UPDATE JSON from LLaMA chatbot reply."""
         if not text:
             return text, {}
 
-        pattern = r"SLOT_UPDATE:\s*(\{[^{}]+\})"
+        pattern = r"(?:\[\s*)?SLOT_UPDATE:\s*(\{[^{}]+\})(?:\s*\])?"
         match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
-        if not match:
-            return text, {}
-
-        clean_text = text[: match.start()].strip()
-        raw_json = match.group(1)
-
-        try:
-            parsed = json.loads(raw_json)
-        except json.JSONDecodeError:
-            return clean_text, {}
-
-        valid_keys = {"location", "sensation", "modality_agg", "modality_amel", "concomitant", "temporal", "mental"}
         found: Dict[str, List[str]] = {}
-        for key, vals in parsed.items():
-            if key in valid_keys and isinstance(vals, list):
-                clean_vals = [str(v).strip().lower() for v in vals if str(v).strip()]
-                if clean_vals:
-                    found[key] = clean_vals
 
-        return clean_text, found
+        if match:
+            raw_json = match.group(1)
+            text_without_slot = text[: match.start()] + text[match.end() :]
+            try:
+                parsed = json.loads(raw_json)
+                valid_keys = {"location", "sensation", "modality_agg", "modality_amel", "concomitant", "temporal", "mental"}
+                for key, vals in parsed.items():
+                    if key in valid_keys and isinstance(vals, list):
+                        clean_vals = [str(v).strip().lower() for v in vals if str(v).strip()]
+                        if clean_vals:
+                            found[key] = clean_vals
+            except Exception:
+                pass
+            return text_without_slot.strip(), found
+
+        return text, found
 
     def generate_dynamic_suggestions(self, bot_message: str) -> List[str]:
         """Generate 3-4 contextual first-person instant-reply suggestions for the patient.

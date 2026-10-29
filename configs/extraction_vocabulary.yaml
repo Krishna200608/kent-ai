@@ -180,6 +180,9 @@ dimensions:
     - midnight
     - afternoon
     - stress
+    - work stress
+    - job stress
+    - work
     - crowds
     - crowd
     - people
@@ -360,6 +363,9 @@ dimensions:
     - apprehensive
     - panic
     - distress
+    - stress
+    - work stress
+    - job stress
     - worry
     - worried
     - restless
@@ -421,3 +427,4 @@ generate_button:
   # 'Generate Repertorization' button unlocks. Set to 1 to unlock as soon
   # as any complaint is registered.
   min_dimensions_to_unlock: 1
+

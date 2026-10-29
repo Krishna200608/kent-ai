@@ -147,7 +147,11 @@ class ConversationStateMachine:
             return self.current_state
 
         if self.current_state == IntakeState.GREETING:
-            self.current_state = IntakeState.CHIEF_COMPLAINT
+            if extracted_slots and any(extracted_slots.values()):
+                next_slot = self._get_next_unfilled_slot()
+                self.current_state = next_slot if next_slot else IntakeState.CHIEF_COMPLAINT
+            else:
+                self.current_state = IntakeState.CHIEF_COMPLAINT
 
         elif self.current_state == IntakeState.CHIEF_COMPLAINT:
             next_slot = self._get_next_unfilled_slot()

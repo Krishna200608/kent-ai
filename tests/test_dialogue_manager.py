@@ -166,3 +166,34 @@ def test_dynamic_suggestions_generation(mock_dialogue_manager):
     assert "QUICK_REPLIES" not in clean_text
     assert parsed_opts == ["Left temple", "Right forehead", "Behind both eyes"]
 
+
+def test_clean_message_text_strips_dangling_brackets_and_metadata():
+    """Verify that clean_message_text completely removes lone brackets and leaked metadata."""
+    # 1. Lone trailing bracket on newline (from screenshot bug)
+    dirty_text_1 = "Noted — that sounds quite intense. Where in your body do you feel this?\n\n["
+    assert DialogueManager.clean_message_text(dirty_text_1) == "Noted — that sounds quite intense. Where in your body do you feel this?"
+
+    # 2. Text with bracketed QUICK_REPLIES
+    dirty_text_2 = (
+        "Noted — work stress can be overwhelming. Where in your body do you feel this?\n\n"
+        "[\n"
+        'QUICK_REPLIES: ["Head", "Chest", "Stomach", "Shoulders"]\n'
+        "]"
+    )
+    dm = DialogueManager(mock_mode=True)
+    clean_text, options = dm._parse_and_strip_quick_replies(dirty_text_2)
+    assert clean_text == "Noted — work stress can be overwhelming. Where in your body do you feel this?"
+    assert options == ["Head", "Chest", "Stomach", "Shoulders"]
+
+    # 3. Text with both SLOT_UPDATE and QUICK_REPLIES
+    dirty_text_3 = (
+        "I understand completely. What sensation do you feel?\n\n"
+        'SLOT_UPDATE: {"location": ["stomach"]}\n'
+        'QUICK_REPLIES: ["Heavy and tight", "Burning ache"]'
+    )
+    text_after_slot, slots = dm._parse_and_strip_slot_update(dirty_text_3)
+    assert slots.get("location") == ["stomach"]
+    clean_text_3, options_3 = dm._parse_and_strip_quick_replies(text_after_slot)
+    assert clean_text_3 == "I understand completely. What sensation do you feel?"
+    assert options_3 == ["Heavy and tight", "Burning ache"]
+
