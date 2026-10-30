@@ -150,19 +150,19 @@ Evaluated strictly via SeqEval (`zero_division=0`) on the held-out test split (`
 | Encoders (PubMedBERT / Bio_ClinicalBERT) | ~411 MB | < 1.2 GB | ~18 ms | 4.15–4.20 cases/sec (eval batch) |
 | Qwen 2.5 7B Instruct (4-bit QLoRA) | ~4.6 GB (Base + 78MB Adapter) | ~6.2 GB | 2,672 ms | 0.37 cases/sec |
 | BioMistral 7B (4-bit QLoRA) | ~4.5 GB (Base + 81MB Adapter) | ~6.5 GB | 3,093 ms | 0.32 cases/sec |
-| Multi-Model Voting Ensemble | ~1.3 GB (3 Encoders) | ~2.5 GB | ~42 ms | ~23.8 cases/sec |
+| Multi-Model Voting Ensemble (4 Encoders) | ~1.6 GB (4 Encoders) | ~2.5 GB | 54.6 ms | 18.31 cases/sec |
 ```
 
 ### Table 4: End-to-End Downstream Repertorization Impact (Empirical Benchmark)
 Evaluated across all 74,513 Kent rubrics and 1,836 cases with documented remedy ground truth:
 
-| Stage & Evaluation Metric | Bio_ClinicalBERT (Baseline) | PubMedBERT (BiomedNLP) | BioLinkBERT (Stanford) | DeBERTa-v3 (Microsoft)* | Qwen 2.5 7B (QLoRA) | BioMistral 7B (QLoRA) | Best Performing Model |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Top-1 Rubric Recall** | 10.39% | 10.69% | 10.85% | **28.28%** | 10.24% | 13.68% | 🏆 **BioLinkBERT / DeBERTa** |
-| **Top-5 Rubric Recall** | 25.29% | 26.46% | 25.49% | **48.30%** | 20.93% | 24.68% | 🏆 **PubMedBERT / DeBERTa** |
-| **Top-10 Rubric Recall** | 31.68% | 33.40% | 32.44% | **55.65%** | 25.85% | 30.31% | 🏆 **PubMedBERT / DeBERTa** |
-| **Top-20 Rubric Recall** | 40.14% | 41.56% | 41.46% | **62.95%** | 31.68% | 37.71% | 🏆 **PubMedBERT / DeBERTa** |
-| **Mean Reciprocal Rank (MRR)** | 0.1746 | 0.1815 | 0.1798 | **0.3722** | 0.1529 | 0.1904 | 🏆 **PubMedBERT / DeBERTa** |
+| Stage & Evaluation Metric | Bio_ClinicalBERT (Baseline) | PubMedBERT (BiomedNLP) | BioLinkBERT (Stanford) | DeBERTa-v3 (Microsoft)* | Qwen 2.5 7B (QLoRA) | BioMistral 7B (QLoRA) | Multi-Model Ensemble | Best Performing Model |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Top-1 Rubric Recall** | 10.39% | 10.69% | 10.85% | **28.28%** | 10.24% | 13.68% | 12.11% | 🏆 **BioLinkBERT / DeBERTa** |
+| **Top-5 Rubric Recall** | 25.29% | 26.46% | 25.49% | **48.30%** | 20.93% | 24.68% | 21.84% | 🏆 **PubMedBERT / DeBERTa** |
+| **Top-10 Rubric Recall** | 31.68% | 33.40% | 32.44% | **55.65%** | 25.85% | 30.31% | 26.51% | 🏆 **PubMedBERT / DeBERTa** |
+| **Top-20 Rubric Recall** | 40.14% | 41.56% | 41.46% | **62.95%** | 31.68% | 37.71% | 31.27% | 🏆 **PubMedBERT / DeBERTa** |
+| **Mean Reciprocal Rank (MRR)** | 0.1746 | 0.1815 | 0.1798 | **0.3722** | 0.1529 | 0.1904 | 0.1687 | 🏆 **PubMedBERT / DeBERTa** |
 | **Simillimum Top-1 Accuracy** | 13.07% | 13.02% | 12.47% | **17.65%** | 🏆 **ClinicalBERT / DeBERTa** |
 | **Simillimum Top-3 Accuracy** | 25.33% | 26.42% | 25.98% | **33.50%** | 🏆 **PubMedBERT / DeBERTa** |
 | **Simillimum Top-5 Accuracy** | 34.04% | 35.02% | 34.53% | **42.16%** | 🏆 **PubMedBERT / DeBERTa** |
@@ -275,9 +275,9 @@ Update [`scripts/evaluate.py`](file:///d:/Research%20Project/kent-ai/scripts/eva
 | Week | Workstream | Specific Milestones & Deliverables | Primary Assignee | Status |
 | :--- | :--- | :--- | :--- | :---: |
 | **Week 1** | **Encoder Training Runs** | Fine-tune `PubMedBERT`, `BioLinkBERT`, and `DeBERTa-v3` on College GPU Server (`RTX 5000 Ada`). Export model checkpoints and evaluate token-level SeqEval F1 over 1,973 held-out test cases. Compile master comparative benchmark report (`docs/Evaluation/COMPARATIVE_BENCHMARK.md`). | Krishna Sikheriya | ✅ **Complete** |
-| **Week 2** | **Generative LLM PEFT & QLoRA** | Fine-tune `BioMistral 7B` and `LLaMA 3.1 8B` using QLoRA. Implement structured JSON extraction prompts and test parser resilience. | Lokesh Bawariya | 🔄 **Active / Next** |
-| **Week 3** | **Ensemble Implementation** | Build `src/models/ensemble.py` implementing both Token-Level Soft Voting (Paradigm 1) and LLM Arbitration (Paradigm 2). Execute comprehensive benchmark over 1,973 test cases. | Naitik Jain & Krishna | ⬜ Pending |
-| **Week 4** | **Paper Drafting & Defense Prep** | Populate Tables 1–4 with empirical results, generate LaTeX figures, draft Methodology and Ablation sections, and review complete manuscript with Dr. Nikhilanand Arya. | All Team Members | ⬜ Pending |
+| **Week 2** | **Generative LLM PEFT & QLoRA** | Fine-tune `BioMistral 7B` and `Qwen 2.5 7B` using QLoRA. Implement structured JSON extraction prompts, test parser resilience, and benchmark on 1,973 cases (`eval_qwen_7b.md`, `eval_biomistral_7b.md`). | Lokesh Bawariya | ✅ **Complete** |
+| **Week 3** | **Ensemble Implementation** | Build `src/models/ensemble.py` and `src/models/hybrid_pipeline.py` implementing both Weighted Voting (Paradigm 1) and LLM Arbitration (Paradigm 2). Execute comprehensive benchmark over 1,973 test cases (`eval_ensemble.md`). | Naitik Jain & Krishna | ✅ **Complete** |
+| **Week 4** | **Paper Drafting & Defense Prep** | Populate Tables 1–4 with empirical results, generate LaTeX manuscript, wire production models into Streamlit dashboard, and review with Dr. Nikhilanand Arya. | All Team Members | 🔄 **Active / Next** |
 
 ---
 

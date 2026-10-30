@@ -417,9 +417,17 @@ pytest tests/ -v
    - Stage 1: Ultra-fast sub-token candidate entity mining via the 4-encoder ensemble (< 40 ms).
    - Stage 2: Contextual arbitration, negation resolution (filtering denied symptoms), and 7-dimension structuring via instruction-tuned LLM.
    - Downstream: ChromaDB Kentian rubric retrieval (74,513 rubrics) and classical totality remedy ranking.
-3. **Evaluation Suite**:
+3. **Evaluation Suite & Empirical Test Benchmark ($N = 1,973$ Held-Out Cases)**:
    - CLI Evaluator: [`scripts/evaluate_ensemble.py`](../scripts/evaluate_ensemble.py).
    - Test Suite: [`tests/test_ensemble.py`](../tests/test_ensemble.py) (5/5 tests passing).
+   - Evaluation Report: [`docs/Evaluation/eval_ensemble.md`](../docs/Evaluation/eval_ensemble.md)
+   - Metric Payload: [`data/eval_metrics_ensemble.json`](../data/eval_metrics_ensemble.json)
+   - Results:
+     * **Micro Recall**: **49.91%** (highest recall among all systems)
+     * **Micro F1**: **46.10%** (Macro F1: **41.05%**)
+     * **Grounding Rate**: **100.00%** (0% hallucination)
+     * **Inference Latency**: **54.62 ms / narrative** (**18.31 cases/sec** across 4 combined models)
+     * **Downstream ChromaDB Retrieval**: Recall@1: 12.1%, Recall@5: 21.8%, Recall@20: 31.3%, MRR: 0.1687
 
 ---
 
