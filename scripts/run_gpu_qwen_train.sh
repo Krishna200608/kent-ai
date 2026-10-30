@@ -28,15 +28,15 @@ echo "GPU Device: $(nvidia-smi --query-gpu=name,memory.total --format=csv,nohead
 echo "Storage HF_HOME: $HF_HOME ($(df -h "$HF_HOME" | awk 'NR==2 {print $4}') available)"
 echo "========================================================================"
 
-# 2. Execute Training Run
+# 2. Execute Training Run (Batch size 2 x Grad Accum 8 = Effective Batch 16, ~6.8GB VRAM)
 .venv/bin/python scripts/train_llm_peft.py \
   --model-name Qwen/Qwen2.5-7B-Instruct \
   --output-dir data/models/qwen_homeoQLoRA \
   --train-file data/processed/train.jsonl \
   --val-file data/processed/val.jsonl \
   --epochs 3 \
-  --batch-size 4 \
-  --grad-accum 4 \
+  --batch-size 2 \
+  --grad-accum 8 \
   --lr 2e-4 \
   --max-seq-length 512 \
   --lora-r 16 \

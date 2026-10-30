@@ -253,3 +253,4 @@ def calculate_grounding_rate(
 
     ratio = (grounded / total) if total > 0 else 1.0
     return ratio, grounded, total
+

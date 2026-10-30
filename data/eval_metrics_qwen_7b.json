@@ -1,0 +1,83 @@
+{
+  "model_name": "Qwen/Qwen2.5-7B-Instruct",
+  "adapter_dir": "data/models/qwen_homeoQLoRA",
+  "total_test_cases": 1973,
+  "json_parse_validity_percent": 100.0,
+  "clean_syntax_percent": 100.0,
+  "grounding_rate_percent": 99.78,
+  "hallucination_rate_percent": 0.22,
+  "micro_precision": 0.4614,
+  "micro_recall": 0.4418,
+  "micro_f1": 0.4514,
+  "macro_f1": 0.3985,
+  "dimension_breakdown": {
+    "LOC": {
+      "precision": 0.4114,
+      "recall": 0.3813,
+      "f1": 0.3958,
+      "tp": 485,
+      "fp": 694,
+      "fn": 787
+    },
+    "SEN": {
+      "precision": 0.3869,
+      "recall": 0.4301,
+      "f1": 0.4074,
+      "tp": 652,
+      "fp": 1033,
+      "fn": 864
+    },
+    "MOD_AGG": {
+      "precision": 0.3966,
+      "recall": 0.3437,
+      "f1": 0.3682,
+      "tp": 276,
+      "fp": 420,
+      "fn": 527
+    },
+    "MOD_AMEL": {
+      "precision": 0.2812,
+      "recall": 0.2093,
+      "f1": 0.24,
+      "tp": 18,
+      "fp": 46,
+      "fn": 68
+    },
+    "CONC": {
+      "precision": 0.3078,
+      "recall": 0.2464,
+      "f1": 0.2737,
+      "tp": 169,
+      "fp": 380,
+      "fn": 517
+    },
+    "TEMP": {
+      "precision": 0.5992,
+      "recall": 0.6323,
+      "f1": 0.6153,
+      "tp": 595,
+      "fp": 398,
+      "fn": 346
+    },
+    "MENT": {
+      "precision": 0.5048,
+      "recall": 0.4739,
+      "f1": 0.4889,
+      "tp": 2194,
+      "fp": 2152,
+      "fn": 2436
+    }
+  },
+  "downstream_rubric_retrieval": {
+    "recall_at_1": 0.1024,
+    "recall_at_5": 0.2093,
+    "recall_at_10": 0.2585,
+    "recall_at_20": 0.3168,
+    "mrr": 0.1529
+  },
+  "computational_footprint": {
+    "avg_latency_ms": 2672.67,
+    "throughput_cases_per_sec": 0.37,
+    "quantization": "4-bit NormalFloat (NF4)"
+  }
+}
