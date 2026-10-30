@@ -26,6 +26,8 @@ def test_clinical_case_lifecycle():
     """Verify ClinicalCase model creation, symptom mutation, and query derivation."""
     case = ClinicalCase(case_id="TEST-2026-001", patient_name="Jane Doe", patient_age=32, patient_sex="Female")
     assert case.case_id == "TEST-2026-001"
+    assert "32 yrs" in case.demographics_string
+    assert "Female" in case.demographics_string
     assert case.filled_dimensions_count == 0
     assert not case.is_ready_for_repertorization
 

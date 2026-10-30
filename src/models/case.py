@@ -82,6 +82,16 @@ class ClinicalCase:
         return None
 
     @property
+    def demographics_string(self) -> str:
+        """Formatted demographics string e.g. '35 yrs | Female' or 'Demographics unspecified'."""
+        parts = []
+        if self.patient_age is not None:
+            parts.append(f"{self.patient_age} yrs")
+        if self.patient_sex:
+            parts.append(self.patient_sex)
+        return " | ".join(parts) if parts else "Demographics unspecified"
+
+    @property
     def filled_dimensions_count(self) -> int:
         """Count how many of the 7 Kent dimensions contain at least one symptom."""
         return sum(1 for k in CANONICAL_DIMENSIONS if self.dimensions.get(k))
