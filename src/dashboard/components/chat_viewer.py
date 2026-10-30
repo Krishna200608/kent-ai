@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from datetime import datetime
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 import urllib.request
 import streamlit as st
+
+logger = logging.getLogger("chat_viewer")
 
 from src.chatbot.dialogue_manager import DialogueManager
 from src.dashboard.components.icons import get_icon
@@ -361,7 +364,11 @@ def render_chat_interface(dm: DialogueManager) -> None:
                     </div>
                     """
                 )
-                bot_reply = dm.process_turn(input_to_process)
+                try:
+                    bot_reply = dm.process_turn(input_to_process)
+                except Exception as err:
+                    logger.warning("Error processing dialogue turn: %s", err)
+                    bot_reply = dm._mock_response_for_state()
                 thinking_box.markdown(
                     f"<div style='font-size: 11.5px; font-weight: 700; color: #10B981; margin-bottom: 4px; letter-spacing: 0.02em;'>"
                     f"Kent-AI"

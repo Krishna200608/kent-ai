@@ -509,13 +509,14 @@ class DialogueManager:
     # =========================================================================
 
     def _call_ollama_chat(self, user_prompt: str) -> str:
-        """Call Ollama /api/chat with full conversational context."""
+        """Call Ollama /api/chat with concise prompt context."""
         url = f"{self.api_base}/api/chat"
 
-        messages = [{"role": "system", "content": CHATBOT_SYSTEM_PROMPT}]
-        for turn in self.history[-6:]:  # keep recent context window
-            messages.append(turn)
-        messages.append({"role": "user", "content": user_prompt})
+        # Use lean context: system prompt + structured turn prompt (turn prompt already embeds recent history)
+        messages = [
+            {"role": "system", "content": CHATBOT_SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ]
 
         payload = {
             "model": self.model_name,
@@ -537,11 +538,11 @@ class DialogueManager:
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
         try:
-            with opener.open(req, timeout=60) as resp:
+            with opener.open(req, timeout=120) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 return data.get("message", {}).get("content", "").strip()
-        except urllib.error.URLError as err:
-            logger.warning("Ollama unreachable for chat (%s). Using fallback template.", err)
+        except (urllib.error.URLError, TimeoutError, OSError, Exception) as err:
+            logger.warning("Ollama call failed or timed out (%s). Using fallback template.", err)
             return self._mock_response_for_state()
 
     def is_ollama_online(self) -> bool:
@@ -614,8 +615,8 @@ class DialogueManager:
                 "or emotional state — any anxiety, irritability, or low energy?"
             ),
             IntakeState.DONE: (
-                "Thank you — I have all the details I need. "
-                "Your homeopathic repertory analysis is now ready to view."
+                "Thank you — I have gathered all your clinical details into the Kentian totality framework. "
+                "Your comprehensive homeopathic repertorization report has been generated below!"
             ),
         }
         return templates.get(state, "Please tell me more about that.")
@@ -878,6 +879,7 @@ class DialogueManager:
             IntakeState.CONCOMITANT: ["Nausea and dizziness", "Chills and perspiration", "Extreme fatigue", "No other symptoms"],
             IntakeState.MENTAL: ["Restless and anxious", "Irritable and frustrated", "Down and tearful", "Calm and peaceful"],
             IntakeState.REVIEW: ["Yes, that covers all my symptoms!", "I want to add another symptom", "Please proceed to repertorization"],
+            IntakeState.DONE: ["View Top Remedies", "Export Consultation", "Explore Rubrics", "Start New Consultation"],
         }
         return state_fallback.get(self.state_machine.current_state, [
             "Yes, exactly like that",
@@ -940,7 +942,7 @@ class DialogueManager:
         goal_desc = self.state_machine.get_current_goal_description()
 
         # 5. Generate bot response
-        if self.mock_mode:
+        if self.mock_mode or current_state == IntakeState.DONE:
             raw_reply = self._mock_response_for_state()
         else:
             slots_summary = "\n".join(
@@ -961,7 +963,12 @@ class DialogueManager:
                 user_utterance=user_utterance,
             )
 
-            raw_reply = self._call_ollama_chat(turn_prompt)
+            try:
+                raw_reply = self._call_ollama_chat(turn_prompt)
+            except Exception as err:
+                logger.warning("Error during chat generation (%s). Using fallback.", err)
+                raw_reply = self._mock_response_for_state()
+
             if not raw_reply:
                 raw_reply = self._mock_response_for_state()
 

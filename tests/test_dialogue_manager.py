@@ -278,3 +278,43 @@ def test_state_machine_confirmation_triggers():
         assert fsm.current_state == IntakeState.DONE
 
 
+def test_ollama_chat_timeout_fallback(monkeypatch):
+    """Verify that TimeoutError or network exceptions in _call_ollama_chat gracefully return fallback."""
+    import urllib.request
+
+    dm = DialogueManager(mock_mode=False)
+
+    class DummyOpener:
+        def open(self, *args, **kwargs):
+            raise TimeoutError("timed out")
+
+    monkeypatch.setattr(urllib.request, "build_opener", lambda *args: DummyOpener())
+
+    # Must NOT raise TimeoutError; must return fallback message safely
+    reply = dm._call_ollama_chat("Hello")
+    assert reply is not None
+    assert len(reply) > 0
+
+
+def test_done_transition_instant_response(mock_dialogue_manager):
+    """Verify that proceeding from REVIEW to DONE generates report and immediate response without hanging."""
+    dm = mock_dialogue_manager
+    dm.state_machine.current_state = IntakeState.REVIEW
+    dm.extracted_slots = {
+        "location": ["head and temples"],
+        "sensation": ["sharp", "dizziness"],
+        "modality_agg": ["motion"],
+        "modality_amel": [],
+        "concomitant": ["lightheadedness"],
+        "temporal": [],
+        "mental": ["severe anxiety"],
+    }
+
+    reply = dm.process_turn("Let's proceed with the analysis")
+    assert dm.state_machine.current_state == IntakeState.DONE
+    assert "repertorization" in reply.lower() or "framework" in reply.lower() or "ready" in reply.lower()
+    assert dm.get_patient_report() is not None
+    assert any("remed" in s.lower() or "consultation" in s.lower() for s in dm.current_suggestions)
+
+
+
