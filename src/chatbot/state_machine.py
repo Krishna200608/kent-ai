@@ -118,8 +118,8 @@ class ConversationStateMachine:
         """Detect patient confirmation in review state."""
         cleaned = text.strip().lower()
         positive_patterns = [
-            r"^(?:yes|yeah|yep|correct|that'?s (?:it|all|right|correct)|sounds (?:good|right|accurate)|accurate|perfect|all good|no more|nothing else|that covers it)\b",
-            r"\b(?:looks good|all set|nothing to add|that is all)\b",
+            r"^(?:yes|yeah|yep|correct|that'?s (?:it|all|right|correct)|sounds (?:good|right|accurate)|accurate|perfect|all good|no more|nothing else|that covers (?:it|all|everything)|covers (?:it|all|everything))\b",
+            r"\b(?:looks good|all set|nothing to add|that is (?:all|everything)|proceed|ready|repertorize|repertorisation|repertorization|analyze (?:my )?remedies|view (?:my )?remedies)\b",
         ]
         return any(re.search(pat, cleaned) for pat in positive_patterns)
 

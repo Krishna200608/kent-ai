@@ -324,7 +324,7 @@ class DialogueManager:
         word_count = len(user_utterance.split())
         llm_cfg = _load_llm_extraction_config()
 
-        if not llm_cfg.get("enabled", True):
+        if self.mock_mode or not llm_cfg.get("enabled", True):
             return {}
 
         min_words = int(llm_cfg.get("min_word_count", _MIN_WORDS_FOR_LLM_EXTRACTION))
@@ -391,8 +391,90 @@ class DialogueManager:
         return found
 
     # =========================================================================
-    # 3-Tier Merge Orchestrator
+    # 3-Tier Merge Orchestrator & Sanitizer
     # =========================================================================
+
+    @staticmethod
+    def sanitize_extracted_slots(slots: Dict[str, List[str]]) -> Dict[str, List[str]]:
+        """Clean, deduplicate, and resolve cross-dimension conflicts in extracted symptom slots.
+
+        - Drops conversational stopwords & non-symptoms (e.g. 'actually', 'worse than', 'than that').
+        - Resolves sensation vs aggravation conflict (e.g. 'sharp, electric stabs' belongs in sensation, not modality_agg).
+        - Resolves 'worse alone' vs 'alone' conflict (removes 'alone' from mental when 'worse alone' is in modality_agg).
+        - Performs subsumption deduplication (e.g. keeps 'utterly hopeless', drops redundant 'hopeless' / 'hopelessness').
+        """
+        if not slots:
+            return {k: [] for k in ["location", "sensation", "modality_agg", "modality_amel", "concomitant", "temporal", "mental"]}
+
+        cleaned: Dict[str, List[str]] = {
+            k: [str(item).strip().lower() for item in slots.get(k, []) if str(item).strip()]
+            for k in ["location", "sensation", "modality_agg", "modality_amel", "concomitant", "temporal", "mental"]
+        }
+
+        # 1. Conversational stopword removal
+        STOPWORDS = {
+            "worse than", "worse than that", "than that", "actually", "it's", "it is",
+            "yes", "no", "yeah", "yep", "not really", "that's it", "nothing else",
+            "i feel", "i have", "patient has", "doctor", "please", "help", "thank you",
+            "everything", "covers it", "all of it", "that is all", "it", "that", "this",
+            "more", "much", "very", "severe", "increasing", "escalating", "terrible", "bad"
+        }
+        for k in cleaned:
+            cleaned[k] = [v for v in cleaned[k] if v not in STOPWORDS and len(v) >= 2]
+
+        # 2. Sensation vs Aggravation conflict resolution
+        SENSATION_INDICATORS = {
+            "sharp", "stab", "stabbing", "stabs", "electric", "throbbing", "pounding",
+            "burning", "splitting", "pulsating", "pulsing", "stitching", "heavy", "tight"
+        }
+        filtered_agg: List[str] = []
+        for term in cleaned["modality_agg"]:
+            is_sensation = any(re.search(r"\b" + re.escape(si) + r"\b", term) for si in SENSATION_INDICATORS)
+            if is_sensation:
+                if term not in cleaned["sensation"]:
+                    cleaned["sensation"].append(term)
+            else:
+                filtered_agg.append(term)
+        cleaned["modality_agg"] = filtered_agg
+
+        # 3. 'worse alone' vs 'alone' resolution
+        has_worse_alone = any("worse alone" in a or "alone" in a for a in cleaned["modality_agg"])
+        if has_worse_alone:
+            if "worse alone" in cleaned["modality_agg"] and "alone" in cleaned["modality_agg"]:
+                cleaned["modality_agg"].remove("alone")
+            if "alone" in cleaned["mental"]:
+                cleaned["mental"].remove("alone")
+
+        # 4. Redundant sub-phrase subsumption within each dimension
+        for k in cleaned:
+            unique_vals = list(dict.fromkeys(cleaned[k]))
+            if len(unique_vals) <= 1:
+                cleaned[k] = unique_vals
+                continue
+
+            sorted_by_len = sorted(unique_vals, key=len, reverse=True)
+            pruned: List[str] = []
+            for item in sorted_by_len:
+                is_sub = False
+                for keeper in pruned:
+                    if item in keeper.split() or (item in keeper and len(item) < len(keeper)):
+                        is_sub = True
+                        break
+                    # Root / morphological stem match (e.g. 'hopelessness' subsumed by 'utterly hopeless')
+                    keeper_words = [w for w in re.findall(r"\b\w+\b", keeper) if len(w) >= 4]
+                    item_words = [w for w in re.findall(r"\b\w+\b", item) if len(w) >= 4]
+                    for kw in keeper_words:
+                        for iw in item_words:
+                            if (kw.startswith(iw) or iw.startswith(kw)) and min(len(kw), len(iw)) >= 4:
+                                is_sub = True
+                                break
+                        if is_sub:
+                            break
+                if not is_sub:
+                    pruned.append(item)
+            cleaned[k] = pruned
+
+        return cleaned
 
     def _extract_all_slots(self, user_utterance: str) -> Dict[str, List[str]]:
         """Run all 3 extraction tiers and merge results, deduplicating per dimension.
@@ -413,13 +495,14 @@ class DialogueManager:
         # Tier 1 — YAML heuristic (always runs, <1ms)
         _merge_tier(self._extract_slots_heuristic(user_utterance))
 
-        # Tier 2 — Bio_ClinicalBERT (when weights present, ~0.5–1.5s)
+        # Tier 2 — Fine-tuned biomedical encoder (BioLinkBERT / PubMedBERT / Ensemble)
         _merge_tier(self._extract_slots_clinicalbert(user_utterance))
 
         # Tier 3 — LLaMA structured extraction (when utterance is substantive, ~2–4s)
         _merge_tier(self._extract_slots_llm(user_utterance))
 
-        return merged
+        # Sanitize and resolve cross-dimension conflicts
+        return self.sanitize_extracted_slots(merged)
 
     # =========================================================================
     # Ollama Chat Helpers
@@ -611,8 +694,34 @@ class DialogueManager:
         else:
             clean_part = text
 
+        # Strict validation: Quick replies must be patient statements, never doctor questions
+        valid_patient_replies: List[str] = []
+        question_openers = (
+            "how ", "what ", "why ", "when ", "where ", "can you ", "could you ",
+            "is there ", "are there ", "do you ", "tell me ", "describe ", "would you ",
+            "which ", "have you ", "should you ", "can we ", "could we "
+        )
+        for opt in quick_options:
+            s_opt = opt.strip()
+            if not s_opt:
+                continue
+            # Must NOT end with '?'
+            if s_opt.endswith("?"):
+                continue
+            # Must NOT start with interrogatives
+            if s_opt.lower().startswith(question_openers):
+                continue
+            # Must not be an excessively long sentence
+            if len(s_opt.split()) > 8:
+                continue
+            valid_patient_replies.append(s_opt)
+
+        # If LLM generated questions or failed validation, discard so dynamic suggestions take over
+        if len(valid_patient_replies) < 2:
+            valid_patient_replies = []
+
         clean_text = self.clean_message_text(clean_part)
-        return clean_text, quick_options[:4]
+        return clean_text, valid_patient_replies[:4]
 
     def _parse_and_strip_slot_update(self, text: str) -> Tuple[str, Dict[str, List[str]]]:
         """Extract SLOT_UPDATE JSON from LLaMA chatbot reply."""
@@ -723,12 +832,40 @@ class DialogueManager:
                 "My mood is relatively calm",
             ]
 
-        # Review / Confirmation
-        if any(w in text for w in ["accurate", "summarize", "anything else", "sound right", "add anything", "confirm", "covers it", "got it right"]):
+        # Review / Confirmation / Clarification / Readiness
+        if any(w in text for w in ["accurate", "summarize", "anything else", "sound right", "add anything", "confirm", "covers it", "got it right", "proceed", "repertoriz", "ready"]):
             return [
                 "Yes, that covers all my symptoms!",
-                "I also want to add another detail",
                 "Please proceed to repertorization",
+                "I also want to add another detail",
+                "Ready to view my remedies",
+            ]
+
+        # Impact on daily life / relationships / coping
+        if any(w in text for w in ["daily life", "relationships", "affecting", "coping", "manage", "interfere", "routine"]):
+            return [
+                "Yes, deeply affecting my daily life",
+                "I struggle to get through each day",
+                "Mostly overwhelming when alone",
+                "I try to hide it from others",
+            ]
+
+        # Hopelessness / Despair / Grief
+        if any(w in text for w in ["hopeless", "despair", "grief", "forsaken", "weep", "tearful"]):
+            return [
+                "I feel completely hopeless & forsaken",
+                "Weeping easily from any emotional upset",
+                "Worse in morning on waking",
+                "Unable to find joy in anything",
+            ]
+
+        # Intensity / Escalation / "worse than that"
+        if any(w in text for w in ["intensity", "increasing", "getting worse", "escalat"]):
+            return [
+                "The emotional despair is unbearable",
+                "Physical pains worsen with sadness",
+                "Worse when alone and thinking",
+                "I feel utterly exhausted by it",
             ]
 
         # Adaptive state-based fallback
@@ -795,6 +932,7 @@ class DialogueManager:
                 existing = [x.lower() for x in self.extracted_slots.get(slot_k, [])]
                 if v_clean and v_clean not in existing:
                     self.extracted_slots.setdefault(slot_k, []).append(v_clean)
+        self.extracted_slots = self.sanitize_extracted_slots(self.extracted_slots)
 
         # 4. Transition FSM
         self.state_machine.next_state(user_utterance, extracted_slots=new_slots)
@@ -836,6 +974,7 @@ class DialogueManager:
                     existing = [x.lower() for x in self.extracted_slots.get(slot_k, [])]
                     if v_clean and v_clean not in existing:
                         self.extracted_slots.setdefault(slot_k, []).append(v_clean)
+            self.extracted_slots = self.sanitize_extracted_slots(self.extracted_slots)
 
         # 7. Extract QUICK_REPLIES or generate dynamic suggestions
         clean_reply, quick_replies = self._parse_and_strip_quick_replies(raw_reply)
