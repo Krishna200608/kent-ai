@@ -1,7 +1,7 @@
 # Kent-AI — Project Context
 
-> Last updated: 2026-10-29 by Antigravity
-> Phase: Complete through Phase 5 / Phase B & C (Two-Stage Pipeline & Evaluation Suite Operational; UI Demo & Thesis Defense Next)
+> Last updated: 2026-10-30 by Antigravity
+> Phase: Complete through Week 3 / Phase 10 (Multi-Model Ensembling & Generative Decoders Operational; Week 4 UI Integration & Manuscript Active)
 
 ---
 
@@ -24,11 +24,12 @@ It takes a patient's natural-language symptom description, extracts structured c
 
 | Component | Technology | Purpose |
 |---|---|---|
-| NER Model | Bio_ClinicalBERT (`emilyalsentzer/Bio_ClinicalBERT`) | Token-level symptom extraction |
-| Post-Processor | LLaMA 3 8B via Ollama | Negation, coreference, 7-dim JSON |
-| Vector Search | ChromaDB + `all-MiniLM-L6-v2` | Semantic rubric matching |
+| Biomedical Encoders | `BioLinkBERT`, `PubMedBERT`, `Bio_ClinicalBERT`, `DeBERTa-v3` | Fast token-level sequence classification (BIO tagging, ~18 ms) |
+| Generative Decoders | `BioMistral 7B` (PMC-adapted), `Qwen 2.5 7B Instruct` (4-bit QLoRA) | Contextual 7-dimension structured extraction & reasoning |
+| Multi-Model Ensemble | Weighted Majority Voting & Two-Stage Hybrid Arbitration | High-recall span mining + LLM contextual arbitration |
+| Vector Search | ChromaDB + `all-MiniLM-L6-v2` | Semantic rubric matching (74,513 Kent rubrics) |
 | Text Search | SQLite FTS5 | Prefix token rubric search |
-| Dashboard | Streamlit | Doctor-facing clinical UI |
+| Dashboard | Streamlit | Doctor-facing clinical UI with Totality Matrix |
 | Runtime | Python 3.12 (`.venv`) | Virtual environment in project root |
 
 ### Kent's 7 Symptom Dimensions

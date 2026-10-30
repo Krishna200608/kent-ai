@@ -1,7 +1,7 @@
 # Kent-AI — Architecture Context
 
-> Last updated: 2026-10-29 by Antigravity
-> Phase: Complete through Phase 7 / Phase 8 Active (Multi-Model Comparative Benchmark & Ensembling Operational; 73 Unit & Integration Tests Passing, 0 Warnings)
+> Last updated: 2026-10-30 by Antigravity
+> Phase: Complete through Phase 10 (Multi-Model Ensembling & Paradigm 2 Hybrid Pipeline Operational; 86 Unit & Integration Tests Passing, 0 Warnings)
 
 ---
 
@@ -44,8 +44,11 @@ kent-ai/
 │   │
 │   ├── models/
 │   │   ├── symptom_ner.py         # ★ CORE: Bio_ClinicalBERT wrapper with subword inference & mock fallback — implemented
-│   │   ├── trainer.py             # ★ CORE: Bio_ClinicalBERT fine-tuning loop with SeqEval & early stopping — implemented
-│   │   └── resolver.py            # ★ CORE: LLaMA post-processor & negation resolver (Phase 4) — implemented
+│   │   ├── trainer.py             # ★ CORE: Multi-encoder fine-tuning loop with SeqEval & early stopping — implemented
+│   │   ├── resolver.py            # ★ CORE: LLaMA post-processor & negation resolver (Phase 4) — implemented
+│   │   ├── llm_dataset.py         # ★ CORE: Instruction dataset transformer for 7-dim clinical PEFT — implemented
+│   │   ├── ensemble.py            # ★ CORE: Weighted majority voting & IoU span clustering (Paradigm 1) — implemented
+│   │   └── hybrid_pipeline.py     # ★ CORE: Two-stage hybrid pipeline with LLM arbitration (Paradigm 2) — implemented
 │   │
 │   ├── search/
 │   │   ├── embedder.py            # ★ CORE: Sentence-transformers embedder (Phase 2) — implemented
