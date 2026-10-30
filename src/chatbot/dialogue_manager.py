@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from src.chatbot.prompts import CHATBOT_SYSTEM_PROMPT, CHATBOT_TURN_PROMPT
 from src.chatbot.state_machine import ConversationStateMachine, IntakeState
+from src.models.case import ClinicalCase
 
 try:
     from src.config import get_chatbot_config, get_extraction_vocabulary
@@ -111,6 +112,7 @@ class DialogueManager:
         model_name: Optional[str] = None,
         api_base: Optional[str] = None,
         mock_mode: bool = False,
+        case: Optional[ClinicalCase] = None,
     ) -> None:
         cfg = get_chatbot_config().get("chatbot", {})
         self.state_machine = state_machine or ConversationStateMachine()
@@ -119,6 +121,7 @@ class DialogueManager:
         self.api_base = api_base or cfg.get("api_base", "http://127.0.0.1:11434")
         self.temperature = float(cfg.get("temperature", 0.5))
         self.mock_mode = mock_mode
+        self.case = case
 
         self.history: List[Dict[str, str]] = []
         self.extracted_slots: Dict[str, List[str]] = {
@@ -132,6 +135,29 @@ class DialogueManager:
         }
         self.patient_report: Optional[PatientReport] = None
         self.current_suggestions: List[str] = []
+
+        if case is not None:
+            self.load_from_case(case)
+
+    def sync_to_case(self, target_case: Optional[ClinicalCase] = None) -> ClinicalCase:
+        """Synchronize dialogue manager slots and history into the typed ClinicalCase."""
+        c = target_case or self.case or ClinicalCase()
+        self.case = c
+        c.dimensions = self.sanitize_extracted_slots(self.extracted_slots)
+        c.transcript = self.get_full_transcript()
+        c.dialogue_history = list(self.history)
+        if self.patient_report:
+            c.report_data = self.patient_report.to_dict()
+        return c
+
+    def load_from_case(self, source_case: ClinicalCase) -> None:
+        """Load dialogue manager state and slots from a ClinicalCase."""
+        self.case = source_case
+        self.extracted_slots = self.sanitize_extracted_slots(source_case.dimensions)
+        self.history = list(source_case.dialogue_history)
+        for dim_k, vals in self.extracted_slots.items():
+            if vals:
+                self.state_machine.filled_slots.add(dim_k.lower())
 
     @property
     def detected_dimensions(self) -> Dict[str, bool]:
@@ -995,8 +1021,12 @@ class DialogueManager:
         # 9. Handover to pipeline orchestrator when intake is complete
         if current_state == IntakeState.DONE and self.orchestrator:
             try:
-                transcript = self.get_full_transcript()
-                self.patient_report = self.orchestrator.process_transcript(transcript)
+                active_case = self.sync_to_case(self.case)
+                if hasattr(self.orchestrator, "repertorize_case"):
+                    self.patient_report = self.orchestrator.repertorize_case(active_case)
+                else:
+                    transcript = self.get_full_transcript()
+                    self.patient_report = self.orchestrator.process_transcript(transcript)
             except Exception as e:
                 logger.error("Error executing handover to pipeline orchestrator: %s", e)
 

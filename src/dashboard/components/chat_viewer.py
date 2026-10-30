@@ -76,49 +76,32 @@ def get_current_step_label(dm: DialogueManager) -> str:
 
 
 def render_slot_badges_html(slots: Dict[str, List[str]], dm: Optional[DialogueManager] = None) -> str:
-    """Render the 7-segment Live Symptom Dimension HUD in plain language with empty/filled states and tooltips."""
+    """Render single, high-contrast 7-segment Live Symptom Dimension Strip."""
     segments_html = []
 
     for dim in KENT_DIMENSIONS_ORDERED:
         items = slots.get(dim.key, [])
         is_filled = bool(items) or (dm is not None and (dim.key in dm.state_machine.filled_slots or dm.detected_dimensions.get(dim.key, False)))
         if is_filled:
-            snippet = items[0] if items else "Recorded"
-            if len(snippet) > 18:
-                snippet = snippet[:16] + ".."
-            title_text = f"{dim.label} ({dim.code}): {dim.captures}&#10;Example: &quot;{dim.example}&quot;&#10;Current value: {', '.join(items) if items else 'Recorded'}"
+            val_str = ", ".join(items) if items else "Recorded"
+            title_text = f"{dim.label} ({dim.code}): {dim.captures}&#10;Captured: {val_str}"
             segments_html.append(
                 f'<div class="hud-segment hud-segment-filled {dim.badge_class}" title="{title_text}" data-code="{dim.code}">'
                 f'<div class="hud-dim-title"><span class="status-dot" style="width:6px;height:6px;display:inline-block;margin-right:4px;"></span>{dim.label}</div>'
-                f'<div class="hud-dim-sub">{snippet}</div>'
+                f'<div class="hud-dim-sub" style="white-space: normal; line-height: 1.25;">{val_str}</div>'
                 f'</div>'
             )
         else:
-            title_text = f"{dim.label} ({dim.code}): {dim.captures}&#10;Example: &quot;{dim.example}&quot;&#10;Status: Not asked yet"
+            rec_tag = " <span style='font-size:9px; color:#F59E0B;'>(Recommended)</span>" if dim.key in ("modality_amel", "temporal") else ""
+            title_text = f"{dim.label} ({dim.code}): {dim.captures}&#10;Status: Not recorded yet"
             segments_html.append(
                 f'<div class="hud-segment hud-segment-unfilled" title="{title_text}" data-code="{dim.code}">'
-                f'<div class="hud-dim-title">{dim.label}</div>'
-                f'<div class="hud-dim-sub">Not asked yet</div>'
+                f'<div class="hud-dim-title">{dim.label}{rec_tag}</div>'
+                f'<div class="hud-dim-sub" style="color: #6B7280;">Not recorded yet</div>'
                 f'</div>'
             )
 
-    grid_markup = f'<div class="hud-segments-grid">{"".join(segments_html)}</div>'
-
-    extracted_chips = []
-    for dim in KENT_DIMENSIONS_ORDERED:
-        for item in slots.get(dim.key, []):
-            chip_title = f"{dim.label} ({dim.code}): {dim.captures}&#10;Value: {item}&#10;Example: &quot;{dim.example}&quot;"
-            extracted_chips.append(
-                f'<span class="badge {dim.badge_class}" title="{chip_title}">'
-                f'<b>{dim.label}:</b> {item} '
-                f'</span>'
-            )
-
-    chips_markup = ""
-    if extracted_chips:
-        chips_markup = f'<div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px;">{"".join(extracted_chips)}</div>'
-
-    return grid_markup + chips_markup
+    return f'<div class="hud-segments-grid">{ "".join(segments_html) }</div>'
 
 
 def render_slot_badges(slots: Dict[str, List[str]]) -> None:
@@ -131,6 +114,11 @@ def render_quick_reply_chips(dm: DialogueManager, in_container: bool = False) ->
     current_suggestions = dm.get_current_suggestions()
     if not current_suggestions:
         return None
+
+    # Limit to at most 3 authentic patient responses + "None / something else"
+    display_chips = list(current_suggestions[:3])
+    if "None of these / other" not in display_chips:
+        display_chips.append("None of these / other")
 
     title_margin = "10px 0 6px 2px" if in_container else "12px 0 6px 2px"
     st.markdown(
@@ -146,16 +134,16 @@ def render_quick_reply_chips(dm: DialogueManager, in_container: bool = False) ->
     )
 
     selected = None
-    # Fluid 2-column wrapping layout so suggestions don't get squished or truncated
-    cols = st.columns(2)
-    for idx, suggestion in enumerate(current_suggestions):
-        with cols[idx % 2]:
+    cols = st.columns(len(display_chips))
+    for idx, suggestion in enumerate(display_chips):
+        with cols[idx]:
             if st.button(
                 suggestion,
                 key=f"chip_turn_{dm.state_machine.turn_count}_{idx}_{'box' if in_container else 'dock'}",
                 width="stretch",
             ):
                 selected = suggestion
+                dm.current_suggestions = []  # Clear immediately so stale chips never linger
     return selected
 
 
@@ -197,29 +185,42 @@ def format_chat_transcript(dm: DialogueManager) -> str:
 
 
 def render_chat_interface(dm: DialogueManager) -> None:
-    """Render multi-turn conversation, compact step indicator, and 7-segment live HUD."""
+    """Render multi-turn conversation, 7-segment live HUD, and review transitions."""
     filled_count = sum(
         1 for dim in KENT_DIMENSIONS_ORDERED
         if (dim.key in dm.state_machine.filled_slots) or bool(dm.extracted_slots.get(dim.key))
     )
-    step_badge = get_current_step_label(dm)
 
     hud_html = f"""
     <div class="stGlassCard" style="margin-bottom: 12px; padding: 14px 18px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
             <div style="display: flex; align-items: center; gap: 8px;">
                 {get_icon('track_changes', color='#10B981', size=18)}
-                <span style="font-weight: 700; font-size: 15px; color: #F9FAFB;">Live Symptom Dimensions</span>
-                <span class="step-counter-badge">{step_badge}</span>
+                <span style="font-weight: 700; font-size: 15px; color: #F9FAFB;">Symptom Totality Strip</span>
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 13px; font-weight: 700; color: #10B981;">Totality: {filled_count}/7</span>
+                <span style="font-size: 13px; font-weight: 700; color: #10B981;">{filled_count} of 7 Dimensions Captured</span>
             </div>
         </div>
         {render_slot_badges_html(dm.extracted_slots, dm=dm)}
     </div>
     """
     st.markdown(hud_html, unsafe_allow_html=True)
+
+    if filled_count >= 1:
+        c_rev1, c_rev2 = st.columns([4, 2], vertical_alignment="center")
+        with c_rev1:
+            missing = [d.label for d in KENT_DIMENSIONS_ORDERED if not dm.extracted_slots.get(d.key)]
+            if missing:
+                st.caption(f"Unrecorded dimensions: {', '.join(missing[:3])} (can be added now or in Review)")
+            else:
+                st.caption("All 7 clinical symptom dimensions captured!")
+        with c_rev2:
+            if st.button("Proceed to Review \u2192", type="primary", width="stretch", key="intake_to_review_btn"):
+                if hasattr(st.session_state, "current_case") and st.session_state.current_case:
+                    dm.sync_to_case(st.session_state.current_case)
+                st.session_state.workspace_step = 2
+                st.rerun()
 
     # Manage / Edit captured symptoms if any exist
     any_captured = any(bool(items) for items in dm.extracted_slots.values())

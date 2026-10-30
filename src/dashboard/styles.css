@@ -1107,6 +1107,147 @@ button:disabled:hover,
     line-height: 1.5;
 }
 
+/* =========================================================================
+   OVERHAUL: STALE ELEMENT FADE FIX, PERSISTENT CASE BAR & CHAT BUBBLES
+   ========================================================================= */
+
+/* Fix Streamlit's Stale-Element Fade: keep buttons, charts, and text fully opaque during reruns */
+[data-stale="true"],
+[data-testid="stAppViewContainer"] [data-stale="true"],
+.stElementContainer[data-stale="true"],
+[data-testid="stVerticalBlock"] [data-stale="true"] {
+    opacity: 1 !important;
+    filter: none !important;
+    transition: none !important;
+}
+
+.persistent-case-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(17, 24, 39, 0.9);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: 12px;
+    padding: 12px 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.case-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.case-id-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #10B981;
+}
+
+.case-demographics {
+    font-size: 13.5px;
+    color: #F3F4F6;
+}
+
+.case-totality-pill {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #34D399;
+}
+
+.case-rubrics-pill {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #60A5FA;
+}
+
+.stepper-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.step-chip {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #9CA3AF;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.step-chip.step-active {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10B981;
+    font-weight: 700;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.step-chip.step-done {
+    color: #D1D5DB;
+}
+
+.stepper-arrow {
+    color: #6B7280;
+    font-size: 12px;
+}
+
+/* User right-aligned chat bubble */
+.chat-bubble-user {
+    background: #064E3B;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 12px 12px 2px 12px;
+    padding: 10px 14px;
+    color: #F9FAFB;
+    font-size: 13.5px;
+    max-width: 80%;
+    margin-left: auto;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Assistant clean clinical bubble */
+.chat-bubble-assistant {
+    background: rgba(31, 41, 55, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px 12px 12px 2px;
+    padding: 12px 16px;
+    color: #F3F4F6;
+    font-size: 13.5px;
+    line-height: 1.5;
+    margin-bottom: 10px;
+}
+
+@media print {
+    body, .stApp {
+        background: #FFFFFF !important;
+        color: #000000 !important;
+    }
+    header, footer, [data-testid="stSidebar"], .persistent-case-bar, button {
+        display: none !important;
+    }
+    .repertory-grid {
+        color: #000000 !important;
+        border: 1px solid #CCCCCC !important;
+    }
+}
+
 
 
 

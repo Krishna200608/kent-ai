@@ -8,6 +8,8 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
 
+from src.data.kent_db import KentDB
+from src.models.case import ClinicalCase
 from src.models.symptom_ner import SymptomNER
 from src.models.resolver import SymptomProfile, SymptomResolver
 from src.pipeline.report_generator import generate_json_report, generate_markdown_report
@@ -143,3 +145,93 @@ class PipelineOrchestrator:
             search_queries=queries,
             entities=raw_entities,
         )
+
+    def repertorize_case(
+        self,
+        case: ClinicalCase,
+        top_rubrics_per_query: int = 3,
+        top_remedies: int = 20,
+    ) -> PatientReport:
+        """Execute clinical repertorization directly from a typed ClinicalCase object.
+
+        Guarantees 100% data consistency: consumes case.dimensions directly,
+        retrieves matching rubrics using case.get_search_queries() and case.selected_rubric_ids,
+        filters out case.muted_rubric_ids, enforces case.eliminatory_rubric_ids,
+        and applies case.section_id scope.
+        """
+        queries = case.get_search_queries()
+        sec_id = case.section_id
+
+        matched_rubrics_dict: Dict[int, Dict[str, Any]] = {}
+        db = KentDB()
+
+        # 1. Include manually selected rubrics from explorer or previous steps
+        if case.selected_rubric_ids:
+            for r_id in case.selected_rubric_ids:
+                try:
+                    r_id_int = int(r_id)
+                    r_info = db.get_rubric_by_id(r_id_int)
+                    if r_info:
+                        matched_rubrics_dict[r_id_int] = {
+                            "rubric_id": r_id_int,
+                            "path": r_info.get("path", f"Rubric #{r_id_int}"),
+                            "label": r_info.get("label", ""),
+                            "section_id": r_info.get("section_id"),
+                            "section_name": r_info.get("section_name", ""),
+                            "similarity": 1.0,
+                            "remedy_count": r_info.get("remedy_count", 0),
+                            "matched_symptom": "Clinician Added",
+                        }
+                except Exception:
+                    pass
+
+        # 2. Query vector store across synthesized symptom queries
+        for query_str in queries:
+            try:
+                candidates = self.vector_store.query(
+                    query_text=query_str,
+                    top_k=top_rubrics_per_query,
+                    section_id=sec_id,
+                )
+                for cand in candidates:
+                    r_id = cand["rubric_id"]
+                    if r_id is None:
+                        continue
+                    cand["matched_symptom"] = query_str
+                    if r_id not in matched_rubrics_dict:
+                        matched_rubrics_dict[r_id] = cand
+                    else:
+                        if cand.get("similarity", 0) > matched_rubrics_dict[r_id].get("similarity", 0):
+                            matched_rubrics_dict[r_id] = cand
+            except Exception:
+                continue
+
+        # 3. Filter out muted rubrics
+        muted_set = set(case.muted_rubric_ids or [])
+        active_rubrics = [
+            r for r_id, r in matched_rubrics_dict.items()
+            if r_id not in muted_set
+        ]
+
+        # Sort by similarity descending
+        active_rubrics.sort(key=lambda x: x.get("similarity", 0.0), reverse=True)
+
+        # 4. Rank remedies according to case ranking_mode and eliminatory rubrics
+        ranked_remedies = self.ranker.rank(
+            active_rubrics,
+            top_n=top_remedies,
+            ranking_mode=case.ranking_mode,
+            eliminatory_rubric_ids=case.eliminatory_rubric_ids,
+        )
+
+        report = PatientReport(
+            patient_id=case.case_id,
+            transcript=case.transcript or case.chief_complaint or "Structured clinical intake",
+            dimensions=dict(case.dimensions),
+            matched_rubrics=active_rubrics,
+            ranked_remedies=ranked_remedies,
+            search_queries=queries,
+            entities=[],
+        )
+        case.report_data = report.to_dict()
+        return report

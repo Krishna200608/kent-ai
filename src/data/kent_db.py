@@ -168,9 +168,18 @@ class KentDB:
         remedy_id: int,
         min_grade: Optional[int] = None,
         limit: int = 25,
+        prioritize_mind: bool = False,
+        rank_by_specificity: bool = False,
     ) -> List[Dict[str, Any]]:
         """Fetch top rubrics containing this remedy, ordered by grade."""
-        return get_remedy_rubrics(remedy_id, min_grade, limit, self.db_path)
+        return get_remedy_rubrics(
+            remedy_id,
+            min_grade,
+            limit,
+            self.db_path,
+            prioritize_mind=prioritize_mind,
+            rank_by_specificity=rank_by_specificity,
+        )
 
     def get_mind_rubrics(
         self, limit: Optional[int] = None, offset: int = 0
@@ -375,6 +384,8 @@ def get_remedy_rubrics(
     min_grade: Optional[int] = None,
     limit: int = 25,
     db_path: Optional[Union[str, Path]] = None,
+    prioritize_mind: bool = False,
+    rank_by_specificity: bool = False,
 ) -> List[Dict[str, Any]]:
     """Fetch top repertory rubrics containing this remedy.
     
@@ -383,9 +394,11 @@ def get_remedy_rubrics(
         min_grade: Optional minimum grade filter (e.g., 3 for bold keynotes only).
         limit: Maximum number of rubrics to return.
         db_path: Optional path to SQLite database.
+        prioritize_mind: If True, MIND chapter rubrics are retrieved first.
+        rank_by_specificity: If True, narrower characteristic rubrics (fewer remedies) appear first.
         
     Returns:
-        List of dictionaries with rubric details and remedy grade.
+        List of dictionaries with rubric details, remedy count, and remedy grade.
     """
     sql = """
         SELECT 
@@ -394,7 +407,9 @@ def get_remedy_rubrics(
             COALESCE(rr.grade, rr.grade_candidate, 1) AS grade,
             r.path,
             r.label,
-            s.name AS section_name
+            r.section_id,
+            s.name AS section_name,
+            (SELECT COUNT(*) FROM rubric_remedies WHERE rubric_id = r.id) AS remedy_count
         FROM rubric_remedies rr
         JOIN rubrics r ON rr.rubric_id = r.id
         LEFT JOIN sections s ON r.section_id = s.id
@@ -404,7 +419,16 @@ def get_remedy_rubrics(
     if min_grade is not None:
         sql += " AND COALESCE(rr.grade, rr.grade_candidate, 1) >= ?"
         params.append(int(min_grade))
-    sql += " ORDER BY grade DESC, r.path ASC LIMIT ?"
+
+    order_clauses: List[str] = []
+    if prioritize_mind:
+        order_clauses.append("(CASE WHEN r.section_id = 1 OR r.path LIKE 'MIND%' THEN 0 ELSE 1 END)")
+    order_clauses.append("grade DESC")
+    if rank_by_specificity:
+        order_clauses.append("remedy_count ASC")
+    order_clauses.append("r.path ASC")
+
+    sql += f" ORDER BY {', '.join(order_clauses)} LIMIT ?"
     params.append(int(limit))
     
     with get_connection(db_path) as conn:

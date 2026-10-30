@@ -1,10 +1,12 @@
-"""Streamlit Clinical Dashboard for Kent-AI (Phase 7).
+"""Streamlit Clinical Decision Support Dashboard for Kent-AI.
 
-A state-of-the-art clinical interface built to Google Stitch UI/UX design standards:
-- Sleek dark glassmorphic styling
-- 4 comprehensive clinical workspaces (Intake Chatbot, Repertorization Engine, Rubric Explorer, Materia Medica)
-- Interactive Plotly totality ranking charts
-- Real-time 7-dimension symptom visualization
+A clinician-centric clinical decision-support application built to Google Stitch UI/UX standards:
+- 4-Step Consultation Stepper (1. Intake → 2. Review → 3. Analysis → 4. Report)
+- Single typed ClinicalCase model as single source of truth
+- Persistent SQLite Case Store and Case Library
+- Classical Totality Repertory Grid (Rubrics as rows, Remedies as columns) with Mute & Eliminatory toggles
+- High-contrast accessible design adhering to WCAG AA
+- Professional PDF and JSON export suite
 """
 
 from __future__ import annotations
@@ -13,6 +15,7 @@ import copy
 import logging
 import sys
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -26,37 +29,35 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-import importlib
-
 import src.config as config_mod
-importlib.reload(config_mod)
-
-import src.chatbot.prompts as prompts_mod
-importlib.reload(prompts_mod)
-
-import src.chatbot.state_machine as state_machine_mod
-importlib.reload(state_machine_mod)
-from src.chatbot.state_machine import IntakeState
-
-import src.chatbot.dialogue_manager as dialogue_manager_mod
-importlib.reload(dialogue_manager_mod)
+from src.config import get_project_root
 from src.chatbot.dialogue_manager import DialogueManager, get_min_dimensions_to_unlock
+from src.chatbot.state_machine import IntakeState
+from src.data.kent_db import KentDB
+from src.data.case_store import generate_case_id, get_case, list_cases, save_case
+from src.models.case import ClinicalCase
+from src.models.symptom_ner import SymptomNER
+from src.models.ensemble import EnsembleNER
+from src.models.hybrid_pipeline import HybridPipelineOrchestrator
+from src.pipeline.orchestrator import PatientReport, PipelineOrchestrator
+from src.search.embedder import RubricEmbedder
+from src.search.ranker import RemedyRanker
+from src.search.vector_store import RubricVectorStore
 
-import src.dashboard.styles as dashboard_styles
-importlib.reload(dashboard_styles)
 from src.dashboard.styles import inject_custom_css
-
-import src.dashboard.components.rubric_tree as rubric_tree_mod
-importlib.reload(rubric_tree_mod)
+from src.dashboard.components.icons import get_icon
+from src.dashboard.components.chat_viewer import (
+    check_ollama_online,
+    format_chat_transcript,
+    render_chat_interface,
+    render_slot_badges,
+)
 from src.dashboard.components.rubric_tree import render_rubric_card
-
-import src.dashboard.components.chat_viewer as chat_viewer_mod
-importlib.reload(chat_viewer_mod)
-from datetime import datetime
-from src.dashboard.components.chat_viewer import render_chat_interface, render_slot_badges, format_chat_transcript
-
-import src.dashboard.dimensions as dimensions_mod
-importlib.reload(dimensions_mod)
+from src.dashboard.components.case_bar import render_case_bar
+from src.dashboard.components.totality_grid import render_classical_totality_matrix
+from src.dashboard.components.case_library import render_case_library
+from src.dashboard.components.remedy_comparison import render_remedy_comparison
+from src.dashboard.pdf_exporter import generate_case_pdf
 from src.dashboard.dimensions import (
     DIMENSION_MAP,
     KENT_DIMENSIONS_ORDERED,
@@ -65,18 +66,6 @@ from src.dashboard.dimensions import (
     get_engine_dimensions_summary,
     pluralize,
 )
-
-from src.dashboard.components.chat_viewer import check_ollama_online
-from src.dashboard.components.icons import get_icon
-from src.data.kent_db import KentDB
-from src.config import get_project_root
-from src.models.symptom_ner import SymptomNER
-from src.models.ensemble import EnsembleNER
-from src.models.hybrid_pipeline import HybridPipelineOrchestrator
-from src.pipeline.orchestrator import PatientReport, PipelineOrchestrator
-from src.search.embedder import RubricEmbedder
-from src.search.ranker import RemedyRanker
-from src.search.vector_store import RubricVectorStore
 
 logger = logging.getLogger("dashboard")
 
@@ -90,7 +79,7 @@ ENGINE_OPTIONS = [
 
 # Set wide page layout
 st.set_page_config(
-    page_title="Kent-AI — Clinical Assistant",
+    page_title="Kent-AI Clinical Decision Support",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -127,88 +116,111 @@ def get_pipeline(engine_name: str = "⚡ BioLinkBERT Fast Mode (~18ms)"):
 
 
 def initialize_session():
-    """Initialize stateful consultation variables."""
+    """Initialize stateful consultation variables and active ClinicalCase model."""
+    if "current_case" not in st.session_state:
+        new_cid = generate_case_id()
+        fresh_case = ClinicalCase(case_id=new_cid)
+        save_case(fresh_case)
+        st.session_state.current_case = fresh_case
+
+    case: ClinicalCase = st.session_state.current_case
+
+    if "workspace_step" not in st.session_state:
+        st.session_state.workspace_step = 1
+
     if "inference_engine" not in st.session_state:
         st.session_state.inference_engine = ENGINE_OPTIONS[0]
     active_engine = st.session_state.inference_engine
+
     if "pipeline" not in st.session_state:
         st.session_state.pipeline = get_pipeline(active_engine)
+
     if "dialogue_manager" not in st.session_state or not hasattr(st.session_state.dialogue_manager, "is_ollama_online"):
-        st.session_state.dialogue_manager = DialogueManager(
+        dm = DialogueManager(
             orchestrator=st.session_state.pipeline,
             model_name="llama3:8b",
             mock_mode=False,
         )
-        st.session_state.dialogue_manager.get_greeting()
+        dm.load_from_case(case)
+        dm.get_greeting()
+        st.session_state.dialogue_manager = dm
     else:
-        st.session_state.dialogue_manager.orchestrator = st.session_state.pipeline
-        # Ensure 127.0.0.1 is always set over localhost to bypass Windows IPv6 resolution delay
-        if getattr(st.session_state.dialogue_manager, "api_base", None) in ("http://localhost:11434", None):
-            st.session_state.dialogue_manager.api_base = "http://127.0.0.1:11434"
+        dm = st.session_state.dialogue_manager
+        dm.orchestrator = st.session_state.pipeline
+        if getattr(dm, "api_base", None) in ("http://localhost:11434", None):
+            dm.api_base = "http://127.0.0.1:11434"
+
     if "current_report" not in st.session_state:
         st.session_state.current_report = None
+        # Re-hydrate report from case if stored
+        if case.report_data:
+            try:
+                st.session_state.current_report = PatientReport(
+                    patient_id=case.report_data.get("patient_id", case.case_id),
+                    transcript=case.report_data.get("transcript", ""),
+                    dimensions=case.report_data.get("dimensions", case.dimensions),
+                    matched_rubrics=case.report_data.get("matched_rubrics", []),
+                    ranked_remedies=case.report_data.get("ranked_remedies", []),
+                    search_queries=case.report_data.get("search_queries", []),
+                    entities=case.report_data.get("entities", []),
+                )
+            except Exception as e:
+                logger.warning(f"Failed to rehydrate report from case: {e}")
+
     if "repertory_scope" not in st.session_state:
         st.session_state.repertory_scope = "MIND Chapter Focus (4,933 rubrics)"
     if "case_tray" not in st.session_state:
         st.session_state.case_tray = {"rubrics": [], "remedies": []}
     if "show_dev_details" not in st.session_state:
         st.session_state.show_dev_details = False
+    if "ranking_sort_mode" not in st.session_state:
+        st.session_state.ranking_sort_mode = "totality"
 
 
 def render_header():
-    """Render top brand navigation bar with consolidated session telemetry pill."""
+    """Render top brand navigation bar with clinical logo and active consultation telemetry."""
     active_scope = st.session_state.get("repertory_scope", "MIND Chapter Focus (4,933 rubrics)")
     is_mind = "MIND" in active_scope
     short_scope = "MIND (4.9k)" if is_mind else "All Chapters (74k)"
-    
-    active_engine = st.session_state.get("inference_engine", ENGINE_OPTIONS[0])
-    if "BioLinkBERT" in active_engine:
-        short_engine = "BioLinkBERT (~18ms)"
-    elif "PubMedBERT" in active_engine:
-        short_engine = "PubMedBERT (~18ms)"
-    elif "Multi-Model Ensemble" in active_engine:
-        short_engine = "4-Encoder Ensemble (54ms)"
-    elif "Two-Stage Hybrid" in active_engine:
-        short_engine = "Two-Stage Hybrid"
-    else:
-        short_engine = "BioLinkBERT"
+
+    case: ClinicalCase = st.session_state.get("current_case")
+    case_label = case.case_id if case else "Active Case"
 
     dm = st.session_state.get("dialogue_manager")
     is_llm_online = dm.is_ollama_online() if (dm and hasattr(dm, "is_ollama_online")) else check_ollama_online()
-    engine_desc = "LLaMA 3:8B Online" if is_llm_online else "Offline (Rule-based Fallback)"
-    
+    llm_desc = "LLaMA 3:8B Online" if is_llm_online else "Rule-based Fallback"
+
     tooltip_text = (
         f"Active Scope: {active_scope} | "
-        f"Inference Engine: {active_engine} | "
-        f"Dialogue LLM: {engine_desc} | "
+        f"Dialogue LLM: {llm_desc} | "
         "Kent Knowledge Base: 74,513 rubrics across 37 chapters"
     )
-    
+
     st.html(
         f"""
         <div class="brand-header">
             <div class="brand-left">
                 <div class="brand-icon-box">
-                    {get_icon('psychology', size=26, color='#10B981')}
+                    {get_icon('local_florist', size=26, color='#10B981')}
                 </div>
                 <div>
-                    <div class="brand-title">Kent-AI Clinical Assistant</div>
-                    <div class="brand-subtitle">Classical Homeopathic Repertorization & Decision Support</div>
+                    <div class="brand-title">Kent-AI Clinical Decision Support</div>
+                    <div class="brand-subtitle">Classical Homeopathic Repertorization &middot; Dr. J. T. Kent Framework</div>
                 </div>
             </div>
-            <div class="brand-pills" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <div class="session-badge-wrapper" title="{tooltip_text}">
-                    <span class="status-pill status-pill-engine session-compact-pill" style="border-color: rgba(59, 130, 246, 0.4); background: rgba(59, 130, 246, 0.1);">
-                        <span class="status-dot" style="background: #3B82F6;"></span>
-                        {get_icon('auto_fix_high', size=14, color='#60A5FA')}
-                        <span>Engine: <b>{short_engine}</b></span>
-                    </span>
-                </div>
+            <div class="brand-pills">
                 <div class="session-badge-wrapper" title="{tooltip_text}">
                     <span class="status-pill status-pill-focus session-compact-pill">
                         <span class="status-dot"></span>
                         {get_icon('psychology' if is_mind else 'database', size=14, color='#10B981' if is_mind else '#06B6D4')}
-                        <span>Session: <b>{short_scope}</b></span>
+                        <span>Scope: <b>{short_scope}</b></span>
+                    </span>
+                </div>
+                <div class="session-badge-wrapper">
+                    <span class="status-pill session-compact-pill" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.1);">
+                        <span class="status-dot" style="background: {'#10B981' if is_llm_online else '#9CA3AF'};"></span>
+                        {get_icon('forum', size=14, color='#10B981' if is_llm_online else '#9CA3AF')}
+                        <span><b>{llm_desc}</b></span>
                     </span>
                 </div>
             </div>
@@ -218,7 +230,7 @@ def render_header():
 
 
 def render_dimensions_grid(dims: Dict[str, Any], report: Optional[PatientReport] = None):
-    """Render 7-dimension clinical findings in clean cards with why provenance affordances."""
+    """Render 7-dimension clinical findings in clean cards with provenance affordances."""
     col1, col2, col3, col4 = st.columns(4)
 
     prov_hint = "Extracted from clinical dialogue and mapped to Kent totality dimensions"
@@ -227,7 +239,7 @@ def render_dimensions_grid(dims: Dict[str, Any], report: Optional[PatientReport]
         cand_path = top_cand.get("path") or top_cand.get("name") or "Repertory rubric"
         prov_hint = f"Matched rubric: {cand_path} (Totality Ranker)"
 
-    # Build entity lookup from report.entities to surface agreement, votes, and confidence badges
+    # Build entity lookup from report.entities to surface agreement and confidence
     entity_lookup: Dict[str, Dict[str, Any]] = {}
     if report and getattr(report, "entities", None):
         for ent in report.entities:
@@ -240,19 +252,18 @@ def render_dimensions_grid(dims: Dict[str, Any], report: Optional[PatientReport]
         ent_meta = entity_lookup.get(val.strip().lower(), {})
         badge_extra = ""
         if ent_meta.get("is_unanimous"):
-            badge_extra = ' <span style="font-size: 9.5px; background: rgba(16,185,129,0.22); color: #34D399; border: 1px solid rgba(16,185,129,0.4); border-radius: 3px; padding: 1px 4px; margin-left: 4px; font-weight: 700;" title="Unanimous agreement across all 4 encoders">4/4 Unanimous</span>'
+            badge_extra = ' <span style="font-size: 9.5px; background: rgba(16,185,129,0.22); color: #34D399; border: 1px solid rgba(16,185,129,0.4); border-radius: 3px; padding: 1px 4px; margin-left: 4px; font-weight: 700;">4/4 Unanimous</span>'
         elif ent_meta.get("votes") and ent_meta.get("total_models"):
             votes = ent_meta['votes']
             total = ent_meta['total_models']
-            supp = ", ".join(m.replace('_homeoNER', '') for m in ent_meta.get('supporting_models', []))
-            badge_extra = f' <span style="font-size: 9.5px; background: rgba(59,130,246,0.22); color: #93C5FD; border: 1px solid rgba(59,130,246,0.4); border-radius: 3px; padding: 1px 4px; margin-left: 4px; font-weight: 600;" title="Supported by {votes}/{total} models: {supp}">{votes}/{total} agreed</span>'
+            badge_extra = f' <span style="font-size: 9.5px; background: rgba(59,130,246,0.22); color: #93C5FD; border: 1px solid rgba(59,130,246,0.4); border-radius: 3px; padding: 1px 4px; margin-left: 4px; font-weight: 600;">{votes}/{total} agreed</span>'
         elif ent_meta.get("confidence"):
             conf_pct = int(ent_meta["confidence"] * 100)
-            badge_extra = f' <span style="font-size: 9.5px; background: rgba(147,51,234,0.22); color: #D8B4FE; border: 1px solid rgba(147,51,234,0.4); border-radius: 3px; padding: 1px 4px; margin-left: 4px; font-weight: 600;" title="Extraction Confidence: {conf_pct}%">{conf_pct}%</span>'
+            badge_extra = f' <span style="font-size: 9.5px; background: rgba(147,51,234,0.22); color: #D8B4FE; border: 1px solid rgba(147,51,234,0.4); border-radius: 3px; padding: 1px 4px; margin-left: 4px; font-weight: 600;">{conf_pct}%</span>'
 
         return (
-            f'<span class="badge {badge_cls}" title="Dimension: {dim_label} ({dim_code}) | Entity: {val}&#10;Provenance: {prov_hint}">'
-            f'{val}{badge_extra} <span class="badge-why-hint" title="Provenance: {prov_hint}">why?</span></span>'
+            f'<span class="badge {badge_cls}" title="Dimension: {dim_label} ({dim_code}) | Finding: {val}&#10;Provenance: {prov_hint}">'
+            f'{val}{badge_extra}</span>'
         )
 
     d_loc = DIMENSION_MAP["location"]
@@ -266,39 +277,38 @@ def render_dimensions_grid(dims: Dict[str, Any], report: Optional[PatientReport]
     with col1:
         st.markdown(f"**{d_loc.label} ({d_loc.code}):**")
         locs = dims.get("location") or dims.get("LOC", [])
-        st.html("".join(format_badge(l, d_loc.badge_class, d_loc.code, d_loc.label) for l in locs) if locs else "<span style='color:#8492A6; font-size:13px;'>None</span>")
+        st.html("".join(format_badge(l, d_loc.badge_class, d_loc.code, d_loc.label) for l in locs) if locs else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>")
 
         st.markdown(f"**{d_sen.label} ({d_sen.code}):**")
         sens = dims.get("sensation") or dims.get("SEN", [])
-        st.html("".join(format_badge(s, d_sen.badge_class, d_sen.code, d_sen.label) for s in sens) if sens else "<span style='color:#8492A6; font-size:13px;'>None</span>")
+        st.html("".join(format_badge(s, d_sen.badge_class, d_sen.code, d_sen.label) for s in sens) if sens else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>")
 
     with col2:
         st.markdown(f"**{d_agg.label} ({d_agg.code}):**")
         aggs = dims.get("modality_agg") or dims.get("MOD_AGG", [])
-        st.html("".join(format_badge(a, d_agg.badge_class, d_agg.code, d_agg.label) for a in aggs) if aggs else "<span style='color:#8492A6; font-size:13px;'>None</span>")
+        st.html("".join(format_badge(a, d_agg.badge_class, d_agg.code, d_agg.label) for a in aggs) if aggs else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>")
 
         st.markdown(f"**{d_amel.label} ({d_amel.code}):**")
         amels = dims.get("modality_amel") or dims.get("MOD_AMEL", [])
-        st.html("".join(format_badge(a, d_amel.badge_class, d_amel.code, d_amel.label) for a in amels) if amels else "<span style='color:#8492A6; font-size:13px;'>None</span>")
+        st.html("".join(format_badge(a, d_amel.badge_class, d_amel.code, d_amel.label) for a in amels) if amels else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>")
 
     with col3:
         st.markdown(f"**{d_temp.label} ({d_temp.code}):**")
         temps = dims.get("temporal") or dims.get("TEMP", [])
-        st.html("".join(format_badge(t, d_temp.badge_class, d_temp.code, d_temp.label) for t in temps) if temps else "<span style='color:#8492A6; font-size:13px;'>None</span>")
+        st.html("".join(format_badge(t, d_temp.badge_class, d_temp.code, d_temp.label) for t in temps) if temps else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>")
 
         st.markdown(f"**{d_conc.label} ({d_conc.code}):**")
         concs = dims.get("concomitant") or dims.get("CONC", [])
-        st.html("".join(format_badge(c, d_conc.badge_class, d_conc.code, d_conc.label) for c in concs) if concs else "<span style='color:#8492A6; font-size:13px;'>None</span>")
+        st.html("".join(format_badge(c, d_conc.badge_class, d_conc.code, d_conc.label) for c in concs) if concs else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>")
 
     with col4:
         st.markdown(f"**{d_ment.label} ({d_ment.code}):**")
         ments = dims.get("mental") or dims.get("MENT", [])
-        st.html("".join(format_badge(m, d_ment.badge_class, d_ment.code, d_ment.label) for m in ments) if ments else "<span style='color:#8492A6; font-size:13px;'>None</span>")
+        st.html("".join(format_badge(m, d_ment.badge_class, d_ment.code, d_ment.label) for m in ments) if ments else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>")
 
-        st.markdown("**Negated / Denied:**")
+        st.markdown("**Negated / Excluded:**")
         negs = dims.get("negated") or dims.get("NEG", [])
         st.html("".join(format_badge(n, "badge-neg", "NEG", "Negated") for n in negs) if negs else "<span style='color:#8492A6; font-size:13px;'>None</span>")
-
 
 
 def render_repertorization_chart(remedies: List[Dict[str, Any]]):
@@ -309,8 +319,6 @@ def render_repertorization_chart(remedies: List[Dict[str, Any]]):
 
     top_remedies = remedies[:12]
     df = pd.DataFrame(top_remedies)
-    
-    # Sort ascending for horizontal bar chart (top remedy at the top)
     df = df.iloc[::-1]
 
     fig = go.Figure()
@@ -332,7 +340,7 @@ def render_repertorization_chart(remedies: List[Dict[str, Any]]):
     )
 
     fig.update_layout(
-        title="<b>Remedy Totality Ranking (Grade-Weighted Score)</b>",
+        title="<b>Candidate Remedies: Grade-Weighted Totality Scores</b>",
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#F9FAFB", family="Outfit"),
@@ -346,135 +354,53 @@ def render_repertorization_chart(remedies: List[Dict[str, Any]]):
             tickfont=dict(size=12),
         ),
         margin=dict(l=20, r=20, t=40, b=20),
-        height=400,
+        height=380,
     )
 
     st.plotly_chart(fig, width="stretch")
 
 
-def render_totality_matrix(report: PatientReport, db: KentDB) -> None:
-    """Render classical Kentian totality matrix grid with remedies vs rubrics."""
-    remedies = report.ranked_remedies[:10]
-    rubrics = report.matched_rubrics
-    if not remedies or not rubrics:
-        return
-
-    # Pre-fetch remedies for each rubric to know grades
-    rubric_remedy_map: Dict[int, Dict[str, int]] = {}
-    for r in rubrics:
-        raw_id = r.get("rubric_id") if r.get("rubric_id") is not None else r.get("id")
-        if raw_id is None:
-            continue
-        try:
-            r_id = int(str(raw_id).replace("rubric_", "").strip())
-        except (ValueError, TypeError):
-            continue
-        entries = db.get_remedies(r_id)
-        rubric_remedy_map[r_id] = {
-            (e.get("abbreviation") or "").rstrip(".").lower(): e.get("grade", 1)
-            for e in entries
-        }
-
-    # Build HTML table
-    headers_html = "<th>Rank</th><th>Remedy</th><th>Score</th><th>Coverage</th>"
-    for idx, r in enumerate(rubrics, start=1):
-        full_p = r.get("path") or ""
-        short_label = full_p.split(">")[-1].strip()
-        if len(short_label) > 22:
-            short_label = short_label[:20] + "..."
-        matched_query = r.get("query") or r.get("matched_symptom") or ""
-        if len(matched_query) > 20:
-            matched_query = matched_query[:18] + ".."
-        query_sub = f"<div style='font-size: 10px; color: #10B981; font-weight: normal; margin-top: 2px;' title='Matched finding: {r.get('query', '')}'>↳ {matched_query}</div>" if matched_query else ""
-        headers_html += f"<th title='{full_p}&#10;Matched finding: {r.get('query', short_label)}' style='font-size: 11.5px;'>R{idx}: {short_label}{query_sub}</th>"
-
-    rows_html = []
-    for rank, rem in enumerate(remedies, start=1):
-        abbr = rem.get("abbreviation", "")
-        name = rem.get("full_name", abbr)
-        score = rem.get("score", 0.0)
-        cov = f"{rem.get('rubric_count', 0)}/{len(rubrics)}"
-        clean_abbr = abbr.rstrip(".").lower()
-
-        row_tds = [
-            f"<td><b>#{rank}</b></td>",
-            f"<td><span style='color: #10B981; font-weight:700;'>{abbr}</span> <span style='font-size:11px; color:#9CA3AF;'>({name})</span></td>",
-            f"<td><b>{score:.2f}</b></td>",
-            f"<td><span class='status-pill' style='font-size:11px; padding:2px 8px;'>{cov}</span></td>",
-        ]
-
-        for r in rubrics:
-            raw_id = r.get("rubric_id") if r.get("rubric_id") is not None else r.get("id")
-            try:
-                r_id = int(str(raw_id).replace("rubric_", "").strip()) if raw_id is not None else -1
-            except (ValueError, TypeError):
-                r_id = -1
-            grade = rubric_remedy_map.get(r_id, {}).get(clean_abbr)
-            if grade == 3:
-                row_tds.append("<td><span class='grade-3'>3</span></td>")
-            elif grade == 2:
-                row_tds.append("<td><span class='grade-2'>2</span></td>")
-            elif grade == 1:
-                row_tds.append("<td><span class='grade-1'>1</span></td>")
-            else:
-                row_tds.append("<td style='color: #4B5563; text-align:center;'>·</td>")
-
-        rows_html.append(f"<tr>{''.join(row_tds)}</tr>")
-
-    table_html = f"""
-    <div style='overflow-x: auto; margin-top: 10px; margin-bottom: 12px;'>
-        <table class='repertory-grid'>
-            <thead>
-                <tr>{headers_html}</tr>
-            </thead>
-            <tbody>
-                {''.join(rows_html)}
-            </tbody>
-        </table>
-    </div>
-    <div style='font-size: 12px; color: #9CA3AF; margin-top: 4px; font-style: italic;'>
-        <b>Clinical Note:</b> Decision-support analysis based on Dr. Kent's Repertory; does not constitute a clinical prescription or medical diagnosis.
-    </div>
-    """
-    st.html(table_html)
-
-
-def render_report_view(report: PatientReport, db: KentDB):
-    """Render comprehensive clinical repertorization report."""
+def render_report_view(report: PatientReport, db: KentDB, case: Optional[ClinicalCase] = None):
+    """Render comprehensive clinical repertorization decision-support report."""
     st.html('<div class="stGlassCard">')
     col_rep_head, col_rep_dl = st.columns([3, 1])
     with col_rep_head:
         st.html(
-        f"""
+            f"""
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                 {get_icon('clinical_notes', size=24, color='#10B981')}
-                <h3 style="margin: 0;">Case Analysis Report — <code>{report.patient_id}</code></h3>
+                <h3 style="margin: 0;">Case Repertorization Report &mdash; <code>{report.patient_id}</code></h3>
             </div>
             """
-    )
-        st.markdown(f"> *\"{report.transcript}\"*")
+        )
+        if case:
+            st.markdown(f"**Patient**: {case.patient_name} ({case.demographics_string}) &nbsp;&middot;&nbsp; **Chief Complaint**: {case.chief_complaint or 'Clinical Consultation'}")
     with col_rep_dl:
+        if case:
+            pdf_bytes = generate_case_pdf(case)
+            st.download_button(
+                "Export PDF Report",
+                data=pdf_bytes,
+                file_name=f"{case.case_id}_clinical_report.pdf",
+                mime="application/pdf",
+                width="stretch",
+                key="btn_rep_dl_pdf",
+            )
         st.download_button(
-            "Export Report (MD)",
+            "Export Markdown",
             data=report.to_markdown(),
             file_name=f"{report.patient_id}_repertorization.md",
             mime="text/markdown",
             width="stretch",
-        )
-        st.download_button(
-            "Export Data (JSON)",
-            data=report.to_json(),
-            file_name=f"{report.patient_id}_data.json",
-            mime="application/json",
-            width="stretch",
+            key="btn_rep_dl_md",
         )
     st.markdown("---")
-    
+
     st.html(
         f"""
         <div style="display: flex; align-items: center; gap: 8px; margin: 12px 0 8px 0;">
             {get_icon('account_tree', size=20, color='#06B6D4')}
-            <h4 style="margin: 0;">1. 7-Dimension Clinical Parsing</h4>
+            <h4 style="margin: 0;">1. Validated 7-Dimension Clinical Totality</h4>
         </div>
         """
     )
@@ -484,69 +410,88 @@ def render_report_view(report: PatientReport, db: KentDB):
     remedies = report.ranked_remedies
     if remedies:
         top_rem = remedies[0]
+        margin_html = ""
+        if len(remedies) > 1:
+            margin = top_rem.get("score", 0.0) - remedies[1].get("score", 0.0)
+            margin_html = f"<span style='color: #9CA3AF; font-size: 13px; margin-left: 8px;'>Score advantage: <b>+{margin:.2f}</b> over candidate #2 ({remedies[1].get('abbreviation')})</span>"
+
         st.html(
-        f"""
+            f"""
             <div class="hero-simillimum">
-                <div style="font-size: 13px; text-transform: uppercase; color: #34D399; font-weight: 700; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;">
+                <div style="font-size: 12px; text-transform: uppercase; color: #34D399; font-weight: 700; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;">
                     {get_icon('verified', size=16, color='#34D399')}
-                    <span>Primary Simillimum Indication</span>
+                    <span>Leading Candidates for Practitioner Review</span>
                 </div>
                 <div style="font-size: 26px; font-weight: 800; color: #FFFFFF; margin: 6px 0;">
                     {top_rem.get('full_name')} <span style="color: #34D399; font-size: 20px;">({top_rem.get('abbreviation')})</span>
                 </div>
                 <div style="font-size: 14px; color: #D1D5DB;">
-                    Covering <b>{top_rem.get('rubric_count')} of {len(report.matched_rubrics)}</b> symptom rubrics ({top_rem.get('coverage_ratio', 0)*100:.0f}% coverage) with a weighted totality score of <b>{top_rem.get('score')}</b>.
+                    Covers <b>{top_rem.get('rubric_count')} of {len(report.matched_rubrics)}</b> symptom rubrics ({top_rem.get('coverage_ratio', 0)*100:.0f}% coverage) with a weighted totality score of <b>{top_rem.get('score')}</b>.
+                    {margin_html}
+                </div>
+                <div style="font-size: 11.5px; color: #9CA3AF; margin-top: 6px; font-style: italic;">
+                    Clinical decision-support indication based on Dr. Kent's Repertory; verify keynotes and constitutional picture before prescription.
                 </div>
             </div>
             """
-    )
+        )
 
         col1, col2 = st.columns([3, 2])
         with col1:
             st.html(
-        f"""
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                    {get_icon('bar_chart', size=20, color='#10B981')}
-                    <h4 style="margin: 0;">2. Remedy Totality Ranking</h4>
+                f"""
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        {get_icon('bar_chart', size=20, color='#10B981')}
+                        <h4 style="margin: 0;">2. Remedy Totality Ranking</h4>
+                    </div>
                 </div>
                 """
-    )
+            )
             render_repertorization_chart(remedies)
+            st.markdown(
+                "<div style='font-size: 11.5px; color: #9CA3AF; margin-top: 4px;'>"
+                "<b>Ranking Method:</b> Classical Totality prioritizes candidate remedies covering the highest number of patient rubrics, then sorts by grade-weighted score."
+                "</div>",
+                unsafe_allow_html=True,
+            )
+
         with col2:
             st.html(
-        f"""
+                f"""
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                     {get_icon('table_chart', size=20, color='#A78BFA')}
-                    <h4 style="margin: 0;">3. Top Remedy Breakdown</h4>
+                    <h4 style="margin: 0;">3. Top Candidate Breakdown</h4>
                 </div>
                 """
-    )
+            )
             table_data = []
             for idx, r in enumerate(remedies[:8], start=1):
+                cov_pct = f"{r.get('coverage_ratio', 0)*100:.0f}%"
                 table_data.append({
-                    "Rank": idx,
+                    "Rank": f"#{idx}",
                     "Remedy": r.get("abbreviation"),
                     "Full Name": r.get("full_name"),
                     "Score": r.get("score"),
-                    "Rubrics": f"{r.get('rubric_count')}/{len(report.matched_rubrics)}",
+                    "Coverage": f"{r.get('rubric_count')}/{len(report.matched_rubrics)} ({cov_pct})",
                 })
             st.dataframe(pd.DataFrame(table_data), width="stretch", hide_index=True)
 
         st.html(
-        f"""
-            <div style="display: flex; align-items: center; gap: 8px; margin: 16px 0 8px 0;">
+            f"""
+            <div style="display: flex; align-items: center; gap: 8px; margin: 20px 0 8px 0;">
                 {get_icon('grid_on', size=20, color='#FBBF24')}
-                <h4 style="margin: 0;">4. Classical Repertorization Totality Matrix (Remedies × Rubrics)</h4>
+                <h4 style="margin: 0;">4. Classical Repertorization Matrix (Remedies &times; Rubrics)</h4>
             </div>
             """
-    )
-        render_totality_matrix(report, db)
+        )
+        render_classical_totality_matrix(report, db, case=case, allow_toggles=True)
 
     st.html(
         f"""
-        <div style="display: flex; align-items: center; gap: 8px; margin: 16px 0 8px 0;">
+        <div style="display: flex; align-items: center; gap: 8px; margin: 20px 0 8px 0;">
             {get_icon('format_list_bulleted', size=20, color='#34D399')}
-            <h4 style="margin: 0;">5. Matched Kent Repertory Rubrics</h4>
+            <h4 style="margin: 0;">5. Matched Kent Repertory Rubrics ({len(report.matched_rubrics)})</h4>
         </div>
         """
     )
@@ -554,9 +499,8 @@ def render_report_view(report: PatientReport, db: KentDB):
         render_rubric_card(r, db)
 
 
-
 def render_sidebar_case_tray():
-    """Render persistent Current Case tray in sidebar (Phase 6)."""
+    """Render persistent Current Case tray in sidebar."""
     tray = st.session_state.get("case_tray", {"rubrics": [], "remedies": []})
     rubrics = tray.get("rubrics", [])
     remedies = tray.get("remedies", [])
@@ -574,18 +518,6 @@ def render_sidebar_case_tray():
         </div>
         """
     )
-
-    dm = st.session_state.get("dialogue_manager")
-    intake_items = []
-    if dm and hasattr(dm, "extracted_slots"):
-        for slot_key, slot_vals in dm.extracted_slots.items():
-            if slot_vals:
-                intake_items.append((slot_key, ", ".join(slot_vals)))
-
-    if intake_items:
-        with st.expander(f"Intake Dimensions ({pluralize(len(intake_items), 'dimension', 'dimensions')})", expanded=False):
-            for skey, svals in intake_items:
-                st.markdown(f"<div style='font-size: 11px; margin-bottom: 2px;'><b style='color:#10B981;'>{skey}:</b> <span style='color:#E5E7EB;'>{svals}</span></div>", unsafe_allow_html=True)
 
     if total_items == 0:
         st.markdown(
@@ -605,7 +537,7 @@ def render_sidebar_case_tray():
                 r_name = r.get("path") or r.get("name", "Rubric")
                 if len(r_name) > 34:
                     r_name = "..." + r_name[-31:]
-                st.markdown(f"<span style='font-size: 11.5px; color: #E5E7EB;'>• {r_name}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='font-size: 11.5px; color: #E5E7EB;'>&bull; {r_name}</span>", unsafe_allow_html=True)
             with col_r_del:
                 if st.button("✕", key=f"del_tray_r_{idx}", help="Remove rubric from case"):
                     tray["rubrics"].pop(idx)
@@ -619,7 +551,7 @@ def render_sidebar_case_tray():
             with col_rem_txt:
                 rem_name = rem.get('full_name') or rem.get('abbreviation')
                 rem_abbr = rem.get('abbreviation') or ''
-                st.markdown(f"<span style='font-size: 11.5px; color: #34D399;'>• {rem_name} ({rem_abbr})</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='font-size: 11.5px; color: #34D399;'>&bull; {rem_name} ({rem_abbr})</span>", unsafe_allow_html=True)
             with col_rem_del:
                 if st.button("✕", key=f"del_tray_rem_{idx}", help="Remove remedy from case"):
                     tray["remedies"].pop(idx)
@@ -628,8 +560,7 @@ def render_sidebar_case_tray():
     col_btn1, col_btn2 = st.columns([3, 2])
     with col_btn1:
         if rubrics and st.button("Repertorize This Case", type="primary", width="stretch", key="tray_repertorize_btn"):
-            pipeline = get_pipeline()
-            db = get_db()
+            pipeline = st.session_state.pipeline
             ranked = pipeline.ranker.rank(rubrics, top_n=10)
             report = PatientReport(
                 patient_id=f"TRAY-{uuid.uuid4().hex[:6].upper()}",
@@ -640,7 +571,8 @@ def render_sidebar_case_tray():
                 search_queries=[r.get("path", "") for r in rubrics],
             )
             st.session_state.current_report = report
-            st.toast("Case repertorized! Report displayed below in intake tab.")
+            st.session_state.workspace_step = 4
+            st.toast("Case repertorized! Displayed in Step 4 Report.")
             st.rerun()
     with col_btn2:
         if st.button("Clear Tray", key="clear_all_tray", width="stretch"):
@@ -648,66 +580,39 @@ def render_sidebar_case_tray():
             st.rerun()
 
 
-
 def render_sidebar():
-    """Render Google Stitch clinical telemetry and quick-case loader."""
+    """Render clinical sidebar telemetry and consultation controls."""
     with st.sidebar:
         st.html(
             f"""
-            <div style='text-align: center; margin-bottom: 20px; padding: 4px 8px; word-break: break-word;'>
-                <div style='margin-bottom: 8px; display: inline-flex; justify-content: center; align-items: center; width: 56px; height: 56px; border-radius: 16px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3);'>
-                    {get_icon('local_florist', size=32, color='#10B981')}
+            <div style='text-align: center; margin-bottom: 16px; padding: 4px 8px;'>
+                <div style='margin-bottom: 8px; display: inline-flex; justify-content: center; align-items: center; width: 50px; height: 50px; border-radius: 14px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3);'>
+                    {get_icon('local_florist', size=28, color='#10B981')}
                 </div>
-                <div style='font-size: 17px; font-weight: 800; color: #10B981; line-height: 1.25;'>Kent-AI Clinical Suite</div>
-                <div style='font-size: 11px; color: #9CA3AF; margin-top: 2px;'>Classical Homeopathy + Generative AI</div>
+                <div style='font-size: 16px; font-weight: 800; color: #10B981; line-height: 1.25;'>Kent-AI Clinical Suite</div>
+                <div style='font-size: 11px; color: #9CA3AF; margin-top: 2px;'>Classical Decision Support</div>
             </div>
             """
         )
 
-        with st.expander("Dr. Kent's Principle on Mental Symptoms", expanded=False):
-            st.markdown(
-                '<div style="font-size: 12.5px; color: #D1D5DB; line-height: 1.5; font-style: italic;">'
-                '“The mental symptoms are the most important, for they express the very man himself.”'
-                '<div style="font-weight: 700; color: #10B981; margin-top: 4px; font-style: normal;">— Dr. J. T. Kent</div>'
-                '</div>',
-                unsafe_allow_html=True,
+        case: ClinicalCase = st.session_state.get("current_case")
+        if case:
+            st.html(
+                f"""
+                <div style="background: rgba(17, 24, 39, 0.85); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px;">
+                    <div style="font-size: 11px; color: #10B981; font-weight: 700; text-transform: uppercase;">Active Consultation</div>
+                    <div style="font-size: 13.5px; font-weight: 800; color: #FFFFFF; margin-top: 2px;">{case.patient_name}</div>
+                    <div style="font-size: 11px; color: #9CA3AF;">{case.case_id} &middot; {case.demographics_string}</div>
+                    <div style="font-size: 11.5px; color: #D1D5DB; margin-top: 4px;">Totality: <b>{case.filled_dimensions_count}/7</b> dimensions captured</div>
+                </div>
+                """
             )
 
         st.html(
             f"""
-            <div style='display: flex; align-items: center; gap: 6px; margin: 12px 0 6px 0;'>
-                {get_icon('auto_fix_high', size=16, color='#60A5FA')}
-                <span style='font-size: 14px; font-weight: 700; color: #F9FAFB;'>Inference Model Engine</span>
-            </div>
-            """
-        )
-        curr_engine = st.session_state.get("inference_engine", ENGINE_OPTIONS[0])
-        default_eng_idx = 0
-        for i, opt in enumerate(ENGINE_OPTIONS):
-            if opt == curr_engine:
-                default_eng_idx = i
-                break
-
-        selected_engine = st.radio(
-            "Inference Model Engine",
-            ENGINE_OPTIONS,
-            index=default_eng_idx,
-            key="engine_radio_select",
-            label_visibility="collapsed",
-            help="Select the underlying NLP architecture for token extraction, symptom disambiguation, and repertory retrieval.",
-        )
-        if selected_engine != st.session_state.get("inference_engine"):
-            st.session_state.inference_engine = selected_engine
-            st.session_state.pipeline = get_pipeline(selected_engine)
-            if "dialogue_manager" in st.session_state and hasattr(st.session_state.dialogue_manager, "orchestrator"):
-                st.session_state.dialogue_manager.orchestrator = st.session_state.pipeline
-            st.rerun()
-
-        st.html(
-            f"""
-            <div style='display: flex; align-items: center; gap: 6px; margin: 12px 0 6px 0;'>
+            <div style='display: flex; align-items: center; gap: 6px; margin: 10px 0 6px 0;'>
                 {get_icon('tune', size=16, color='#10B981')}
-                <span style='font-size: 14px; font-weight: 700; color: #F9FAFB;'>Repertory Scope Selection</span>
+                <span style='font-size: 13px; font-weight: 700; color: #F9FAFB;'>Repertory Scope Selection</span>
             </div>
             """
         )
@@ -726,109 +631,59 @@ def render_sidebar():
             help="Single source of truth for intake analysis and repertorization across all workspaces.",
         )
 
-        # Warn if switching scope mid-consultation
-        dm_inst = st.session_state.get("dialogue_manager")
-        if dm_inst and len(dm_inst.history) > 2 and "All" in new_scope and "prev_scope_is_mind" not in st.session_state:
-            st.session_state.prev_scope_is_mind = True
-            st.warning("⚠️ Scope switched to All 37 Chapters mid-intake. Analysis will retrieve across all 74k rubrics.")
+        if case:
+            case.scope_chapter = "MIND" if "MIND" in new_scope else "ALL"
 
-        # Developer Details Toggle
-        st.markdown("---")
-        st.toggle(
-            "Developer details",
-            value=st.session_state.get("show_dev_details", False),
-            key="show_dev_details",
-            help="Toggle low-level model architecture, rubric IDs, and system telemetry.",
-        )
+        with st.expander("Inference Engine & Settings", expanded=False):
+            curr_engine = st.session_state.get("inference_engine", ENGINE_OPTIONS[0])
+            default_eng_idx = 0
+            for i, opt in enumerate(ENGINE_OPTIONS):
+                if opt == curr_engine:
+                    default_eng_idx = i
+                    break
 
-        if st.session_state.get("show_dev_details", False):
-            st.html(
-                f"""
-                <div style='display: flex; align-items: center; gap: 6px; margin: 10px 0 8px 0;'>
-                    {get_icon('sensors', size=16, color='#06B6D4')}
-                    <span style='font-size: 14px; font-weight: 700; color: #F9FAFB;'>System Telemetry</span>
-                </div>
-                """
+            selected_engine = st.radio(
+                "Inference Engine",
+                ENGINE_OPTIONS,
+                index=default_eng_idx,
+                key="engine_radio_select",
+                label_visibility="collapsed",
+                help="Select underlying NLP architecture for token extraction and symptom classification.",
             )
-            active_engine = st.session_state.get("inference_engine", ENGINE_OPTIONS[0])
-            if "BioLinkBERT" in active_engine:
-                eng_html = (
-                    '<div class="stitch-metric" style="margin-bottom: 8px; border-color: rgba(59, 130, 246, 0.4);">'
-                    '    <div class="stitch-metric-val" style="color: #60A5FA;">BioLinkBERT (110M)</div>'
-                    '    <div class="stitch-metric-lbl">Citation Graph • ~18ms • SOTA 34.86% BIO F1</div>'
-                    '</div>'
-                )
-            elif "PubMedBERT" in active_engine:
-                eng_html = (
-                    '<div class="stitch-metric" style="margin-bottom: 8px; border-color: rgba(59, 130, 246, 0.4);">'
-                    '    <div class="stitch-metric-val" style="color: #60A5FA;">PubMedBERT (110M)</div>'
-                    '    <div class="stitch-metric-lbl">BiomedNLP • ~18ms • 41.56% Recall@20</div>'
-                    '</div>'
-                )
-            elif "Multi-Model Ensemble" in active_engine:
-                eng_html = (
-                    '<div class="stitch-metric" style="margin-bottom: 8px; border-color: rgba(16, 185, 129, 0.4);">'
-                    '    <div class="stitch-metric-val" style="color: #10B981;">4-Encoder Ensemble (414M)</div>'
-                    '    <div class="stitch-metric-lbl">Weighted Majority Voting • 54ms • 49.91% Recall</div>'
-                    '</div>'
-                )
-            else:
-                eng_html = (
-                    '<div class="stitch-metric" style="margin-bottom: 8px; border-color: rgba(168, 85, 247, 0.4);">'
-                    '    <div class="stitch-metric-val" style="color: #C084FC;">Two-Stage Hybrid</div>'
-                    '    <div class="stitch-metric-lbl">Ensemble Mining + LLM Contextual Arbitration</div>'
-                    '</div>'
-                )
+            if selected_engine != st.session_state.get("inference_engine"):
+                st.session_state.inference_engine = selected_engine
+                st.session_state.pipeline = get_pipeline(selected_engine)
+                if "dialogue_manager" in st.session_state and hasattr(st.session_state.dialogue_manager, "orchestrator"):
+                    st.session_state.dialogue_manager.orchestrator = st.session_state.pipeline
+                st.rerun()
 
-            st.html(
-                f"""
-                {eng_html}
-                <div class="stitch-metric" style="margin-bottom: 8px;">
-                    <div class="stitch-metric-val">llama3:8b</div>
-                    <div class="stitch-metric-lbl">Inference LLM (Ollama)</div>
-                </div>
-                <div class="stitch-metric" style="margin-bottom: 8px; border-color: rgba(16, 185, 129, 0.4);">
-                    <div class="stitch-metric-val" style="color: #10B981;">4,933</div>
-                    <div class="stitch-metric-lbl">Active Chapter Rubrics (MIND)</div>
-                </div>
-                <div class="stitch-metric" style="margin-bottom: 12px;">
-                    <div class="stitch-metric-val">74,513</div>
-                    <div class="stitch-metric-lbl">Full Repertory DB (37 Ch.)</div>
-                </div>
-                """
+            st.toggle(
+                "Developer telemetry",
+                value=st.session_state.get("show_dev_details", False),
+                key="show_dev_details",
+                help="Toggle low-level system latency, rubric IDs, and model details.",
             )
 
-        # Phase 6: Persistent Case Tray in Sidebar
         render_sidebar_case_tray()
 
         st.markdown("---")
-        st.html(
-        f"""
-            <div style='display: flex; align-items: center; gap: 6px; margin: 12px 0 8px 0;'>
-                {get_icon('scale', size=18, color='#FBBF24')}
-                <span style='font-size: 15px; font-weight: 700; color: #F9FAFB;'>Totality Weights (Kentian)</span>
-            </div>
-            """
-    )
-        st.html(
-        """
-            <div style='font-size: 12px; color: #D1D5DB; line-height: 1.8;'>
-                • <span class='grade-3'>Grade 3</span> : <b>3.0×</b> (Confirmed / Bold)<br>
-                • <span class='grade-2'>Grade 2</span> : <b>2.0×</b> (Qualified / Italic)<br>
-                • <span class='grade-1'>Grade 1</span> : <b>1.0×</b> (Plain / Roman)<br>
-                • <i>Specificity</i> : Inverse rubric frequency
-            </div>
-            """
-    )
+        with st.expander("Dr. Kent's Totality Principles", expanded=False):
+            st.markdown(
+                '<div style="font-size: 12px; color: #D1D5DB; line-height: 1.5; font-style: italic;">'
+                '“The mental symptoms are the most important, for they express the very man himself. '
+                'Next in importance are the physical generals, especially those related to time, temperature, and weather.”'
+                '<div style="font-weight: 700; color: #10B981; margin-top: 4px; font-style: normal;">— Dr. J. T. Kent</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
 
-        st.markdown("---")
         st.html(
-        """
-            <div style='font-size: 11px; color: #6B7280; text-align: justify;'>
+            """
+            <div style='font-size: 11px; color: #6B7280; text-align: justify; margin-top: 14px;'>
                 <b>Investigational Tool:</b> Kent-AI is an academic clinical decision-support and repertorization research system. It does not replace qualified homeopathic or medical evaluation.
             </div>
             """
-    )
+        )
 
 
 def main():
@@ -840,307 +695,341 @@ def main():
     db = get_db()
     pipeline = st.session_state.pipeline
     dm: DialogueManager = st.session_state.dialogue_manager
+    current_case: ClinicalCase = st.session_state.current_case
 
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "Live Patient Intake",
-        "Repertorization Engine",
+    tab_workspace, tab_library, tab_explorer, tab_mm, tab_settings = st.tabs([
+        "Case Workspace",
+        "Case Library",
         "Rubric Explorer",
-        "Materia Medica Index",
+        "Materia Medica",
+        "Settings & Methodology",
     ])
 
     # =========================================================================
-    # TAB 1: Live Patient Consultation (Chatbot)
+    # TAB 1: Case Workspace (4-Step Clinician Workflow)
     # =========================================================================
-    with tab1:
-        col_chat, col_ctrl = st.columns([3, 1])
-        with col_ctrl:
-            with st.container(border=True):
-                st.html(
-                    f"""
-                    <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 12px;'>
-                        {get_icon('tune', size=18, color='#10B981')}
-                        <span style='font-size: 15px; font-weight: 700; color: #F9FAFB;'>Intake Controls</span>
-                    </div>
-                    """
-                )
+    with tab_workspace:
+        render_case_bar(current_case)
+        step = st.session_state.get("workspace_step", 1)
 
-                # Phase 2 item 7: Live Case Summary in right panel
-                st.markdown("<div style='font-size: 13px; font-weight: 700; color: #D1D5DB; margin-bottom: 6px;'>Active Case Summary:</div>", unsafe_allow_html=True)
-                active_scope = st.session_state.get("repertory_scope", "MIND Chapter Focus (4,933 rubrics)")
-                is_mind = "MIND" in active_scope
+        # ---------------------------------------------------------------------
+        # STEP 1: Patient Intake (Bedside Chat or Paste Narrative)
+        # ---------------------------------------------------------------------
+        if step == 1:
+            st.markdown("#### Step 1: Patient Clinical Intake")
+            intake_mode = st.radio(
+                "Intake Modality:",
+                ["Bedside Dialogue (Chatbot)", "Paste Clinical Narrative (Text)"],
+                horizontal=True,
+                key="intake_mode_select",
+            )
 
-                # Count filled slots from canonical dimension map
-                filled_items = []
-                for dim in KENT_DIMENSIONS_ORDERED:
-                    vals = dm.extracted_slots.get(dim.key, [])
-                    if vals:
-                        filled_items.append((dim.label, ", ".join(vals), dim.badge_class, dim.tooltip))
+            if intake_mode == "Bedside Dialogue (Chatbot)":
+                col_chat, col_ctrl = st.columns([3, 1])
+                with col_ctrl:
+                    with st.container(border=True):
+                        st.html(
+                            f"""
+                            <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 12px;'>
+                                {get_icon('tune', size=18, color='#10B981')}
+                                <span style='font-size: 15px; font-weight: 700; color: #F9FAFB;'>Intake Controls</span>
+                            </div>
+                            """
+                        )
 
-                if filled_items:
-                    for d_label, d_val, b_cls, d_tip in filled_items:
-                        st.markdown(f"<div style='font-size: 12px; margin-bottom: 4px;' title='{d_tip}'><span class='badge {b_cls}' style='font-size:11px; padding:2px 6px;'>{d_label}</span> <span style='color:#F9FAFB;'>{d_val}</span></div>", unsafe_allow_html=True)
-                else:
-                    st.markdown("<div style='font-size: 12px; color: #8492A6; margin-bottom: 8px; font-style: italic;'>No symptoms captured yet. Converse in the dialogue console to extract dimensions.</div>", unsafe_allow_html=True)
+                        st.markdown("<div style='font-size: 13px; font-weight: 700; color: #D1D5DB; margin-bottom: 6px;'>Active Case Summary:</div>", unsafe_allow_html=True)
+                        filled_items = []
+                        for dim in KENT_DIMENSIONS_ORDERED:
+                            vals = current_case.dimensions.get(dim.key, [])
+                            if vals:
+                                filled_items.append((dim.label, ", ".join(vals), dim.badge_class, dim.tooltip))
 
-                st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
-
-                # Unlock threshold is configured in configs/extraction_vocabulary.yaml
-                # → generate_button.min_dimensions_to_unlock (default: 1)
-                is_ready = getattr(dm.state_machine, "can_terminate", lambda: False)() or dm.state_machine.current_state == IntakeState.DONE
-                collected_count = len(filled_items)
-                min_dims = get_min_dimensions_to_unlock()
-
-                can_generate = is_ready or (collected_count >= min_dims)
-
-                # Automatically sync dm.patient_report if available and not yet set
-                if getattr(dm, "patient_report", None) and st.session_state.current_report is None:
-                    st.session_state.current_report = dm.patient_report
-
-                button_label = f"Generate Repertorization ({collected_count}/7)"
-                if can_generate:
-                    if st.button(button_label, type="primary", width="stretch"):
-                        transcript = dm.get_full_transcript()
-                        if transcript.strip():
-                            with st.spinner("Analyzing totality and ranking remedies..."):
-                                sec_filter = 1 if is_mind else None
-                                report = pipeline.process_transcript(transcript, section_id=sec_filter)
-                                st.session_state.current_report = report
-                            st.success("Repertorization complete! Scroll down to view report.")
+                        if filled_items:
+                            for d_label, d_val, b_cls, d_tip in filled_items:
+                                st.markdown(f"<div style='font-size: 12px; margin-bottom: 4px;' title='{d_tip}'><span class='badge {b_cls}' style='font-size:11px; padding:2px 6px;'>{d_label}</span> <span style='color:#F9FAFB;'>{d_val}</span></div>", unsafe_allow_html=True)
                         else:
-                            st.warning("Please chat with Kent-AI first before generating report.")
-                else:
-                    st.button(button_label, type="primary", disabled=True, width="stretch", help="Converse with Kent-AI to capture at least one symptom dimension to unlock repertorization.")
-                    st.markdown(f"<div style='font-size: 11.5px; color: #9CA3AF; margin-top: 4px;'>Requires at least {min_dims} captured dimension(s) — currently {collected_count}/7.</div>", unsafe_allow_html=True)
+                            st.markdown("<div style='font-size: 12px; color: #8492A6; margin-bottom: 8px; font-style: italic;'>No symptoms captured yet. Converse in the dialogue console to extract dimensions.</div>", unsafe_allow_html=True)
 
-                st.markdown("---")
+                        st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
 
-                # One-click copy/download consultation transcript for debugging and analysis
-                with st.popover("Copy Consultation Chat", width="stretch", help="Export complete consultation dialogue and captured slots for analysis"):
-                    st.markdown("##### Consultation Transcript")
-                    st.caption("Click the copy icon in the top right of the code box below or download the file to share with developer/assistant.")
-                    transcript_text = format_chat_transcript(dm)
-                    st.download_button(
-                        label="Download Chat (.txt)",
-                        data=transcript_text,
-                        file_name=f"kent_ai_consultation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-                        mime="text/plain",
-                        width="stretch",
-                        key="sidebar_ctrl_download_txt",
-                    )
-                    st.code(transcript_text, language="markdown")
+                        collected_count = current_case.filled_dimensions_count
+                        min_dims = get_min_dimensions_to_unlock()
+                        can_proceed = current_case.is_ready_for_repertorization or (collected_count >= min_dims)
 
-                st.markdown("---")
+                        if can_proceed:
+                            if st.button("Proceed to Clinical Review →", type="primary", width="stretch"):
+                                dm.sync_to_case(current_case)
+                                save_case(current_case)
+                                st.session_state.workspace_step = 2
+                                st.rerun()
+                        else:
+                            st.button("Proceed to Clinical Review →", type="primary", disabled=True, width="stretch", help=f"Capture at least {min_dims} symptom dimension to unlock.")
+                            st.markdown(f"<div style='font-size: 11.5px; color: #9CA3AF; margin-top: 4px;'>Requires at least {min_dims} dimension &mdash; currently {collected_count}/7.</div>", unsafe_allow_html=True)
 
-                # Phase 2 item 4: Reset Consultation as quiet action with confirmation
-                if st.session_state.get("confirm_intake_reset", False):
-                    st.warning("Clear all intake symptoms?")
-                    col_cf1, col_cf2 = st.columns(2)
-                    with col_cf1:
-                        if st.button("Yes, Clear", type="primary", width="stretch", key="confirm_reset_yes"):
-                            dm.reset()
-                            dm.get_greeting()
-                            st.session_state.current_report = None
-                            st.session_state.confirm_intake_reset = False
-                            st.toast("Consultation reset.")
-                            st.rerun()
-                    with col_cf2:
-                        if st.button("Cancel", width="stretch", key="confirm_reset_no"):
-                            st.session_state.confirm_intake_reset = False
-                            st.rerun()
-                else:
-                    if st.button("Reset Consultation", type="secondary", width="stretch"):
-                        st.session_state.confirm_intake_reset = True
-                        st.rerun()
+                        st.markdown("---")
 
-                st.markdown("---")
+                        with st.popover("Export Consultation Transcript", width="stretch"):
+                            st.markdown("##### Consultation Transcript")
+                            transcript_text = format_chat_transcript(dm)
+                            st.download_button(
+                                label="Download Chat (.txt)",
+                                data=transcript_text,
+                                file_name=f"{current_case.case_id}_consultation.txt",
+                                mime="text/plain",
+                                width="stretch",
+                                key="sidebar_ctrl_download_txt",
+                            )
+                            st.code(transcript_text, language="markdown")
 
-                # Phase 2 item 7: Move Kentian Intake Guidance into a '?' popover
-                with st.popover("Intake Guidance (?)"):
-                    st.markdown(
-                        "<div style='font-size: 12.5px; color: #D1D5DB; line-height: 1.5;'>"
-                        "<b>Kentian Intake Guidance:</b><br>"
-                        "Prioritize mental & emotional generals (anxiety, fears, grief, restlessness) "
-                        "alongside physical modalities (aggravation/amelioration times, temperatures, weather)."
-                        "</div>",
-                        unsafe_allow_html=True,
-                    )
+                        st.markdown("---")
 
-        with col_chat:
-            render_chat_interface(dm)
-
-        # If report generated from chat, display it below
-        if st.session_state.current_report:
-            st.markdown("---")
-            render_report_view(st.session_state.current_report, db)
-
-    # =========================================================================
-    # TAB 2: Direct Clinical Repertorization Engine
-    # =========================================================================
-    with tab2:
-        with st.container(border=True):
-            st.html(
-                f"""
-                <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 8px;'>
-                    {get_icon('psychology', size=22, color='#10B981')}
-                    <h3 style='margin: 0;'>Clinical Repertorization Engine</h3>
-                </div>
-                """
-            )
-            st.markdown(
-                f"Input patient clinical narrative to extract Dr. Kent's **7 clinical dimensions** "
-                f"({get_engine_dimensions_summary()}), retrieve matching rubrics, and compute totality."
-            )
-
-            example_cases = {
-                "Select a clinical vignette (or enter free text below)...": "",
-                "Case 1: Severe anxiety in morning, worse alone (MIND)": "Doctor, I feel terribly anxious and depressed every morning, worse when alone. My thoughts race with fear and dread. I have no fever and no nausea.",
-                "Case 2: Absent-minded & forgetful on waking (MIND)": "Patient complains of extreme absent-mindedness and difficulty concentrating, especially in the morning after waking up, with trembling hands and restless pacing.",
-                "Case 3: Fear of dark & crowds with weeping (MIND)": "Patient reports overwhelming fear in the dark and in crowded places. Weeps easily upon any emotional upset, feels completely forsaken and abandoned, relieved by fresh open air.",
-                "Case 4: Extreme irritability & impatience with anger (MIND)": "Patient is exceedingly irritable, cannot bear contradiction or noise, full of wrath and quick to anger over trifles, intensely restless at night.",
-            }
-
-            selected_example = st.selectbox("Pre-load Clinical Vignette:", list(example_cases.keys()))
-            default_text = example_cases.get(selected_example, "")
-
-            user_case_text = st.text_area(
-                "Patient Clinical Narrative:",
-                value=default_text,
-                placeholder="Describe patient symptoms in free text (e.g., 'Anxious and depressed every morning, worse when alone. Thoughts race with fear and dread. No fever, no nausea.')...",
-                height=120,
-            )
-
-            with st.expander("Advanced Settings", expanded=False):
-                col_opt1, col_opt2, col_opt3 = st.columns([1, 1, 1])
-                with col_opt1:
-                    top_k_rubrics = st.slider("Matches per symptom:", 1, 5, 3, help="Candidate rubrics to retrieve per extracted symptom dimension")
-                with col_opt2:
-                    top_remedies_count = st.slider("Remedies to show:", 5, 20, 10, help="Number of ranked homeopathic remedies to show in totality grid")
-                with col_opt3:
-                    sections = db.get_sections()
-                    mind_opt = "1: MIND (4,933 rubrics - Focus Chapter)"
-                    all_opt = "All Chapters (74,513 rubrics)"
-                    sec_options = [mind_opt, all_opt] + [f"{s['id']}: {s['name']}" for s in sections if s['id'] != 1]
-                    section_choice = st.selectbox("Filter Chapter:", sec_options, index=0)
-                    sec_id = 1
-                    if section_choice == all_opt:
-                        sec_id = None
-                    elif ":" in section_choice:
-                        sec_id = int(section_choice.split(":")[0])
-
-            has_narrative = bool(user_case_text and user_case_text.strip())
-            run_btn = st.button(
-                "Analyze & Repertorize Case",
-                type="primary",
-                disabled=not has_narrative,
-                width="stretch",
-                help="Input clinical narrative above to analyze and repertorize." if not has_narrative else "Extract 7 dimensions and compute totality ranking.",
-            )
-
-        if run_btn and user_case_text.strip():
-            active_eng_label = st.session_state.get("inference_engine", "BioLinkBERT").split(" ")[1]
-            with st.spinner(f"Extracting 7-dimensions via {active_eng_label}, retrieving rubrics from ChromaDB, and computing totality..."):
-                report = pipeline.process_transcript(
-                    transcript=user_case_text,
-                    top_rubrics_per_query=top_k_rubrics,
-                    top_remedies=top_remedies_count,
-                    section_id=sec_id,
-                )
-                st.session_state.tab2_report = report
-                st.session_state.tab2_active_dims = copy.deepcopy(report.dimensions)
-
-        # If report generated in Tab 2, display extracted symptom chips and repertorization report
-        active_t2_report = st.session_state.get("tab2_report")
-        if active_t2_report:
-            st.markdown("---")
-            with st.container(border=True):
-                st.html(
-                    f"""
-                    <div style='display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;'>
-                        <div style='display: flex; align-items: center; gap: 8px;'>
-                            {get_icon('filter_alt', size=18, color='#10B981')}
-                            <h4 style='margin: 0;'>Extracted Clinical Symptoms & Modalities (Active Filter)</h4>
-                        </div>
-                        <span style='font-size: 11.5px; color: #9CA3AF;'>Filter symptoms before totality ranking</span>
-                    </div>
-                    """
-                )
-
-                dims = st.session_state.get("tab2_active_dims", active_t2_report.dimensions)
-                dim_cols = st.columns(4)
-                active_symptoms_list = []
-
-                with dim_cols[0]:
-                    st.markdown(f"**{DIMENSION_MAP['location'].label} & {DIMENSION_MAP['sensation'].label}:**")
-                    locs = (dims.get("location") or dims.get("LOC", [])) + (dims.get("sensation") or dims.get("SEN", []))
-                    for i, item in enumerate(locs):
-                        c = st.checkbox(item, value=True, key=f"t2_symptom_{i}_{item}")
-                        if c:
-                            active_symptoms_list.append(item)
-                    if not locs:
-                        st.caption("None identified")
-
-                with dim_cols[1]:
-                    st.markdown(f"**Modalities ({DIMENSION_MAP['modality_agg'].label} / {DIMENSION_MAP['modality_amel'].label}):**")
-                    aggs = dims.get("modality_agg") or dims.get("MOD_AGG", [])
-                    amels = dims.get("modality_amel") or dims.get("MOD_AMEL", [])
-                    mods = [f"worse: {m}" for m in aggs] + [f"better: {m}" for m in amels]
-                    for i, item in enumerate(mods):
-                        c = st.checkbox(item, value=True, key=f"t2_mod_{i}_{item}")
-                        if c:
-                            active_symptoms_list.append(item)
-                    if not mods:
-                        st.caption("None identified")
-
-                with dim_cols[2]:
-                    st.markdown(f"**{DIMENSION_MAP['mental'].label} & {DIMENSION_MAP['temporal'].label}:**")
-                    ments = (dims.get("mental") or dims.get("MENT", [])) + (dims.get("temporal") or dims.get("TEMP", []))
-                    for i, item in enumerate(ments):
-                        c = st.checkbox(item, value=True, key=f"t2_ment_{i}_{item}")
-                        if c:
-                            active_symptoms_list.append(item)
-                    if not ments:
-                        st.caption("None identified")
-
-                with dim_cols[3]:
-                    st.markdown("**Negated / Excluded:**")
-                    negs = dims.get("negated") or dims.get("NEG", [])
-                    for item in negs:
-                        st.markdown(f"<span class='badge badge-neg'>{item}</span>", unsafe_allow_html=True)
-                    if not negs:
-                        st.caption("None")
-
-                col_re_btn, col_re_note = st.columns([1.5, 3])
-                with col_re_btn:
-                    if st.button("Re-run Repertorization", type="secondary", width="stretch", help="Re-run totality ranking with active selected symptoms"):
-                        if active_symptoms_list:
-                            mod_transcript = ". ".join(active_symptoms_list)
-                            with st.spinner("Re-evaluating totality with modified symptoms..."):
-                                new_report = pipeline.process_transcript(
-                                    transcript=mod_transcript,
-                                    top_rubrics_per_query=top_k_rubrics if 'top_k_rubrics' in locals() else 3,
-                                    top_remedies=top_remedies_count if 'top_remedies_count' in locals() else 10,
-                                    section_id=sec_id if 'sec_id' in locals() else 1,
-                                )
-                                st.session_state.tab2_report = new_report
-                                st.toast("Totality updated with modified symptoms.")
+                        if st.session_state.get("confirm_intake_reset", False):
+                            st.warning("Clear all intake symptoms?")
+                            col_cf1, col_cf2 = st.columns(2)
+                            with col_cf1:
+                                if st.button("Yes, Clear", type="primary", width="stretch", key="confirm_reset_yes"):
+                                    dm.reset()
+                                    dm.get_greeting()
+                                    current_case.dimensions = {k: [] for k in current_case.dimensions}
+                                    save_case(current_case)
+                                    st.session_state.current_report = None
+                                    st.session_state.confirm_intake_reset = False
+                                    st.toast("Consultation reset.")
+                                    st.rerun()
+                            with col_cf2:
+                                if st.button("Cancel", width="stretch", key="confirm_reset_no"):
+                                    st.session_state.confirm_intake_reset = False
+                                    st.rerun()
+                        else:
+                            if st.button("Reset Consultation", type="secondary", width="stretch"):
+                                st.session_state.confirm_intake_reset = True
                                 st.rerun()
 
-            render_report_view(active_t2_report, db)
+                with col_chat:
+                    render_chat_interface(dm)
+
+            else:
+                # Paste Clinical Narrative mode
+                with st.container(border=True):
+                    example_cases = {
+                        "Select a clinical vignette (or enter free text below)...": "",
+                        "Case 1: Severe anxiety in morning, worse alone (MIND)": "Doctor, I feel terribly anxious and depressed every morning, worse when alone. My thoughts race with fear and dread. I have no fever and no nausea.",
+                        "Case 2: Absent-minded & forgetful on waking (MIND)": "Patient complains of extreme absent-mindedness and difficulty concentrating, especially in the morning after waking up, with trembling hands and restless pacing.",
+                        "Case 3: Fear of dark & crowds with weeping (MIND)": "Patient reports overwhelming fear in the dark and in crowded places. Weeps easily upon any emotional upset, feels completely forsaken and abandoned, relieved by fresh open air.",
+                        "Case 4: Extreme irritability & impatience with anger (MIND)": "Patient is exceedingly irritable, cannot bear contradiction or noise, full of wrath and quick to anger over trifles, intensely restless at night.",
+                    }
+
+                    selected_example = st.selectbox("Pre-load Clinical Vignette:", list(example_cases.keys()))
+                    default_text = example_cases.get(selected_example, "")
+
+                    user_case_text = st.text_area(
+                        "Patient Clinical Narrative:",
+                        value=default_text,
+                        placeholder="Describe patient symptoms in free text...",
+                        height=140,
+                    )
+
+                    col_p_run, col_p_info = st.columns([2, 4], vertical_alignment="center")
+                    with col_p_run:
+                        if st.button("Extract Symptoms & Proceed →", type="primary", disabled=not bool(user_case_text.strip()), width="stretch"):
+                            with st.spinner("Extracting 7 clinical dimensions..."):
+                                raw_rep = pipeline.process_transcript(transcript=user_case_text, section_id=1 if "MIND" in current_case.scope_chapter else None)
+                                # Load extracted dimensions into current_case directly
+                                for dkey, vals in raw_rep.dimensions.items():
+                                    norm_key = dkey.lower()
+                                    if norm_key in current_case.dimensions:
+                                        for v in vals:
+                                            current_case.add_symptom(norm_key, v)
+                                current_case.chief_complaint = user_case_text[:120] + ("..." if len(user_case_text) > 120 else "")
+                                save_case(current_case)
+                                dm.load_from_case(current_case)
+                                st.session_state.workspace_step = 2
+                                st.rerun()
+
+                    with col_p_info:
+                        st.caption("Extracts Location, Sensation, Modalities, Concomitants, Temporal, and Mental generals directly into Clinical Review.")
+
+        # ---------------------------------------------------------------------
+        # STEP 2: Clinical Review (Validate, Add, and Delete 7-Dimensions)
+        # ---------------------------------------------------------------------
+        elif step == 2:
+            st.markdown("#### Step 2: Clinical Review & 7-Dimension Validation")
+            st.markdown(
+                "<div style='font-size: 13px; color: #9CA3AF; margin-bottom: 14px;'>"
+                "Verify symptoms captured during intake before repertorization. Add missing modalities, delete misclassifications, or adjust details."
+                "</div>",
+                unsafe_allow_html=True,
+            )
+
+            # Completeness & Kentian Guidance
+            filled_count = current_case.filled_dimensions_count
+            missing_dims = []
+            if not current_case.dimensions.get("mental"):
+                missing_dims.append("Mental & Emotional Generals")
+            if not current_case.dimensions.get("modality_agg") and not current_case.dimensions.get("modality_amel"):
+                missing_dims.append("Modalities (Worse/Better)")
+
+            if missing_dims:
+                st.info(
+                    f"💡 **Kentian Repertorization Advice**: Dr. Kent emphasized that **{' and '.join(missing_dims)}** "
+                    "carry paramount weight when finding the simillimum. Consider adding them below if observed."
+                )
+
+            # 4 Columns of Cards
+            c1, c2, c3, c4 = st.columns(4)
+
+            def render_dim_editor(col, dim_key: str, dim_label: str, badge_cls: str, code: str):
+                with col:
+                    with st.container(border=True):
+                        st.markdown(f"**{dim_label}** `({code})`")
+                        items = current_case.dimensions.get(dim_key, [])
+                        if not items:
+                            st.caption("None recorded")
+                        else:
+                            for idx, item in enumerate(items):
+                                c_txt, c_del = st.columns([4, 1])
+                                with c_txt:
+                                    st.markdown(f"<span class='badge {badge_cls}' style='font-size:12px;'>{item}</span>", unsafe_allow_html=True)
+                                with c_del:
+                                    if st.button("✕", key=f"del_{dim_key}_{idx}_{item}", help=f"Remove '{item}'"):
+                                        current_case.remove_symptom(dim_key, item)
+                                        save_case(current_case)
+                                        st.rerun()
+
+                        # Add new item input
+                        new_item = st.text_input(f"+ Add {dim_label}:", key=f"inp_add_{dim_key}", placeholder="e.g. throbbing...")
+                        if st.button(f"+ Add to {code}", key=f"btn_add_{dim_key}", width="stretch"):
+                            if new_item.strip():
+                                current_case.add_symptom(dim_key, new_item.strip())
+                                save_case(current_case)
+                                st.rerun()
+
+            render_dim_editor(c1, "location", "Location", "badge-loc", "LOC")
+            render_dim_editor(c1, "sensation", "Sensation", "badge-sen", "SEN")
+
+            render_dim_editor(c2, "modality_agg", "Worse from (Aggravation)", "badge-agg", "MOD_AGG")
+            render_dim_editor(c2, "modality_amel", "Better from (Amelioration)", "badge-amel", "MOD_AMEL")
+
+            render_dim_editor(c3, "temporal", "Time Pattern", "badge-temp", "TEMP")
+            render_dim_editor(c3, "concomitant", "Concomitant Symptom", "badge-conc", "CONC")
+
+            render_dim_editor(c4, "mental", "Mental / Emotional", "badge-ment", "MENT")
+
+            st.markdown("---")
+            col_back, col_fwd = st.columns([1, 2])
+            with col_back:
+                if st.button("← Back to Intake", width="stretch"):
+                    st.session_state.workspace_step = 1
+                    st.rerun()
+            with col_fwd:
+                can_repertorize = current_case.is_ready_for_repertorization
+                if st.button("Run Repertorization Analysis →", type="primary", disabled=not can_repertorize, width="stretch", help="Search Kent's Repertory and compute classical totality ranking"):
+                    with st.spinner("Searching Kent's Repertory and computing totality scores..."):
+                        report = pipeline.repertorize_case(current_case)
+                        st.session_state.current_report = report
+                        current_case.report_data = report.to_dict()
+                        save_case(current_case)
+                        st.session_state.workspace_step = 3
+                        st.rerun()
+
+        # ---------------------------------------------------------------------
+        # STEP 3: Repertorization & Analysis (Rubric Curation)
+        # ---------------------------------------------------------------------
+        elif step == 3:
+            st.markdown("#### Step 3: Repertory Rubric Curation & Filtering")
+            report = st.session_state.get("current_report")
+
+            if not report:
+                st.info("No repertorization analysis performed yet. Click below to analyze.")
+                if st.button("Run Repertorization Analysis", type="primary"):
+                    report = pipeline.repertorize_case(current_case)
+                    st.session_state.current_report = report
+                    current_case.report_data = report.to_dict()
+                    save_case(current_case)
+                    st.rerun()
+            else:
+                st.markdown(
+                    f"Retrieved **{len(report.matched_rubrics)}** matching rubrics across Dr. Kent's Repertory for Case **{current_case.case_id}**. "
+                    "You may mute individual rubrics or mark keynotes as **Eliminatory** (mandatory)."
+                )
+
+                # Classical repertorization matrix with interactive toggles
+                render_classical_totality_matrix(report, db, case=current_case, allow_toggles=True)
+
+                st.markdown("---")
+                col_s3_back, col_s3_recomp, col_s3_next = st.columns([1, 1.5, 1.5])
+                with col_s3_back:
+                    if st.button("← Back to Review", width="stretch"):
+                        st.session_state.workspace_step = 2
+                        st.rerun()
+                with col_s3_recomp:
+                    if st.button("Recompute Totality Scores", type="secondary", width="stretch"):
+                        with st.spinner("Re-ranking remedies with active rubric filters..."):
+                            report = pipeline.repertorize_case(current_case)
+                            st.session_state.current_report = report
+                            current_case.report_data = report.to_dict()
+                            save_case(current_case)
+                            st.toast("Totality scores recomputed.")
+                            st.rerun()
+                with col_s3_next:
+                    if st.button("View Clinical Report →", type="primary", width="stretch"):
+                        st.session_state.workspace_step = 4
+                        st.rerun()
+
+        # ---------------------------------------------------------------------
+        # STEP 4: Clinical Report
+        # ---------------------------------------------------------------------
+        elif step == 4:
+            report = st.session_state.get("current_report")
+            if not report and current_case.report_data:
+                try:
+                    report = PatientReport(
+                        patient_id=current_case.report_data.get("patient_id", current_case.case_id),
+                        transcript=current_case.report_data.get("transcript", ""),
+                        dimensions=current_case.report_data.get("dimensions", current_case.dimensions),
+                        matched_rubrics=current_case.report_data.get("matched_rubrics", []),
+                        ranked_remedies=current_case.report_data.get("ranked_remedies", []),
+                        search_queries=current_case.report_data.get("search_queries", []),
+                        entities=current_case.report_data.get("entities", []),
+                    )
+                    st.session_state.current_report = report
+                except Exception:
+                    pass
+
+            if report:
+                col_back_rep, _ = st.columns([1, 4])
+                with col_back_rep:
+                    if st.button("← Back to Rubric Curation", width="stretch"):
+                        st.session_state.workspace_step = 3
+                        st.rerun()
+
+                render_report_view(report, db, case=current_case)
+            else:
+                st.warning("No report generated for this case yet. Please complete Steps 1 & 2 first.")
+                if st.button("Go to Step 1 (Intake)", type="primary"):
+                    st.session_state.workspace_step = 1
+                    st.rerun()
 
     # =========================================================================
-    # TAB 3: Kent's MIND Rubric Explorer (4,933 Rubrics)
+    # TAB 2: Case Library
     # =========================================================================
-    with tab3:
+    with tab_library:
+        render_case_library(current_case)
+
+    # =========================================================================
+    # TAB 3: Rubric Explorer
+    # =========================================================================
+    with tab_explorer:
         with st.container(border=True):
             st.html(
                 f"""
                 <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 8px;'>
                     {get_icon('psychology', size=22, color='#10B981')}
-                    <h3 style='margin: 0;'>Kent's MIND Repertory & Rubric Search</h3>
+                    <h3 style='margin: 0;'>Kent's Repertory & Rubric Search</h3>
                 </div>
                 """
             )
-            st.markdown("Explore **4,933 digitized MIND rubrics** using meaning-based semantic search or exact words.")
+            st.markdown("Search **74,513 digitized rubrics** using meaning-based dense vector search or exact words.")
 
             col_search, col_sec = st.columns([3, 1])
             with col_search:
@@ -1169,12 +1058,6 @@ def main():
             with col_limit:
                 limit = st.select_slider("Results:", options=[15, 30, 50], value=15)
 
-            col_filt1, col_filt2 = st.columns(2)
-            with col_filt1:
-                show_weak = st.checkbox("Show weaker matches (< 0.52 similarity)", value=False)
-            with col_filt2:
-                hide_empty = st.checkbox("Hide rubrics with 0 remedies", value=True)
-
             search_clicked = st.button("Search Rubrics", type="primary", width="stretch")
 
         if (search_clicked or search_query) and search_query.strip():
@@ -1192,162 +1075,214 @@ def main():
                         limit=max(limit, 30),
                     )
 
-            # Filter out weaker matches if toggled off (recalibrated to 0.52)
-            filtered_results = raw_results
-            if not show_weak and search_mode == "Meaning-based":
-                filtered_results = [r for r in filtered_results if r.get("similarity", 1.0) >= 0.52]
-
-            # Filter empty rubrics
-            if hide_empty:
-                filtered_results = [r for r in filtered_results if r.get("remedy_count", 0) > 0]
-
-            # Sort
+            filtered_results = [r for r in raw_results if r.get("remedy_count", 0) > 0]
             if "Remedy Count" in sort_by:
                 filtered_results = sorted(filtered_results, key=lambda r: r.get("remedy_count", 0), reverse=True)
 
             display_results = filtered_results[:limit]
-
             if display_results:
-                st.markdown(f"Displaying **{len(display_results)}** {pluralize(len(display_results), 'matching rubric', 'matching rubrics', include_count=False)}:")
+                st.markdown(f"Displaying **{len(display_results)}** matching {pluralize(len(display_results), 'rubric', 'rubrics', include_count=False)}:")
                 for r in display_results:
                     render_rubric_card(r, db, query=search_query)
             else:
-                st.info("No rubrics matched the specified search and filter criteria.")
+                st.info("No rubrics matched the specified search criteria.")
 
     # =========================================================================
-    # TAB 4: Materia Medica & Remedy Index
+    # TAB 4: Materia Medica & Differential Comparison
     # =========================================================================
-    with tab4:
+    with tab_mm:
+        tab_mm_browse, tab_mm_diff = st.tabs(["Materia Medica Index", "Differential Remedy Comparison"])
+
+        with tab_mm_browse:
+            with st.container(border=True):
+                st.html(
+                    f"""
+                    <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 8px;'>
+                        {get_icon('medication', size=22, color='#10B981')}
+                        <h3 style='margin: 0;'>Homeopathic Remedy Dictionary & MIND Keynotes</h3>
+                    </div>
+                    """
+                )
+                st.markdown("Browse cataloged remedies with Latin names, abbreviations, and characteristic Grade 3 keynotes.")
+
+                col_rem_search, col_rem_clear, col_rem_toggle = st.columns([3.5, 0.9, 2.4], vertical_alignment="bottom")
+                with col_rem_search:
+                    if "rem_filter_text" not in st.session_state:
+                        st.session_state.rem_filter_text = "Lach"
+                    rem_search = st.text_input(
+                        "Filter Remedy by Name or Abbreviation:",
+                        value=st.session_state.rem_filter_text,
+                        key="rem_input_widget",
+                        placeholder="e.g. 'Lach', 'Phos', 'Nux-v', 'Ars', 'Acon'...",
+                    )
+                    st.session_state.rem_filter_text = rem_search
+                with col_rem_clear:
+                    if st.button("✕ Clear", help="Clear remedy search filter", width="stretch"):
+                        st.session_state.rem_filter_text = ""
+                        st.session_state.rem_input_widget = ""
+                        st.rerun()
+                with col_rem_toggle:
+                    prioritize_mind = st.checkbox(
+                        "Prioritize MIND Keynotes",
+                        value=True,
+                        help="Sort characteristic Grade 3 symptoms so that mental & emotional rubrics appear first.",
+                    )
+
+            if rem_search.strip():
+                with db.connect() as conn:
+                    cur = conn.cursor()
+                    query = """
+                        SELECT 
+                            r.id,
+                            r.abbreviation,
+                            r.full_name,
+                            r.normalized,
+                            (SELECT COUNT(*) FROM rubric_remedies rr WHERE rr.remedy_id = r.id) as total_rubrics,
+                            (SELECT COUNT(*) FROM rubric_remedies rr JOIN rubrics rb ON rr.rubric_id = rb.id WHERE rr.remedy_id = r.id AND rb.section_id = 1) as mind_rubrics
+                        FROM remedies r
+                        WHERE r.abbreviation LIKE ? OR r.full_name LIKE ? OR r.normalized LIKE ?
+                        ORDER BY mind_rubrics DESC, total_rubrics DESC
+                        LIMIT 20
+                    """
+                    like_term = f"%{rem_search.strip()}%"
+                    cur.execute(query, (like_term, like_term, like_term))
+                    remedy_rows = cur.fetchall()
+
+                if remedy_rows:
+                    st.markdown(f"Found **{len(remedy_rows)}** cataloged {pluralize(len(remedy_rows), 'remedy', 'remedies', include_count=False)}:")
+                    for row in remedy_rows:
+                        r_id, abbr, name = row["id"], row["abbreviation"], row["full_name"]
+                        total_count, mind_count = row["total_rubrics"], row["mind_rubrics"]
+                        card_title = f"{name or abbr} ({abbr})  ·  {pluralize(mind_count, 'rubric', 'rubrics')} in MIND  ·  {pluralize(total_count, 'rubric', 'rubrics')} total"
+
+                        with st.expander(card_title, expanded=False):
+                            col_reminfo, col_remact = st.columns(2)
+                            with col_reminfo:
+                                st.html(
+                                    f"""
+                                    <div style="margin-bottom: 8px;">
+                                        <div style="font-size: 18px; font-weight: 800; color: #FFFFFF;">
+                                            {name or abbr} <span style="color: #34D399; font-weight: 700;">({abbr})</span>
+                                        </div>
+                                        <div style="font-size: 12.5px; color: #9CA3AF; margin-top: 4px;">
+                                            <span class="status-pill" style="color: #10B981;"><b>{mind_count}</b> in MIND</span>
+                                            <span class="status-pill" style="margin-left: 6px;"><b>{total_count:,}</b> across all chapters</span>
+                                        </div>
+                                    </div>
+                                    """
+                                )
+                            with col_remact:
+                                tray = st.session_state.get("case_tray", {"rubrics": [], "remedies": []})
+                                is_in_tray = any(item.get("id") == r_id for item in tray.get("remedies", []))
+                                rem_btn_key = f"tray_add_rem_{r_id}"
+                                if is_in_tray:
+                                    st.button("✓ Added to Case Tray", key=rem_btn_key, disabled=True, width="stretch")
+                                else:
+                                    if st.button("+ Add to case tray", key=rem_btn_key, width="stretch"):
+                                        tray["remedies"].append({
+                                            "id": r_id,
+                                            "abbreviation": abbr,
+                                            "full_name": name or abbr,
+                                            "mind_rubrics": mind_count,
+                                            "total_rubrics": total_count,
+                                        })
+                                        st.toast(f"Added {abbr} to case tray.")
+                                        st.rerun()
+
+                            keynotes = db.get_remedy_rubrics(r_id, min_grade=3, limit=16, prioritize_mind=prioritize_mind, rank_by_specificity=True)
+                            if not keynotes:
+                                st.write("No Grade 3 keynote rubrics cataloged for this remedy.")
+                            else:
+                                st.markdown(f"**Characteristic Grade 3 Keynotes ({pluralize(len(keynotes), 'keynote', 'keynotes')}):**")
+                                for kn in keynotes:
+                                    is_mind_kn = kn.get("section_name") == "MIND" or str(kn["path"]).startswith("MIND")
+                                    mind_badge = f"<span class='badge badge-mind' style='margin-left: 6px;'>{get_icon('psychology', size=11, color='#10B981')} MIND</span>" if is_mind_kn else ""
+                                    st.html(
+                                        f"<div style='margin-bottom: 5px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;'>"
+                                        f"<span class='grade-3'>Grade 3</span> "
+                                        f"<span style='font-size:13px; color:#F9FAFB;'>{kn['path']}</span> "
+                                        f"<span style='font-size:11px; color:#06B6D4;'>({kn.get('section_name')})</span>"
+                                        f"{mind_badge}"
+                                        f"</div>"
+                                    )
+                else:
+                    st.info(f"No remedies found matching '{rem_search}'.")
+
+        with tab_mm_diff:
+            render_remedy_comparison(db)
+
+    # =========================================================================
+    # TAB 5: Settings & Methodology
+    # =========================================================================
+    with tab_settings:
+        st.markdown("### Classical Methodology & Clinical NLP Foundations")
+        col_m1, col_m2 = st.columns(2)
+
+        with col_m1:
+            with st.container(border=True):
+                st.html(
+                    f"""
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        {get_icon('scale', size=20, color='#10B981')}
+                        <h4 style="margin: 0;">1. Dr. J. T. Kent's Totality Principles</h4>
+                    </div>
+                    """
+                )
+                st.markdown(
+                    """
+                    Classical homeopathic repertorization adheres to the hierarchical evaluation of symptoms established by Dr. James Tyler Kent:
+                    
+                    1. **Mental & Emotional Generals (Paramount)**: Will, affections, memory, intellect, anxiety, grief, and fears.
+                    2. **Physical Generals**: Reaction to environment, temperature, weather, motion, posture, time of day.
+                    3. **Particular Symptoms (Localities)**: Specific bodily organs, sensations, and local modalities.
+                    
+                    **Totality Scoring Formula:**
+                    - Grade 3 (Bold): **3.0×** weighting (confirmed by multiple provers & clinical cures)
+                    - Grade 2 (Italics): **2.0×** weighting (qualified by clinical observation)
+                    - Grade 1 (Roman): **1.0×** weighting (occasional prover observation)
+                    - Specificity Multiplier: Evaluated via inverse rubric frequency, granting higher value to uncommon, characteristic keynotes.
+                    """
+                )
+
+        with col_m2:
+            with st.container(border=True):
+                st.html(
+                    f"""
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        {get_icon('auto_fix_high', size=20, color='#60A5FA')}
+                        <h4 style="margin: 0;">2. NLP Inference Encoders & Architecture</h4>
+                    </div>
+                    """
+                )
+                st.markdown(
+                    """
+                    Kent-AI integrates specialized biomedical language models fine-tuned on 15-class BIO token classification:
+                    
+                    - **BioLinkBERT-Base (110M)**: Pretrained on PubMed citation graphs. Evaluated at ~18ms latency with high token precision.
+                    - **PubMedBERT (110M)**: Biomedical domain-specific vocabulary achieving 41.56% Recall@20 on held-out clinical cases.
+                    - **4-Encoder Ensemble (414M)**: Majority voting across BioLinkBERT, PubMedBERT, Bio_ClinicalBERT, and DeBERTa-v3.
+                    - **Two-Stage Hybrid**: High-recall ensemble extraction paired with LLaMA 3.1 8B contextual arbitration.
+                    """
+                )
+
         with st.container(border=True):
             st.html(
                 f"""
-                <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 8px;'>
-                    {get_icon('medication', size=22, color='#10B981')}
-                    <h3 style='margin: 0;'>Homeopathic Remedy Dictionary & MIND Keynotes</h3>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    {get_icon('verified', size=20, color='#FBBF24')}
+                    <h4 style="margin: 0;">3. Clinical Decision-Support Notice</h4>
                 </div>
                 """
             )
-            st.markdown("Browse cataloged remedies in Kent's Repertory with full Latin names, abbreviations, and characteristic Grade 3 keynotes.")
-
-            col_rem_search, col_rem_clear, col_rem_toggle = st.columns([3.5, 0.9, 2.4], vertical_alignment="bottom")
-            with col_rem_search:
-                if "rem_filter_text" not in st.session_state:
-                    st.session_state.rem_filter_text = "Lach"
-                rem_search = st.text_input(
-                    "Filter Remedy by Name or Abbreviation:",
-                    value=st.session_state.rem_filter_text,
-                    key="rem_input_widget",
-                    placeholder="e.g. 'Lach', 'Phos', 'Nux-v', 'Ars', 'Acon'...",
-                )
-                st.session_state.rem_filter_text = rem_search
-            with col_rem_clear:
-                if st.button("✕ Clear", help="Clear remedy search filter", width="stretch"):
-                    st.session_state.rem_filter_text = ""
-                    st.session_state.rem_input_widget = ""
-                    st.rerun()
-            with col_rem_toggle:
-                prioritize_mind = st.checkbox(
-                    "Prioritize MIND Keynotes",
-                    value=True,
-                    help="Sort characteristic Grade 3 symptoms so that mental & emotional rubrics appear first in the keynote list.",
-                )
-
-        if rem_search.strip():
-            with db.connect() as conn:
-                cur = conn.cursor()
-                query = """
-                    SELECT 
-                        r.id,
-                        r.abbreviation,
-                        r.full_name,
-                        r.normalized,
-                        (SELECT COUNT(*) FROM rubric_remedies rr WHERE rr.remedy_id = r.id) as total_rubrics,
-                        (SELECT COUNT(*) FROM rubric_remedies rr JOIN rubrics rb ON rr.rubric_id = rb.id WHERE rr.remedy_id = r.id AND rb.section_id = 1) as mind_rubrics
-                    FROM remedies r
-                    WHERE r.abbreviation LIKE ? OR r.full_name LIKE ? OR r.normalized LIKE ?
-                    ORDER BY mind_rubrics DESC, total_rubrics DESC
-                    LIMIT 20
+            st.markdown(
                 """
-                like_term = f"%{rem_search.strip()}%"
-                cur.execute(query, (like_term, like_term, like_term))
-                remedy_rows = cur.fetchall()
+                Kent-AI is an investigational clinical decision-support system designed to assist practitioners by synthesizing complex repertory data.
+                **It does not provide medical diagnoses, treatment plans, or autonomous prescriptions.**
+                All repertorization indications must be evaluated by a certified medical or homeopathic practitioner alongside primary literature.
+                """
+            )
 
-            if remedy_rows:
-                st.markdown(f"Found **{len(remedy_rows)}** cataloged {pluralize(len(remedy_rows), 'remedy', 'remedies', include_count=False)}:")
-                for row in remedy_rows:
-                    r_id, abbr, name, norm = row["id"], row["abbreviation"], row["full_name"], row["normalized"]
-                    total_count, mind_count = row["total_rubrics"], row["mind_rubrics"]
-
-                    show_dev = st.session_state.get("show_dev_details", False)
-                    dev_norm = f"<span class='rubric-dev-id'>Std: {norm or abbr}</span>" if show_dev else ""
-
-                    card_title = f"{name or abbr} ({abbr})  ·  {pluralize(mind_count, 'rubric', 'rubrics')} in MIND  ·  {pluralize(total_count, 'rubric', 'rubrics')} across all chapters"
-
-                    with st.expander(card_title, expanded=False):
-                        col_reminfo, col_remact = st.columns(2)
-                        with col_reminfo:
-                            st.html(
-                                f"""
-                                <div style="margin-bottom: 8px;">
-                                    <div style="font-size: 18px; font-weight: 800; color: #FFFFFF;">
-                                        {name or abbr} <span style="color: #34D399; font-weight: 700;">({abbr})</span>
-                                        {dev_norm}
-                                    </div>
-                                    <div style="font-size: 12.5px; color: #9CA3AF; margin-top: 4px;">
-                                        <span class="status-pill" style="color: #10B981;" title="Present in {pluralize(mind_count, 'rubric', 'rubrics')} of Chapter 1 (MIND)"><b>{mind_count}</b> in MIND</span>
-                                        <span class="status-pill" style="margin-left: 6px;" title="Present in {pluralize(total_count, 'rubric', 'rubrics')} across all 37 chapters of Kent Repertory"><b>{total_count:,}</b> across all chapters</span>
-                                    </div>
-                                </div>
-                                """
-                            )
-                        with col_remact:
-                            tray = st.session_state.get("case_tray", {"rubrics": [], "remedies": []})
-                            is_in_tray = any(item.get("id") == r_id for item in tray.get("remedies", []))
-                            rem_btn_key = f"tray_add_rem_{r_id}"
-                            if is_in_tray:
-                                st.button("✓ Added to Case", key=rem_btn_key, disabled=True, width="stretch")
-                            else:
-                                if st.button("+ Add to case", key=rem_btn_key, width="stretch"):
-                                    if "case_tray" not in st.session_state:
-                                        st.session_state.case_tray = {"rubrics": [], "remedies": []}
-                                    st.session_state.case_tray["remedies"].append({
-                                        "id": r_id,
-                                        "abbreviation": abbr,
-                                        "full_name": name or abbr,
-                                        "mind_rubrics": mind_count,
-                                        "total_rubrics": total_count,
-                                    })
-                                    st.toast(f"Added {abbr} to case tray.")
-                                    st.rerun()
-
-                        # Characteristic Grade 3 Keynotes inside the single card
-                        keynotes = db.get_remedy_rubrics(r_id, min_grade=3, limit=16)
-                        if not keynotes:
-                            st.write("No Grade 3 keynote rubrics cataloged for this remedy.")
-                        else:
-                            if prioritize_mind:
-                                keynotes = sorted(
-                                    keynotes,
-                                    key=lambda kn: (0 if (kn.get("section_name") == "MIND" or str(kn["path"]).startswith("MIND")) else 1)
-                                )
-                            st.markdown(f"**Characteristic Grade 3 Keynotes ({pluralize(len(keynotes), 'keynote', 'keynotes')}):**")
-                            for kn in keynotes:
-                                is_mind_kn = kn.get("section_name") == "MIND" or str(kn["path"]).startswith("MIND")
-                                mind_badge = f"<span class='badge badge-mind' style='margin-left: 6px;'>{get_icon('psychology', size=11, color='#10B981')} MIND</span>" if is_mind_kn else ""
-                                st.html(
-                                    f"<div style='margin-bottom: 5px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;'>"
-                                    f"<span class='grade-3'>Grade 3</span> "
-                                    f"<span style='font-size:13px; color:#F9FAFB;'>{kn['path']}</span> "
-                                    f"<span style='font-size:11px; color:#06B6D4;'>({kn.get('section_name')})</span>"
-                                    f"{mind_badge}"
-                                    f"</div>"
-                                )
-            else:
-                st.info(f"No remedies found matching '{rem_search}'.")
-
-    # =========================================================================
-    # TASK 7: Short One-Line High-Contrast Clinical Disclaimer Footer
-    # =========================================================================
+    # Footer Disclaimer
     st.html(
         """
         <div class="persistent-clinical-disclaimer">

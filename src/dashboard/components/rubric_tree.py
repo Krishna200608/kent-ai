@@ -70,22 +70,23 @@ def render_rubric_card(
     # Pluralized count display
     count_label = pluralize(remedy_count, "remedy", "remedies") if remedy_count > 0 else "0 remedies"
 
-    # Recalibrated match tiers based on 10-query semantic distribution (Task 5)
+    # Calibrated match tiers based on empirical clinical similarity distribution
     match_label = ""
     match_html = ""
     if sim is not None:
-        if sim >= 0.68:
-            match_label = "Strong match"
-            match_html = f"<span class='status-pill match-strong' title='Semantic similarity score: {sim:.3f}'>Strong match</span>"
+        pct = int(round(sim * 100))
+        if sim >= 0.78:
+            match_label = f"Direct Match ({pct}%)"
+            match_html = f"<span class='status-pill match-strong' title='Semantic similarity score: {sim:.3f}'>Direct Match ({pct}%)</span>"
+        elif sim >= 0.68:
+            match_label = f"Moderate Match ({pct}%)"
+            match_html = f"<span class='status-pill match-good' title='Semantic similarity score: {sim:.3f}'>Moderate Match ({pct}%)</span>"
         elif sim >= 0.58:
-            match_label = "Good match"
-            match_html = f"<span class='status-pill match-good' title='Semantic similarity score: {sim:.3f}'>Good match</span>"
-        elif sim >= 0.52:
-            match_label = "Fair match"
-            match_html = f"<span class='status-pill match-fair' title='Semantic similarity score: {sim:.3f}'>Fair match</span>"
+            match_label = f"Partial Match ({pct}%)"
+            match_html = f"<span class='status-pill match-fair' title='Semantic similarity score: {sim:.3f}'>Partial Match ({pct}%)</span>"
         else:
-            match_label = "Weak match"
-            match_html = f"<span class='status-pill match-weak' title='Semantic similarity score: {sim:.3f}'>Weak match</span>"
+            match_label = f"Distant Match ({pct}%)"
+            match_html = f"<span class='status-pill match-weak' title='Semantic similarity score: {sim:.3f}'>Distant Match ({pct}%)</span>"
 
     # Expander title (Task 6)
     if disp_prefix:

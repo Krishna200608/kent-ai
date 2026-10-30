@@ -124,7 +124,7 @@ def test_dialogue_manager_handover_on_done(mock_dialogue_manager):
     # Report should have been generated automatically
     report = mock_dialogue_manager.get_patient_report()
     assert report is not None
-    assert report.patient_id.startswith("PT-")
+    assert report.patient_id.startswith(("PT-", "CASE-"))
     assert report.to_markdown() is not None
 
 

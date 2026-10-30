@@ -80,6 +80,8 @@ class RemedyRanker:
         rubric_matches: List[Union[int, Dict[str, Any]]],
         top_n: int = 20,
         min_coverage: int = 1,
+        ranking_mode: str = "totality",
+        eliminatory_rubric_ids: Optional[List[int]] = None,
     ) -> List[Dict[str, Any]]:
         """Compute intersection and weighted total scores for candidate remedies.
         
@@ -87,9 +89,11 @@ class RemedyRanker:
             rubric_matches: List of rubric IDs or candidate dicts (e.g. from RubricVectorStore.query).
             top_n: Maximum number of ranked remedies to return.
             min_coverage: Minimum number of rubrics a remedy must cover to be included.
+            ranking_mode: Sort mode ('totality': hits then score [default], 'score': score then hits, 'coverage': hits only).
+            eliminatory_rubric_ids: Optional list of rubric IDs that must be covered by candidate remedies.
             
         Returns:
-            List of ranked remedy dictionaries sorted by (coverage DESC, score DESC).
+            List of ranked remedy dictionaries sorted according to ranking_mode.
         """
         if not rubric_matches:
             return []
@@ -173,18 +177,38 @@ class RemedyRanker:
             if rem["rubric_count"] >= min_coverage
         ]
 
+        # Apply eliminatory rubric filter (Homeorep / classical method)
+        if eliminatory_rubric_ids:
+            elim_set = set(eliminatory_rubric_ids)
+            candidates = [
+                c for c in candidates
+                if elim_set.issubset({rc["rubric_id"] for rc in c["rubrics_covered"]})
+            ]
+
         # Compute coverage ratio and round score
         for c in candidates:
             c["coverage_ratio"] = round(c["rubric_count"] / float(total_rubrics_count), 3)
             c["score"] = round(c["score"], 3)
 
-        # Sort by primary key: rubric_count DESC, secondary key: score DESC
-        candidates.sort(
-            key=lambda x: (x["rubric_count"], x["score"]),
-            reverse=True,
-        )
+        # Sort according to selected ranking_mode
+        if ranking_mode == "score":
+            candidates.sort(key=lambda x: (x["score"], x["rubric_count"]), reverse=True)
+        elif ranking_mode == "coverage":
+            candidates.sort(key=lambda x: (x["rubric_count"], x["score"]), reverse=True)
+        else:
+            # Default "totality": primary key rubric_count DESC, secondary score DESC
+            candidates.sort(key=lambda x: (x["rubric_count"], x["score"]), reverse=True)
 
-        return candidates[:top_n]
+        # Add ranks and margin to next candidate
+        top_candidates = candidates[:top_n]
+        for i, c in enumerate(top_candidates):
+            c["rank"] = i + 1
+            if i + 1 < len(top_candidates):
+                c["margin_to_next"] = round(max(0.0, c["score"] - top_candidates[i + 1]["score"]), 3)
+            else:
+                c["margin_to_next"] = 0.0
+
+        return top_candidates
 
     def repertorize_symptoms(
         self,
