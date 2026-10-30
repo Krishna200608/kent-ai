@@ -227,3 +227,4 @@ class EnsembleNER:
         # Sort consensus entities by start offset
         consensus_entities.sort(key=lambda e: (e.start, e.end))
         return [e.to_dict() for e in consensus_entities]
+

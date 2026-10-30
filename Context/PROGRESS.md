@@ -369,6 +369,42 @@ pytest tests/ -v
 
 ---
 
+## Phase 9.1 — Secondary Generative LLM Fine-Tuning: BioMistral 7B (Week 2 Plan) ⏳
+
+**Status**: In Progress (Active GPU Training) 🔄  
+**Date**: 2026-10-30  
+**Agent**: Antigravity (Gemini 3.8 Flash)  
+**Hardware**: NVIDIA RTX 5000 Ada Generation (32GB VRAM, bfloat16 + 4-bit NormalFloat NF4)  
+**Base Model**: `BioMistral/BioMistral-7B` (Pretrained on 3B tokens from PubMed Central Open Access)  
+**Adapter Output**: `data/models/biomistral_homeoQLoRA/`  
+**Training Scope**: 3 Epochs (2,961 steps, batch size 2 × grad_accum 8 = 16, lr 2e-4, LoRA $r=16, \alpha=32$) on 15,786 training cases (`data/processed/train.jsonl`)  
+**Pipeline**: Automated launcher [`scripts/run_gpu_biomistral_train.sh`](../scripts/run_gpu_biomistral_train.sh) with automatic evaluation on 1,973 test cases.
+
+---
+
+## Phase 10 — Multi-Model Ensembling & Paradigm 2 Hybrid Pipeline (Week 3 Plan) ✅
+
+**Status**: Core Architecture & Test Suite Complete (86/86 Passing Unit Tests) 🎯  
+**Date**: 2026-10-30  
+**Agent**: Antigravity (Gemini 3.8 Flash)  
+
+### Architectural Paradigms Implemented
+
+1. **Paradigm 1: Weighted Majority Voting & Span Clustering (`EnsembleNER`)**
+   - Implemented in [`src/models/ensemble.py`](../src/models/ensemble.py).
+   - Pools token predictions across 4 fine-tuned biomedical encoders (`BioLinkBERT` 0.35, `PubMedBERT` 0.35, `Bio_ClinicalBERT` 0.20, `DeBERTa-v3` 0.10).
+   - Character IoU overlap clustering resolves boundary discrepancies and assigns unanimous vs. contested agreement tags.
+2. **Paradigm 2: Two-Stage Hybrid Pipeline (`HybridPipelineOrchestrator`)**
+   - Implemented in [`src/models/hybrid_pipeline.py`](../src/models/hybrid_pipeline.py).
+   - Stage 1: Ultra-fast sub-token candidate entity mining via the 4-encoder ensemble (< 40 ms).
+   - Stage 2: Contextual arbitration, negation resolution (filtering denied symptoms), and 7-dimension structuring via instruction-tuned LLM.
+   - Downstream: ChromaDB Kentian rubric retrieval (74,513 rubrics) and classical totality remedy ranking.
+3. **Evaluation Suite**:
+   - CLI Evaluator: [`scripts/evaluate_ensemble.py`](../scripts/evaluate_ensemble.py).
+   - Test Suite: [`tests/test_ensemble.py`](../tests/test_ensemble.py) (5/5 tests passing).
+
+---
+
 ## Changelog
 
 | Date | Phase | Agent | Change |
@@ -392,6 +428,7 @@ pytest tests/ -v
 | 2026-10-29 | 8 / Doc | Antigravity | Supervisor review & comparative study formulation: integrated Dr. Nikhilanand Arya's mandate on multi-model fine-tuning (PubMedBERT, BioLinkBERT, DeBERTa-v3, BioMistral 7B, LLaMA 3.1 8B) and ensemble architectures; updated scripts/train_ner.py with --model-name; eliminated all 22 Streamlit width deprecation warnings and SeqEval undefined metric warnings; rewritten docs/Next_Steps.md v2.0; 73/73 tests passing with 0 warnings. |
 | 2026-10-29 | 8 / GPU | Antigravity | Multi-model fine-tuning & academic test benchmark completed on RTX 5000 Ada: trained PubMedBERT, BioLinkBERT, and DeBERTa-v3 (with native BF16 precision); evaluated all 4 models over 1,973 held-out test cases (test.jsonl); BioLinkBERT achieved top token BIO F1 (34.86%); PubMedBERT achieved top dense rubric recall (41.56% Recall@20) and Simillimum accuracy (35.02%); synthesized comparative study report (docs/Evaluation/COMPARATIVE_BENCHMARK.md). |
 | 2026-10-30 | 9 / LLM | Antigravity | Week 2 Generative LLM PEFT/QLoRA fine-tuning and evaluation complete on RTX 5000 Ada: trained Qwen 2.5 7B Instruct with 4-bit NF4 across 15,786 training cases (3 epochs, loss 2.915 -> 0.3556, accuracy 91.03%); evaluated across 1,973 held-out test cases (100% JSON parse validity, 99.78% verbatim substring grounding, 0.22% hallucination, 45.14% Micro F1, 2672 ms latency); generated docs/Evaluation/eval_qwen_7b.md and updated docs/Next_Steps.md; 81/81 unit tests passing. |
+| 2026-10-30 | 10 / Ens | Antigravity | Week 3 Multi-Model Ensemble and Paradigm 2 Hybrid Pipeline implemented and verified: src/models/ensemble.py (weighted majority voting, IoU span clustering across 4 biomedical encoders), src/models/hybrid_pipeline.py (two-stage hybrid with fast encoder span mining + LLM contextual arbitration + negation resolution), scripts/evaluate_ensemble.py, and tests/test_ensemble.py (86/86 passing tests); launched BioMistral 7B QLoRA training on RTX 5000 Ada. |
 
 ---
 

@@ -112,3 +112,4 @@ def test_hybrid_pipeline_process_transcript():
     assert report.transcript == transcript
     assert "MENT" in report.dimensions
     assert len(report.search_queries) > 0
+
