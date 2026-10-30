@@ -187,3 +187,24 @@ def test_format_chat_transcript():
     assert "Severe anxiety & fearful apprehension" in transcript
     assert "I am here to support you." in transcript
 
+
+def test_dashboard_engine_options_and_pipeline():
+    """Verify that dashboard ENGINE_OPTIONS are correctly defined and get_pipeline supports them."""
+    from src.dashboard.app import ENGINE_OPTIONS, get_pipeline
+    from src.pipeline.orchestrator import PipelineOrchestrator
+    from src.models.hybrid_pipeline import HybridPipelineOrchestrator
+
+    assert len(ENGINE_OPTIONS) == 4
+    assert any("BioLinkBERT" in opt for opt in ENGINE_OPTIONS)
+    assert any("PubMedBERT" in opt for opt in ENGINE_OPTIONS)
+    assert any("Ensemble" in opt for opt in ENGINE_OPTIONS)
+    assert any("Hybrid" in opt for opt in ENGINE_OPTIONS)
+
+    # Test BioLinkBERT pipeline instantiation
+    p1 = get_pipeline(ENGINE_OPTIONS[0])
+    assert isinstance(p1, PipelineOrchestrator)
+
+    # Test Hybrid pipeline instantiation
+    p_hybrid = get_pipeline(ENGINE_OPTIONS[3])
+    assert isinstance(p_hybrid, HybridPipelineOrchestrator)
+

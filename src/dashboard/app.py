@@ -69,12 +69,24 @@ from src.dashboard.dimensions import (
 from src.dashboard.components.chat_viewer import check_ollama_online
 from src.dashboard.components.icons import get_icon
 from src.data.kent_db import KentDB
+from src.config import get_project_root
+from src.models.symptom_ner import SymptomNER
+from src.models.ensemble import EnsembleNER
+from src.models.hybrid_pipeline import HybridPipelineOrchestrator
 from src.pipeline.orchestrator import PatientReport, PipelineOrchestrator
 from src.search.embedder import RubricEmbedder
 from src.search.ranker import RemedyRanker
 from src.search.vector_store import RubricVectorStore
 
 logger = logging.getLogger("dashboard")
+
+# Canonical Inference Engine Options for Clinician Workspace
+ENGINE_OPTIONS = [
+    "⚡ BioLinkBERT Fast Mode (~18ms)",
+    "🎯 PubMedBERT (Top Rubric Alignment)",
+    "🛡️ Multi-Model Ensemble (4 Encoders, Majority Voting)",
+    "🔬 Two-Stage Hybrid (Ensemble Mining + LLaMA 3 Arbitration)",
+]
 
 # Set wide page layout
 st.set_page_config(
@@ -91,22 +103,36 @@ def get_db() -> KentDB:
 
 
 @st.cache_resource
-def get_pipeline() -> PipelineOrchestrator:
-    """Cache dense vector store, embedder, and pipeline orchestrator."""
+def get_pipeline(engine_name: str = "⚡ BioLinkBERT Fast Mode (~18ms)"):
+    """Cache dense vector store, embedder, and pipeline orchestrator for selected engine."""
     embedder = RubricEmbedder(mock_mode=False)
     vector_store = RubricVectorStore(embedder=embedder)
     ranker = RemedyRanker()
-    return PipelineOrchestrator(
-        vector_store=vector_store,
-        ranker=ranker,
-        mock_mode=False,
-    )
+    root = get_project_root()
+
+    if "PubMedBERT" in engine_name:
+        model_p = root / "data" / "models" / "pubmedbert_homeoNER"
+        ner = SymptomNER(model_path=model_p, mock_mode=False)
+        return PipelineOrchestrator(ner=ner, vector_store=vector_store, ranker=ranker, mock_mode=False)
+    elif "Multi-Model Ensemble" in engine_name:
+        ensemble = EnsembleNER(mock_mode=False)
+        return PipelineOrchestrator(ner=ensemble, vector_store=vector_store, ranker=ranker, mock_mode=False)
+    elif "Two-Stage Hybrid" in engine_name:
+        return HybridPipelineOrchestrator(vector_store=vector_store, ranker=ranker, mock_mode=False)
+    else:
+        # Default: BioLinkBERT SOTA (~18ms)
+        model_p = root / "data" / "models" / "biolinkbert_homeoNER"
+        ner = SymptomNER(model_path=model_p, mock_mode=False)
+        return PipelineOrchestrator(ner=ner, vector_store=vector_store, ranker=ranker, mock_mode=False)
 
 
 def initialize_session():
     """Initialize stateful consultation variables."""
+    if "inference_engine" not in st.session_state:
+        st.session_state.inference_engine = ENGINE_OPTIONS[0]
+    active_engine = st.session_state.inference_engine
     if "pipeline" not in st.session_state:
-        st.session_state.pipeline = get_pipeline()
+        st.session_state.pipeline = get_pipeline(active_engine)
     if "dialogue_manager" not in st.session_state or not hasattr(st.session_state.dialogue_manager, "is_ollama_online"):
         st.session_state.dialogue_manager = DialogueManager(
             orchestrator=st.session_state.pipeline,
@@ -115,6 +141,7 @@ def initialize_session():
         )
         st.session_state.dialogue_manager.get_greeting()
     else:
+        st.session_state.dialogue_manager.orchestrator = st.session_state.pipeline
         # Ensure 127.0.0.1 is always set over localhost to bypass Windows IPv6 resolution delay
         if getattr(st.session_state.dialogue_manager, "api_base", None) in ("http://localhost:11434", None):
             st.session_state.dialogue_manager.api_base = "http://127.0.0.1:11434"
@@ -134,13 +161,26 @@ def render_header():
     is_mind = "MIND" in active_scope
     short_scope = "MIND (4.9k)" if is_mind else "All Chapters (74k)"
     
+    active_engine = st.session_state.get("inference_engine", ENGINE_OPTIONS[0])
+    if "BioLinkBERT" in active_engine:
+        short_engine = "BioLinkBERT (~18ms)"
+    elif "PubMedBERT" in active_engine:
+        short_engine = "PubMedBERT (~18ms)"
+    elif "Multi-Model Ensemble" in active_engine:
+        short_engine = "4-Encoder Ensemble (54ms)"
+    elif "Two-Stage Hybrid" in active_engine:
+        short_engine = "Two-Stage Hybrid"
+    else:
+        short_engine = "BioLinkBERT"
+
     dm = st.session_state.get("dialogue_manager")
     is_llm_online = dm.is_ollama_online() if (dm and hasattr(dm, "is_ollama_online")) else check_ollama_online()
     engine_desc = "LLaMA 3:8B Online" if is_llm_online else "Offline (Rule-based Fallback)"
     
     tooltip_text = (
         f"Active Scope: {active_scope} | "
-        f"Inference Engine: {engine_desc} | "
+        f"Inference Engine: {active_engine} | "
+        f"Dialogue LLM: {engine_desc} | "
         "Kent Knowledge Base: 74,513 rubrics across 37 chapters"
     )
     
@@ -156,7 +196,14 @@ def render_header():
                     <div class="brand-subtitle">Classical Homeopathic Repertorization & Decision Support</div>
                 </div>
             </div>
-            <div class="brand-pills">
+            <div class="brand-pills" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <div class="session-badge-wrapper" title="{tooltip_text}">
+                    <span class="status-pill status-pill-engine session-compact-pill" style="border-color: rgba(59, 130, 246, 0.4); background: rgba(59, 130, 246, 0.1);">
+                        <span class="status-dot" style="background: #3B82F6;"></span>
+                        {get_icon('auto_fix_high', size=14, color='#60A5FA')}
+                        <span>Engine: <b>{short_engine}</b></span>
+                    </span>
+                </div>
                 <div class="session-badge-wrapper" title="{tooltip_text}">
                     <span class="status-pill status-pill-focus session-compact-pill">
                         <span class="status-dot"></span>
@@ -180,10 +227,32 @@ def render_dimensions_grid(dims: Dict[str, Any], report: Optional[PatientReport]
         cand_path = top_cand.get("path") or top_cand.get("name") or "Repertory rubric"
         prov_hint = f"Matched rubric: {cand_path} (Totality Ranker)"
 
+    # Build entity lookup from report.entities to surface agreement, votes, and confidence badges
+    entity_lookup: Dict[str, Dict[str, Any]] = {}
+    if report and getattr(report, "entities", None):
+        for ent in report.entities:
+            if isinstance(ent, dict):
+                t_key = ent.get("text", "").strip().lower()
+                if t_key and t_key not in entity_lookup:
+                    entity_lookup[t_key] = ent
+
     def format_badge(val: str, badge_cls: str, dim_code: str, dim_label: str) -> str:
+        ent_meta = entity_lookup.get(val.strip().lower(), {})
+        badge_extra = ""
+        if ent_meta.get("is_unanimous"):
+            badge_extra = ' <span style="font-size: 9.5px; background: rgba(16,185,129,0.22); color: #34D399; border: 1px solid rgba(16,185,129,0.4); border-radius: 3px; padding: 1px 4px; margin-left: 4px; font-weight: 700;" title="Unanimous agreement across all 4 encoders">4/4 Unanimous</span>'
+        elif ent_meta.get("votes") and ent_meta.get("total_models"):
+            votes = ent_meta['votes']
+            total = ent_meta['total_models']
+            supp = ", ".join(m.replace('_homeoNER', '') for m in ent_meta.get('supporting_models', []))
+            badge_extra = f' <span style="font-size: 9.5px; background: rgba(59,130,246,0.22); color: #93C5FD; border: 1px solid rgba(59,130,246,0.4); border-radius: 3px; padding: 1px 4px; margin-left: 4px; font-weight: 600;" title="Supported by {votes}/{total} models: {supp}">{votes}/{total} agreed</span>'
+        elif ent_meta.get("confidence"):
+            conf_pct = int(ent_meta["confidence"] * 100)
+            badge_extra = f' <span style="font-size: 9.5px; background: rgba(147,51,234,0.22); color: #D8B4FE; border: 1px solid rgba(147,51,234,0.4); border-radius: 3px; padding: 1px 4px; margin-left: 4px; font-weight: 600;" title="Extraction Confidence: {conf_pct}%">{conf_pct}%</span>'
+
         return (
             f'<span class="badge {badge_cls}" title="Dimension: {dim_label} ({dim_code}) | Entity: {val}&#10;Provenance: {prov_hint}">'
-            f'{val} <span class="badge-why-hint" title="Provenance: {prov_hint}">why?</span></span>'
+            f'{val}{badge_extra} <span class="badge-why-hint" title="Provenance: {prov_hint}">why?</span></span>'
         )
 
     d_loc = DIMENSION_MAP["location"]
@@ -196,38 +265,38 @@ def render_dimensions_grid(dims: Dict[str, Any], report: Optional[PatientReport]
 
     with col1:
         st.markdown(f"**{d_loc.label} ({d_loc.code}):**")
-        locs = dims.get("location", [])
+        locs = dims.get("location") or dims.get("LOC", [])
         st.html("".join(format_badge(l, d_loc.badge_class, d_loc.code, d_loc.label) for l in locs) if locs else "<span style='color:#8492A6; font-size:13px;'>None</span>")
 
         st.markdown(f"**{d_sen.label} ({d_sen.code}):**")
-        sens = dims.get("sensation", [])
+        sens = dims.get("sensation") or dims.get("SEN", [])
         st.html("".join(format_badge(s, d_sen.badge_class, d_sen.code, d_sen.label) for s in sens) if sens else "<span style='color:#8492A6; font-size:13px;'>None</span>")
 
     with col2:
         st.markdown(f"**{d_agg.label} ({d_agg.code}):**")
-        aggs = dims.get("modality_agg", [])
+        aggs = dims.get("modality_agg") or dims.get("MOD_AGG", [])
         st.html("".join(format_badge(a, d_agg.badge_class, d_agg.code, d_agg.label) for a in aggs) if aggs else "<span style='color:#8492A6; font-size:13px;'>None</span>")
 
         st.markdown(f"**{d_amel.label} ({d_amel.code}):**")
-        amels = dims.get("modality_amel", [])
+        amels = dims.get("modality_amel") or dims.get("MOD_AMEL", [])
         st.html("".join(format_badge(a, d_amel.badge_class, d_amel.code, d_amel.label) for a in amels) if amels else "<span style='color:#8492A6; font-size:13px;'>None</span>")
 
     with col3:
         st.markdown(f"**{d_temp.label} ({d_temp.code}):**")
-        temps = dims.get("temporal", [])
+        temps = dims.get("temporal") or dims.get("TEMP", [])
         st.html("".join(format_badge(t, d_temp.badge_class, d_temp.code, d_temp.label) for t in temps) if temps else "<span style='color:#8492A6; font-size:13px;'>None</span>")
 
         st.markdown(f"**{d_conc.label} ({d_conc.code}):**")
-        concs = dims.get("concomitant", [])
+        concs = dims.get("concomitant") or dims.get("CONC", [])
         st.html("".join(format_badge(c, d_conc.badge_class, d_conc.code, d_conc.label) for c in concs) if concs else "<span style='color:#8492A6; font-size:13px;'>None</span>")
 
     with col4:
         st.markdown(f"**{d_ment.label} ({d_ment.code}):**")
-        ments = dims.get("mental", [])
+        ments = dims.get("mental") or dims.get("MENT", [])
         st.html("".join(format_badge(m, d_ment.badge_class, d_ment.code, d_ment.label) for m in ments) if ments else "<span style='color:#8492A6; font-size:13px;'>None</span>")
 
         st.markdown("**Negated / Denied:**")
-        negs = dims.get("negated", [])
+        negs = dims.get("negated") or dims.get("NEG", [])
         st.html("".join(format_badge(n, "badge-neg", "NEG", "Negated") for n in negs) if negs else "<span style='color:#8492A6; font-size:13px;'>None</span>")
 
 
@@ -607,6 +676,36 @@ def render_sidebar():
         st.html(
             f"""
             <div style='display: flex; align-items: center; gap: 6px; margin: 12px 0 6px 0;'>
+                {get_icon('auto_fix_high', size=16, color='#60A5FA')}
+                <span style='font-size: 14px; font-weight: 700; color: #F9FAFB;'>Inference Model Engine</span>
+            </div>
+            """
+        )
+        curr_engine = st.session_state.get("inference_engine", ENGINE_OPTIONS[0])
+        default_eng_idx = 0
+        for i, opt in enumerate(ENGINE_OPTIONS):
+            if opt == curr_engine:
+                default_eng_idx = i
+                break
+
+        selected_engine = st.radio(
+            "Inference Model Engine",
+            ENGINE_OPTIONS,
+            index=default_eng_idx,
+            key="engine_radio_select",
+            label_visibility="collapsed",
+            help="Select the underlying NLP architecture for token extraction, symptom disambiguation, and repertory retrieval.",
+        )
+        if selected_engine != st.session_state.get("inference_engine"):
+            st.session_state.inference_engine = selected_engine
+            st.session_state.pipeline = get_pipeline(selected_engine)
+            if "dialogue_manager" in st.session_state and hasattr(st.session_state.dialogue_manager, "orchestrator"):
+                st.session_state.dialogue_manager.orchestrator = st.session_state.pipeline
+            st.rerun()
+
+        st.html(
+            f"""
+            <div style='display: flex; align-items: center; gap: 6px; margin: 12px 0 6px 0;'>
                 {get_icon('tune', size=16, color='#10B981')}
                 <span style='font-size: 14px; font-weight: 700; color: #F9FAFB;'>Repertory Scope Selection</span>
             </div>
@@ -651,8 +750,39 @@ def render_sidebar():
                 </div>
                 """
             )
+            active_engine = st.session_state.get("inference_engine", ENGINE_OPTIONS[0])
+            if "BioLinkBERT" in active_engine:
+                eng_html = (
+                    '<div class="stitch-metric" style="margin-bottom: 8px; border-color: rgba(59, 130, 246, 0.4);">'
+                    '    <div class="stitch-metric-val" style="color: #60A5FA;">BioLinkBERT (110M)</div>'
+                    '    <div class="stitch-metric-lbl">Citation Graph • ~18ms • SOTA 34.86% BIO F1</div>'
+                    '</div>'
+                )
+            elif "PubMedBERT" in active_engine:
+                eng_html = (
+                    '<div class="stitch-metric" style="margin-bottom: 8px; border-color: rgba(59, 130, 246, 0.4);">'
+                    '    <div class="stitch-metric-val" style="color: #60A5FA;">PubMedBERT (110M)</div>'
+                    '    <div class="stitch-metric-lbl">BiomedNLP • ~18ms • 41.56% Recall@20</div>'
+                    '</div>'
+                )
+            elif "Multi-Model Ensemble" in active_engine:
+                eng_html = (
+                    '<div class="stitch-metric" style="margin-bottom: 8px; border-color: rgba(16, 185, 129, 0.4);">'
+                    '    <div class="stitch-metric-val" style="color: #10B981;">4-Encoder Ensemble (414M)</div>'
+                    '    <div class="stitch-metric-lbl">Weighted Majority Voting • 54ms • 49.91% Recall</div>'
+                    '</div>'
+                )
+            else:
+                eng_html = (
+                    '<div class="stitch-metric" style="margin-bottom: 8px; border-color: rgba(168, 85, 247, 0.4);">'
+                    '    <div class="stitch-metric-val" style="color: #C084FC;">Two-Stage Hybrid</div>'
+                    '    <div class="stitch-metric-lbl">Ensemble Mining + LLM Contextual Arbitration</div>'
+                    '</div>'
+                )
+
             st.html(
-                """
+                f"""
+                {eng_html}
                 <div class="stitch-metric" style="margin-bottom: 8px;">
                     <div class="stitch-metric-val">llama3:8b</div>
                     <div class="stitch-metric-lbl">Inference LLM (Ollama)</div>
@@ -907,7 +1037,8 @@ def main():
             )
 
         if run_btn and user_case_text.strip():
-            with st.spinner("Extracting 7-dimensions via LLaMA 3, retrieving rubrics from ChromaDB, and computing totality..."):
+            active_eng_label = st.session_state.get("inference_engine", "BioLinkBERT").split(" ")[1]
+            with st.spinner(f"Extracting 7-dimensions via {active_eng_label}, retrieving rubrics from ChromaDB, and computing totality..."):
                 report = pipeline.process_transcript(
                     transcript=user_case_text,
                     top_rubrics_per_query=top_k_rubrics,
@@ -940,7 +1071,7 @@ def main():
 
                 with dim_cols[0]:
                     st.markdown(f"**{DIMENSION_MAP['location'].label} & {DIMENSION_MAP['sensation'].label}:**")
-                    locs = dims.get("location", []) + dims.get("sensation", [])
+                    locs = (dims.get("location") or dims.get("LOC", [])) + (dims.get("sensation") or dims.get("SEN", []))
                     for i, item in enumerate(locs):
                         c = st.checkbox(item, value=True, key=f"t2_symptom_{i}_{item}")
                         if c:
@@ -950,7 +1081,9 @@ def main():
 
                 with dim_cols[1]:
                     st.markdown(f"**Modalities ({DIMENSION_MAP['modality_agg'].label} / {DIMENSION_MAP['modality_amel'].label}):**")
-                    mods = [f"worse: {m}" for m in dims.get("modality_agg", [])] + [f"better: {m}" for m in dims.get("modality_amel", [])]
+                    aggs = dims.get("modality_agg") or dims.get("MOD_AGG", [])
+                    amels = dims.get("modality_amel") or dims.get("MOD_AMEL", [])
+                    mods = [f"worse: {m}" for m in aggs] + [f"better: {m}" for m in amels]
                     for i, item in enumerate(mods):
                         c = st.checkbox(item, value=True, key=f"t2_mod_{i}_{item}")
                         if c:
@@ -960,7 +1093,7 @@ def main():
 
                 with dim_cols[2]:
                     st.markdown(f"**{DIMENSION_MAP['mental'].label} & {DIMENSION_MAP['temporal'].label}:**")
-                    ments = dims.get("mental", []) + dims.get("temporal", [])
+                    ments = (dims.get("mental") or dims.get("MENT", [])) + (dims.get("temporal") or dims.get("TEMP", []))
                     for i, item in enumerate(ments):
                         c = st.checkbox(item, value=True, key=f"t2_ment_{i}_{item}")
                         if c:
@@ -970,7 +1103,7 @@ def main():
 
                 with dim_cols[3]:
                     st.markdown("**Negated / Excluded:**")
-                    negs = dims.get("negated", [])
+                    negs = dims.get("negated") or dims.get("NEG", [])
                     for item in negs:
                         st.markdown(f"<span class='badge badge-neg'>{item}</span>", unsafe_allow_html=True)
                     if not negs:
