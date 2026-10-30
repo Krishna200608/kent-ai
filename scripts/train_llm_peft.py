@@ -259,6 +259,7 @@ def main():
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=val_dataset if len(val_dataset) > 0 else None,
+        processing_class=tokenizer,
     )
 
     # 7. Execute Training

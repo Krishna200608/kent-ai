@@ -215,7 +215,17 @@ def main():
 
         # Build prompt using chat template
         messages = format_case_to_messages(case)[:2]  # system + user only
-        prompt_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        try:
+            prompt_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        except Exception:
+            # Fallback for models without separate system role (e.g. BioMistral)
+            merged_messages = [
+                {
+                    "role": "user",
+                    "content": f"{messages[0]['content']}\n\n{messages[1]['content']}",
+                }
+            ]
+            prompt_text = tokenizer.apply_chat_template(merged_messages, tokenize=False, add_generation_prompt=True)
         inputs = tokenizer(prompt_text, return_tensors="pt").to(model.device)
 
         # Refinement #4: Deterministic Greedy Decoding (temperature=0.0, do_sample=False)

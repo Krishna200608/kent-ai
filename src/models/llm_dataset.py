@@ -109,7 +109,19 @@ def format_case_for_training(case: Dict[str, Any], tokenizer: Any) -> Dict[str, 
     """Format a case into input text using the tokenizer's chat template."""
     messages = format_case_to_messages(case)
     if hasattr(tokenizer, "apply_chat_template"):
-        text = tokenizer.apply_chat_template(messages, tokenize=False)
+        try:
+            text = tokenizer.apply_chat_template(messages, tokenize=False)
+        except Exception:
+            # If chat template rejects 'system' role (e.g., Mistral/BioMistral), merge system into user
+            merged_messages = [
+                {
+                    "role": "user",
+                    "content": f"{messages[0]['content']}\n\n{messages[1]['content']}",
+                },
+                messages[2],
+            ]
+            text = tokenizer.apply_chat_template(merged_messages, tokenize=False)
+            messages = merged_messages
     else:
         # Fallback text formatting
         text = (
