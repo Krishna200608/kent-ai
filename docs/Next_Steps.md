@@ -149,20 +149,20 @@ Evaluated strictly via SeqEval (`zero_division=0`) on the held-out test split (`
 |---|---|---|---|---|
 | Encoders (PubMedBERT / Bio_ClinicalBERT) | ~411 MB | < 1.2 GB | ~18 ms | 4.15–4.20 cases/sec (eval batch) |
 | Qwen 2.5 7B Instruct (4-bit QLoRA) | ~4.6 GB (Base + 78MB Adapter) | ~6.2 GB | 2,672 ms | 0.37 cases/sec |
-| Decoders (LLaMA 3.1 / BioMistral 4-bit) | ~4.8 GB | ~7.5 GB | ~520 ms | ~1.9 cases/sec |
+| BioMistral 7B (4-bit QLoRA) | ~4.5 GB (Base + 81MB Adapter) | ~6.5 GB | 3,093 ms | 0.32 cases/sec |
 | Multi-Model Voting Ensemble | ~1.3 GB (3 Encoders) | ~2.5 GB | ~42 ms | ~23.8 cases/sec |
 ```
 
 ### Table 4: End-to-End Downstream Repertorization Impact (Empirical Benchmark)
 Evaluated across all 74,513 Kent rubrics and 1,836 cases with documented remedy ground truth:
 
-| Stage & Evaluation Metric | Bio_ClinicalBERT (Baseline) | PubMedBERT (BiomedNLP) | BioLinkBERT (Stanford) | DeBERTa-v3 (Microsoft)* | Qwen 2.5 7B (QLoRA) | Best Performing Model |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Top-1 Rubric Recall** | 10.39% | 10.69% | 10.85% | **28.28%** | 10.24% | 🏆 **BioLinkBERT / DeBERTa** |
-| **Top-5 Rubric Recall** | 25.29% | 26.46% | 25.49% | **48.30%** | 20.93% | 🏆 **PubMedBERT / DeBERTa** |
-| **Top-10 Rubric Recall** | 31.68% | 33.40% | 32.44% | **55.65%** | 25.85% | 🏆 **PubMedBERT / DeBERTa** |
-| **Top-20 Rubric Recall** | 40.14% | 41.56% | 41.46% | **62.95%** | 31.68% | 🏆 **PubMedBERT / DeBERTa** |
-| **Mean Reciprocal Rank (MRR)** | 0.1746 | 0.1815 | 0.1798 | **0.3722** | 0.1529 | 🏆 **PubMedBERT / DeBERTa** |
+| Stage & Evaluation Metric | Bio_ClinicalBERT (Baseline) | PubMedBERT (BiomedNLP) | BioLinkBERT (Stanford) | DeBERTa-v3 (Microsoft)* | Qwen 2.5 7B (QLoRA) | BioMistral 7B (QLoRA) | Best Performing Model |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Top-1 Rubric Recall** | 10.39% | 10.69% | 10.85% | **28.28%** | 10.24% | 13.68% | 🏆 **BioLinkBERT / DeBERTa** |
+| **Top-5 Rubric Recall** | 25.29% | 26.46% | 25.49% | **48.30%** | 20.93% | 24.68% | 🏆 **PubMedBERT / DeBERTa** |
+| **Top-10 Rubric Recall** | 31.68% | 33.40% | 32.44% | **55.65%** | 25.85% | 30.31% | 🏆 **PubMedBERT / DeBERTa** |
+| **Top-20 Rubric Recall** | 40.14% | 41.56% | 41.46% | **62.95%** | 31.68% | 37.71% | 🏆 **PubMedBERT / DeBERTa** |
+| **Mean Reciprocal Rank (MRR)** | 0.1746 | 0.1815 | 0.1798 | **0.3722** | 0.1529 | 0.1904 | 🏆 **PubMedBERT / DeBERTa** |
 | **Simillimum Top-1 Accuracy** | 13.07% | 13.02% | 12.47% | **17.65%** | 🏆 **ClinicalBERT / DeBERTa** |
 | **Simillimum Top-3 Accuracy** | 25.33% | 26.42% | 25.98% | **33.50%** | 🏆 **PubMedBERT / DeBERTa** |
 | **Simillimum Top-5 Accuracy** | 34.04% | 35.02% | 34.53% | **42.16%** | 🏆 **PubMedBERT / DeBERTa** |
