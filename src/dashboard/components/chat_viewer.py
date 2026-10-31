@@ -37,6 +37,8 @@ def _safe_clean_bot_text(text: str) -> str:
     import re
     text = re.sub(r"\[?\s*QUICK_REPLIES\s*:\s*\[.*?\]\s*\]?", "", text, flags=re.IGNORECASE | re.DOTALL)
     text = re.sub(r"\[?\s*SLOT_UPDATE\s*:\s*\{[^{}]*\}\s*\]?", "", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"(?:\[\s*)?QUICK_REPLIES\s*:.*$", "", text, flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
+    text = re.sub(r"(?:\[\s*)?SLOT_UPDATE\s*:.*$", "", text, flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
     return text.strip().rstrip("[\n\r\t `:,-({")
 
 
@@ -375,7 +377,6 @@ def render_chat_interface(dm: DialogueManager) -> None:
 
     input_to_process = selected_chip or user_prompt
     if input_to_process:
-        prompt = dm.prepare_turn(input_to_process)
         raw = []
         with scroll_area:
             with st.chat_message("user", avatar=USER_AVATAR):
@@ -405,6 +406,8 @@ def render_chat_interface(dm: DialogueManager) -> None:
                     """,
                     unsafe_allow_html=True,
                 )
+
+                prompt = dm.prepare_turn(input_to_process)
 
                 def _stream_with_thinking(stream_gen):
                     cleared = False

@@ -30,8 +30,11 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+import importlib
 import src.config as config_mod
 from src.config import get_project_root
+import src.chatbot.dialogue_manager as _dm_mod
+importlib.reload(_dm_mod)
 from src.chatbot.dialogue_manager import DialogueManager, get_min_dimensions_to_unlock
 from src.chatbot.state_machine import IntakeState
 from src.data.kent_db import KentDB
@@ -43,7 +46,6 @@ from src.models.hybrid_pipeline import HybridPipelineOrchestrator
 try:
     from src.pipeline.orchestrator import PatientReport, PipelineOrchestrator, rescore_report
 except ImportError:
-    import importlib
     import src.pipeline.orchestrator as _orch_mod
     importlib.reload(_orch_mod)
     from src.pipeline.orchestrator import PatientReport, PipelineOrchestrator, rescore_report
@@ -54,12 +56,13 @@ from src.search.vector_store import RubricVectorStore
 try:
     from src.dashboard.styles import inject_custom_css
 except ImportError:
-    import importlib
     import src.dashboard.styles as _styles_mod
     importlib.reload(_styles_mod)
     from src.dashboard.styles import inject_custom_css
 from src.dashboard.utils import esc, safe_rerun_fragment
 from src.dashboard.components.icons import get_icon
+import src.dashboard.components.chat_viewer as _cv_mod
+importlib.reload(_cv_mod)
 from src.dashboard.components.chat_viewer import (
     check_ollama_online,
     format_chat_transcript,

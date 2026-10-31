@@ -635,21 +635,48 @@ class DialogueManager:
     def visible_only(chunks, sink: list):
         """Yield visible text chunks while collecting the complete raw stream in sink.
 
-        Stops yielding visible text as soon as control tags like [QUICK_REPLIES...]
-        or [SLOT_UPDATE...] appear, keeping the user-facing chat free of raw control syntax.
+        Stops yielding visible text as soon as control tags like QUICK_REPLIES,
+        SLOT_UPDATE, or bracketed control syntax appear, keeping the user-facing
+        chat completely free of raw control syntax.
         """
         stopped = False
+        buffer = ""
+        control_pattern = re.compile(
+            r"(\[?\s*(?:QUICK_REPLIES|SLOT_UPDATE)\b|\[\s*\"|\[\s*\{|```)",
+            re.IGNORECASE,
+        )
+
         for piece in chunks:
             sink.append(piece)
             if stopped:
                 continue
-            if "[" in piece:
+
+            buffer += piece
+            match = control_pattern.search(buffer)
+            if match:
                 stopped = True
-                before, _ = piece.split("[", 1)
-                if before:
-                    yield before
+                visible_text = buffer[: match.start()]
+                if visible_text:
+                    yield visible_text
+                buffer = ""
             else:
-                yield piece
+                partial_match = re.search(
+                    r"(\[|\[?\s*Q(?:U(?:I(?:C(?:K(?:_(?:R(?:E(?:P(?:L(?:I(?:E(?:S)?)?)?)?)?)?)?)?)?)?)?)?$|\[?\s*S(?:L(?:O(?:T(?:_(?:U(?:P(?:D(?:A(?:T(?:E)?)?)?)?)?)?)?)?)?)?$|`{1,3}$)",
+                    buffer,
+                    re.IGNORECASE,
+                )
+                if partial_match:
+                    safe_len = partial_match.start()
+                    safe_chunk = buffer[:safe_len]
+                    buffer = buffer[safe_len:]
+                    if safe_chunk:
+                        yield safe_chunk
+                else:
+                    yield buffer
+                    buffer = ""
+
+        if not stopped and buffer:
+            yield buffer
 
     def is_ollama_online(self) -> bool:
         """Check if local Ollama daemon is responding.
@@ -737,9 +764,11 @@ class DialogueManager:
         if not text:
             return ""
 
-        # 1. Remove SLOT_UPDATE and QUICK_REPLIES blocks anywhere in the text
+        # 1. Remove SLOT_UPDATE and QUICK_REPLIES blocks anywhere in the text (bracketed and unbracketed)
         text = re.sub(r"\[?\s*SLOT_UPDATE\s*:\s*\{[^{}]*\}\s*\]?", "", text, flags=re.IGNORECASE | re.DOTALL)
         text = re.sub(r"\[?\s*QUICK_REPLIES\s*:\s*\[.*?\]\s*\]?", "", text, flags=re.IGNORECASE | re.DOTALL)
+        text = re.sub(r"(?:\[\s*)?QUICK_REPLIES\s*:.*$", "", text, flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
+        text = re.sub(r"(?:\[\s*)?SLOT_UPDATE\s*:.*$", "", text, flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
 
         # 2. Remove any trailing JSON array or object
         text = re.sub(r"\[\s*\"[^\"]+\"\s*(?:,\s*\"[^\"]+\"\s*)*\]\s*$", "", text.strip(), flags=re.DOTALL)
@@ -771,35 +800,52 @@ class DialogueManager:
         return text.strip()
 
     def _parse_and_strip_quick_replies(self, text: str) -> Tuple[str, List[str]]:
-        """Extract QUICK_REPLIES JSON from LLaMA output and return clean text + options."""
+        """Extract QUICK_REPLIES from LLaMA output (bracketed JSON or unbracketed list) and return clean text + options."""
         if not text:
             return "", []
 
         quick_options: List[str] = []
+        clean_part = text
 
-        # Match QUICK_REPLIES: ["...", "..."] with optional wrapping brackets
-        pattern = r"(?:\[\s*)?QUICK_REPLIES:\s*(\[.*?\])(?:\s*\])?"
-        match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+        match = re.search(r"(?:\[\s*)?QUICK_REPLIES\s*:\s*(.+)$", text, re.IGNORECASE | re.DOTALL)
         if match:
-            raw_replies = match.group(1).strip()
-            clean_part = text[: match.start()]
-            try:
-                parsed = json.loads(raw_replies)
-                if isinstance(parsed, list) and len(parsed) > 0:
-                    raw_opts = [str(opt).strip(' "\'') for opt in parsed if str(opt).strip()]
-                    quick_options = [
-                        opt.capitalize() if opt.islower() else opt
-                        for opt in raw_opts
-                    ]
-            except Exception:
-                quoted = re.findall(r'["\']([^"\']+)["\']', raw_replies)
-                if quoted:
-                    quick_options = [
-                        q.strip().capitalize() if q.strip().islower() else q.strip()
-                        for q in quoted if q.strip()
-                    ]
-        else:
-            clean_part = text
+            clean_part = text[: match.start()].strip()
+            raw = match.group(1).strip()
+
+            # Attempt A: bracketed list or JSON
+            if raw.startswith("["):
+                bracket_match = re.match(r"\[(.*?)\]", raw, re.DOTALL)
+                if bracket_match:
+                    try:
+                        parsed = json.loads("[" + bracket_match.group(1) + "]")
+                        if isinstance(parsed, list):
+                            quick_options = [str(x).strip(' "\'') for x in parsed if str(x).strip()]
+                    except Exception:
+                        quoted = re.findall(r'["\']([^"\']+)["\']', bracket_match.group(1))
+                        if quoted:
+                            quick_options = [q.strip() for q in quoted if q.strip()]
+
+            # Attempt B: comma or newline separated plain items (e.g. "Worst after exercise, Better when sitting")
+            if not quick_options:
+                clean_raw = re.sub(r"[\]\}\)]+$", "", raw).strip()
+                lines = clean_raw.splitlines()
+                if len(lines) > 1:
+                    for line in lines:
+                        l = re.sub(r"^[\s\-\*\d\.\•]+", "", line).strip(' "\'')
+                        if l:
+                            quick_options.append(l)
+                else:
+                    parts = clean_raw.split(",")
+                    for p in parts:
+                        p_clean = re.sub(r"^[\s\-\*\d\.\•]+", "", p).strip(' "\'')
+                        if p_clean:
+                            quick_options.append(p_clean)
+
+            quick_options = [
+                opt.capitalize() if opt.islower() else opt
+                for opt in quick_options
+                if opt
+            ]
 
         # Strict validation: Quick replies must be patient statements, never doctor questions
         valid_patient_replies: List[str] = []

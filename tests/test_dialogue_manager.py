@@ -197,6 +197,28 @@ def test_clean_message_text_strips_dangling_brackets_and_metadata():
     assert clean_text_3 == "I understand completely. What sensation do you feel?"
     assert options_3 == ["Heavy and tight", "Burning ache"]
 
+    # 4. Text with unbracketed comma-separated QUICK_REPLIES (user screenshot bug)
+    dirty_text_4 = (
+        "I understand. What makes the pulsating, throbbing sensation in the chest worse or brings relief?\n\n"
+        "QUICK_REPLIES: Worst after exercise, Better when sitting"
+    )
+    clean_text_4, options_4 = dm._parse_and_strip_quick_replies(dirty_text_4)
+    assert clean_text_4 == "I understand. What makes the pulsating, throbbing sensation in the chest worse or brings relief?"
+    assert options_4 == ["Worst after exercise", "Better when sitting"]
+    assert DialogueManager.clean_message_text(dirty_text_4) == clean_text_4
+
+    # 5. visible_only stops yielding on unbracketed QUICK_REPLIES during streaming
+    chunks = [
+        "I understand. ",
+        "What makes the pulsating, throbbing sensation in the chest worse or brings relief?\n\n",
+        "QUICK_REPLIES: Worst after exercise, ",
+        "Better when sitting"
+    ]
+    sink = []
+    visible = list(DialogueManager.visible_only(chunks, sink))
+    assert "".join(visible).strip() == "I understand. What makes the pulsating, throbbing sensation in the chest worse or brings relief?"
+    assert "".join(sink) == "".join(chunks)
+
 
 def test_sanitize_extracted_slots():
     """Verify that sanitize_extracted_slots eliminates stopwords, resolves cross-dimension conflicts, and subsumes sub-phrases."""
