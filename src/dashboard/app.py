@@ -147,6 +147,8 @@ def initialize_session():
         st.session_state.current_case = fresh_case
 
     case: ClinicalCase = st.session_state.current_case
+    if not hasattr(case, "clinical_summary"):
+        case.clinical_summary = ""
 
     if "workspace_step" not in st.session_state:
         st.session_state.workspace_step = 1
@@ -925,15 +927,17 @@ def main():
                 )
 
             # Auto-generate or display Patient Clinical Case Summary (Physician Brief)
-            if not current_case.clinical_summary and current_case.is_ready_for_repertorization:
+            case_sum = getattr(current_case, "clinical_summary", "")
+            if not case_sum and current_case.is_ready_for_repertorization:
                 try:
                     from src.pipeline.case_summarizer import CaseSummarizer
                     current_case.clinical_summary = CaseSummarizer().generate_summary(current_case)
                     save_case(current_case)
+                    case_sum = current_case.clinical_summary
                 except Exception as e:
                     logger.info("Summary auto-generation in Step 2: %s", e)
 
-            if current_case.clinical_summary:
+            if case_sum:
                 with st.container(border=True):
                     col_sum_title, col_sum_acts = st.columns([4, 2], vertical_alignment="center")
                     with col_sum_title:
@@ -956,13 +960,13 @@ def main():
                     st.markdown(
                         f"""
                         <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 12px 14px; font-size: 13.5px; line-height: 1.55; color: #E2E8F0; margin: 6px 0 10px 0;">
-                            {esc(current_case.clinical_summary)}
+                            {esc(getattr(current_case, "clinical_summary", ""))}
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
                     with st.expander("Edit Clinical Summary (Physician Adjustments)", expanded=False):
-                        edited_sum = st.text_area("Adjust case summary for medical records:", value=current_case.clinical_summary, height=90, key="ta_edit_sum_step2")
+                        edited_sum = st.text_area("Adjust case summary for medical records:", value=getattr(current_case, "clinical_summary", ""), height=90, key="ta_edit_sum_step2")
                         if st.button("Save Edited Summary", key="btn_save_sum_step2"):
                             current_case.clinical_summary = edited_sum.strip()
                             save_case(current_case)

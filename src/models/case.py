@@ -74,6 +74,13 @@ class ClinicalCase:
         for k in CANONICAL_DIMENSIONS:
             if k not in self.dimensions or not isinstance(self.dimensions[k], list):
                 self.dimensions[k] = list(self.dimensions.get(k, []))
+        if not hasattr(self, "clinical_summary"):
+            self.clinical_summary = ""
+
+    def __getattr__(self, name: str) -> Any:
+        if name == "clinical_summary":
+            return ""
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     @property
     def section_id(self) -> Optional[int]:
