@@ -743,6 +743,10 @@ class DialogueManager:
                 "Noted. Does anything else occur alongside this — "
                 "such as nausea, dizziness, chills, or sweating?"
             ),
+            IntakeState.TEMPORAL: (
+                "Thank you. Have you noticed any specific time of day or night when this is worse or better — "
+                "such as in the morning on waking, afternoon, late evening, or waking up around 2-3 AM?"
+            ),
             IntakeState.MENTAL: (
                 "I appreciate you sharing that. How has this been affecting your mood "
                 "or emotional state — any anxiety, irritability, or low energy?"
@@ -968,12 +972,12 @@ class DialogueManager:
             ]
 
         # Temporal
-        if any(w in text for w in ["what time", "time of day", "when does", "morning or night", "waking up", "periodicity", "hour", "clock"]):
+        if any(w in text for w in ["what time", "time of day", "time pattern", "when does", "morning or night", "day or night", "waking up", "periodicity", "hour", "clock", "midnight"]):
             return [
                 "Worse in morning on waking",
-                "Worse in afternoon (around 3-4 PM)",
-                "Worse in evening & night",
                 "Worse after midnight (2-3 AM)",
+                "Worse in afternoon (around 3-4 PM)",
+                "No specific time pattern",
             ]
 
         # Mental/Emotional
@@ -1029,6 +1033,7 @@ class DialogueManager:
             IntakeState.SENSATION: ["Throbbing and pulsating", "Sharp stabbing pain", "Dull heavy ache", "Burning sensation"],
             IntakeState.MODALITY: ["Worse in heat and sun", "Worse from motion", "Better with cold compress", "Better in quiet dark"],
             IntakeState.CONCOMITANT: ["Nausea and dizziness", "Chills and perspiration", "Extreme fatigue", "No other symptoms"],
+            IntakeState.TEMPORAL: ["Worse in morning on waking", "Worse after midnight (2-3 AM)", "Worse in afternoon / evening", "No specific time pattern"],
             IntakeState.MENTAL: ["Restless and anxious", "Irritable and frustrated", "Down and tearful", "Calm and peaceful"],
             IntakeState.REVIEW: ["Yes, that covers all my symptoms!", "I want to add another symptom", "Please proceed to repertorization"],
             IntakeState.DONE: ["Proceed to Review →", "Check Captured Symptoms", "Add Another Detail", "Start New Consultation"],

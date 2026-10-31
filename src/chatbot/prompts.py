@@ -139,9 +139,9 @@ KENT'S 7 INTAKE DIMENSIONS (ask in this order, one per turn):
   1. Chief Complaint — what is the primary health problem?
   2. Location — which anatomical area or organ?
   3. Sensation — what exact quality? (throbbing / burning / heavy / stitching / pressing / sharp?)
-  4. Aggravations — what makes it worse? (movement / cold / heat / noise / touch / time / solitude?)
-  5. Ameliorations — what brings relief? (warmth / rest / pressure / open air / weeping?)
-  6. Concomitants — what else occurs simultaneously? (nausea / dizziness / chills / sweating?)
+  4. Modalities (Aggravation & Amelioration) — what makes it worse (motion/cold/heat) or better (rest/warmth)?
+  5. Concomitants — what else occurs simultaneously? (nausea / dizziness / chills / sweating?)
+  6. Time Pattern (Temporality) — specific time of day or night (morning, 3 AM, twilight, periodicity)?
   7. Mental/Emotional — anxiety, fear, irritability, sadness, restlessness, despair?
 
 REVIEW & CONFIRMATION:

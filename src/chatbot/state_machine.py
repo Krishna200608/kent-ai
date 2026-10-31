@@ -25,6 +25,7 @@ class IntakeState(str, Enum):
     SENSATION = "SENSATION"
     MODALITY = "MODALITY"
     CONCOMITANT = "CONCOMITANT"
+    TEMPORAL = "TEMPORAL"
     MENTAL = "MENTAL"
     REVIEW = "REVIEW"
     CLARIFICATION = "CLARIFICATION"
@@ -39,6 +40,7 @@ class ConversationStateMachine:
         IntakeState.SENSATION,
         IntakeState.MODALITY,
         IntakeState.CONCOMITANT,
+        IntakeState.TEMPORAL,
         IntakeState.MENTAL,
     ]
 
@@ -54,6 +56,7 @@ class ConversationStateMachine:
         self.max_turns = max_turns or cfg.get("max_turns", 15)
         self.turn_count = 0
         self.filled_slots: Set[str] = set()
+        self.visited_slots: Set[IntakeState] = set()
 
     def update_slots(self, extracted_slots: Dict[str, Any]) -> None:
         """Register newly identified clinical dimensions."""
@@ -84,6 +87,7 @@ class ConversationStateMachine:
             (IntakeState.SENSATION, "Sensation"),
             (IntakeState.MODALITY, "Modalities"),
             (IntakeState.CONCOMITANT, "Concomitants"),
+            (IntakeState.TEMPORAL, "Time Pattern"),
             (IntakeState.MENTAL, "Mental"),
             (IntakeState.REVIEW, "Review"),
             (IntakeState.DONE, "Ready"),
@@ -103,6 +107,8 @@ class ConversationStateMachine:
             )
         elif state == IntakeState.CONCOMITANT:
             return "concomitant" in self.filled_slots or "conc" in self.filled_slots
+        elif state == IntakeState.TEMPORAL:
+            return "temporal" in self.filled_slots or "temp" in self.filled_slots
         elif state == IntakeState.MENTAL:
             return "mental" in self.filled_slots or "ment" in self.filled_slots
         return False
@@ -110,7 +116,7 @@ class ConversationStateMachine:
     def _get_next_unfilled_slot(self) -> Optional[IntakeState]:
         """Find the next clinical dimension that has not yet been addressed."""
         for state in self.SLOT_ORDER:
-            if not self._is_slot_filled(state):
+            if not self._is_slot_filled(state) and state not in self.visited_slots:
                 return state
         return None
 
@@ -158,17 +164,9 @@ class ConversationStateMachine:
             self.current_state = next_slot if next_slot else IntakeState.REVIEW
 
         elif self.current_state in self.SLOT_ORDER:
-            # Check if we have met the required quota of dimensions
-            if len(self.filled_slots) >= self.min_dimensions_required and self.turn_count >= 5:
-                next_slot = self._get_next_unfilled_slot()
-                # If only 1 slot left or patient covered essentials, move to review
-                if not next_slot or len(self.filled_slots) >= 5:
-                    self.current_state = IntakeState.REVIEW
-                else:
-                    self.current_state = next_slot
-            else:
-                next_slot = self._get_next_unfilled_slot()
-                self.current_state = next_slot if next_slot else IntakeState.REVIEW
+            self.visited_slots.add(self.current_state)
+            next_slot = self._get_next_unfilled_slot()
+            self.current_state = next_slot if next_slot else IntakeState.REVIEW
 
         elif self.current_state == IntakeState.REVIEW:
             if self._is_confirmation(user_response):
@@ -190,6 +188,7 @@ class ConversationStateMachine:
             IntakeState.SENSATION: "Inquire about what the sensation feels like (e.g. throbbing, burning, dull ache, stitching, pressure).",
             IntakeState.MODALITY: "Ask what makes the symptom feel worse (motion, cold, heat, light, noise) or what brings comfort and relief.",
             IntakeState.CONCOMITANT: "Kindly check if any other symptoms or feelings happen at the same time (like nausea, dizziness, chills).",
+            IntakeState.TEMPORAL: "Gently ask about the time of day or night when the symptoms are most prominent or whether they follow a specific time pattern or periodicity (e.g. morning, midnight, 3 AM, periodic).",
             IntakeState.MENTAL: "Ask with compassion how this issue has been affecting their mood, energy, or stress levels.",
             IntakeState.REVIEW: "Warmly summarize the key symptoms they described and ask if this sounds accurate or if they'd like to add anything.",
             IntakeState.CLARIFICATION: "Thank the patient for clarifying and confirm the updated detail.",
