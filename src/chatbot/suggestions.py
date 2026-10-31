@@ -17,6 +17,14 @@ def clean_message_text(text: str) -> str:
     if not text:
         return ""
 
+    # Strip leading conversational metadata / preambles (e.g. "Here is my response:", "Response:", "Kent-AI:")
+    text = re.sub(
+        r"^(?:(?:here\s+(?:is|are)\s+(?:my|the|a|kent-ai's)?\s*response\s*:?)|(?:response\s*:)|(?:kent-ai\s*:)|(?:assistant\s*:))\s*",
+        "",
+        text.strip(),
+        flags=re.IGNORECASE,
+    )
+
     # 1. Remove SLOT_UPDATE and QUICK_REPLIES blocks anywhere in the text (bracketed and unbracketed)
     text = re.sub(r"\[?\s*SLOT_UPDATE\s*:\s*\{[^{}]*\}\s*\]?", "", text, flags=re.IGNORECASE | re.DOTALL)
     text = re.sub(r"\[?\s*QUICK_REPLIES\s*:\s*\[.*?\]\s*\]?", "", text, flags=re.IGNORECASE | re.DOTALL)
@@ -52,11 +60,12 @@ def clean_message_text(text: str) -> str:
     return text.strip()
 
 
-def parse_and_strip_quick_replies(text: str) -> Tuple[str, List[str]]:
+def parse_and_strip_quick_replies(text: str, intake_mode: str = "patient") -> Tuple[str, List[str]]:
     """Extract QUICK_REPLIES from LLaMA output (bracketed JSON or unbracketed list) and return clean text + options."""
     if not text:
         return "", []
 
+    is_practitioner = (intake_mode or "").lower() == "practitioner"
     quick_options: List[str] = []
     clean_part = text
 
@@ -91,12 +100,15 @@ def parse_and_strip_quick_replies(text: str) -> Tuple[str, List[str]]:
             if opt
         ]
 
-    # Strict validation: Quick replies must be patient statements, never doctor questions
-    valid_patient_replies: List[str] = []
+    # Strict validation: Quick replies must be valid statements/observations, never doctor questions
+    valid_replies: List[str] = []
     question_openers = (
         "how ", "what ", "why ", "when ", "where ", "can you ", "could you ",
         "is there ", "are there ", "do you ", "tell me ", "describe ", "would you ",
         "which ", "have you ", "should you ", "can we ", "could we "
+    )
+    forbidden_practitioner_openers = (
+        "makes me ", "i feel ", "i am ", "feel helpless", "affecting my"
     )
     for opt in quick_options:
         s_opt = opt.strip()
@@ -106,15 +118,17 @@ def parse_and_strip_quick_replies(text: str) -> Tuple[str, List[str]]:
             continue
         if s_opt.lower().startswith(question_openers):
             continue
+        if is_practitioner and any(f in s_opt.lower() for f in forbidden_practitioner_openers):
+            continue
         if len(s_opt.split()) > 8:
             continue
-        valid_patient_replies.append(s_opt)
+        valid_replies.append(s_opt)
 
-    if len(valid_patient_replies) < 2:
-        valid_patient_replies = []
+    if len(valid_replies) < 2:
+        valid_replies = []
 
     clean_text = clean_message_text(clean_part)
-    return clean_text, valid_patient_replies[:4]
+    return clean_text, valid_replies[:4]
 
 
 def parse_and_strip_slot_update(text: str) -> Tuple[str, Dict[str, List[str]]]:

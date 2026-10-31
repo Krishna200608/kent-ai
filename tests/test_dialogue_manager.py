@@ -403,6 +403,23 @@ def test_intake_mode_toggle_and_practitioner_features(mock_dialogue_manager):
     resp_loc = dm._mock_response_for_state()
     assert "Location recorded" in resp_loc
 
+    # 6. Turn prompt format uses practitioner framing
+    dm.mock_mode = False
+    turn_prompt = dm.prepare_turn("Bilateral knee joint pain with swelling")
+    assert "Practitioner clinical entry:" in turn_prompt
+    assert "Patient just said:" not in turn_prompt
+    dm.mock_mode = True
+
+    # 7. Preambles like "Here is my response:" are stripped
+    cleaned = dm.clean_message_text("Here is my response:\n\nJoint pain recorded.")
+    assert cleaned == "Joint pain recorded."
+
+    # 8. Patient emotional phrases are rejected from practitioner quick replies
+    raw_replies = "QUICK_REPLIES: [\"Knees and ankles\", \"Makes me feel helpless\", \"Stiffness on waking\"]"
+    _, parsed_chips = dm._parse_and_strip_quick_replies(raw_replies)
+    assert "Makes me feel helpless" not in parsed_chips
+    assert "Knees and ankles" in parsed_chips
+
 
 
 

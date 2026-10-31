@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from src.chatbot.prompts import (
     CHATBOT_PRACTITIONER_SYSTEM_PROMPT,
+    CHATBOT_PRACTITIONER_TURN_PROMPT,
     CHATBOT_SYSTEM_PROMPT,
     CHATBOT_TURN_PROMPT,
 )
@@ -354,7 +355,7 @@ class DialogueManager:
         return clean_message_text(text)
 
     def _parse_and_strip_quick_replies(self, text: str) -> Tuple[str, List[str]]:
-        return parse_and_strip_quick_replies(text)
+        return parse_and_strip_quick_replies(text, intake_mode=getattr(self, "intake_mode", "patient"))
 
     def _parse_and_strip_slot_update(self, text: str) -> Tuple[str, Dict[str, List[str]]]:
         return parse_and_strip_slot_update(text)
@@ -408,13 +409,18 @@ class DialogueManager:
                 slots_lines.append(f"  {k}: {', '.join(v)}")
         slots_summary = "\n".join(slots_lines) if slots_lines else "  None yet"
 
+        is_practitioner = getattr(self, "intake_mode", "patient") == "practitioner"
         hist_lines = []
         for turn in self.history[-4:]:
-            role_label = "Kent-AI" if turn["role"] == "assistant" else "Patient"
+            if turn["role"] == "assistant":
+                role_label = "Kent-AI"
+            else:
+                role_label = "Practitioner" if is_practitioner else "Patient"
             hist_lines.append(f"{role_label}: {turn['content']}")
         hist_text = "\n".join(hist_lines)
 
-        turn_prompt = CHATBOT_TURN_PROMPT.format(
+        template = CHATBOT_PRACTITIONER_TURN_PROMPT if is_practitioner else CHATBOT_TURN_PROMPT
+        turn_prompt = template.format(
             current_goal=current_goal,
             slots_summary=slots_summary,
             history=hist_text,
