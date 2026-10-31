@@ -972,7 +972,18 @@ def main():
             # 4 Columns of Cards
             c1, c2, c3, c4 = st.columns(4)
 
+            dim_placeholders: Dict[str, str] = {
+                "location": "e.g. forehead, temples, chest, stomach...",
+                "sensation": "e.g. throbbing, burning, sharp stabs, dull ache...",
+                "modality_agg": "e.g. motion, cold air, evening, after eating...",
+                "modality_amel": "e.g. warm wraps, resting, fresh open air...",
+                "temporal": "e.g. 3 AM, night, morning on waking, periodic...",
+                "concomitant": "e.g. nausea with headache, chills, vertigo...",
+                "mental": "e.g. irritable, anxious restlessness, depression...",
+            }
+
             def render_dim_editor(col, dim_key: str, dim_label: str, badge_cls: str, code: str):
+                placeholder_txt = dim_placeholders.get(dim_key, f"e.g. add {dim_label.lower()}...")
                 with col:
                     with st.container(border=True):
                         st.markdown(f"**{dim_label}** `({code})`")
@@ -990,8 +1001,8 @@ def main():
                                         save_case(current_case)
                                         st.rerun()
 
-                        # Add new item input
-                        new_item = st.text_input(f"+ Add {dim_label}:", key=f"inp_add_{dim_key}", placeholder="e.g. throbbing...")
+                        # Add new item input with dimension-tailored placeholder
+                        new_item = st.text_input(f"+ Add {dim_label}:", key=f"inp_add_{dim_key}", placeholder=placeholder_txt)
                         if st.button(f"+ Add to {code}", key=f"btn_add_{dim_key}", width="stretch"):
                             if new_item.strip():
                                 current_case.add_symptom(dim_key, new_item.strip())
