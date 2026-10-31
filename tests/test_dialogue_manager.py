@@ -366,5 +366,44 @@ def test_dialogue_manager_streaming_and_visible_only(mock_dialogue_manager):
     assert dm.history[-1]["role"] == "assistant"
 
 
+def test_intake_mode_toggle_and_practitioner_features(mock_dialogue_manager):
+    """Verify switching between Patient and Practitioner modes updates greeting, suggestions, and templates."""
+    dm = mock_dialogue_manager
+    dm.reset()
+
+    # 1. Start fresh greeting in default patient mode
+    greeting = dm.get_greeting()
+    assert "Hello, I am Kent-AI, your clinical homeopathic intake assistant" in greeting
+    assert "Headache / Forehead / Temples" in dm.current_suggestions
+
+    # 2. Toggle to practitioner mode on fresh session
+    dm.set_intake_mode("practitioner")
+    assert dm.intake_mode == "practitioner"
+    assert dm.history[0]["content"].startswith("Kent-AI Practitioner Mode active")
+    assert any("Migraine" in s or "Temporal" in s for s in dm.current_suggestions)
+
+    # 3. Toggle back to patient mode on fresh session
+    dm.set_intake_mode("patient")
+    assert dm.intake_mode == "patient"
+    assert dm.history[0]["content"].startswith("Hello, I am Kent-AI")
+    assert "Headache / Forehead / Temples" in dm.current_suggestions
+
+    # 4. Once a consultation turn occurs, toggling mode does NOT overwrite past messages
+    dm.history.append({"role": "user", "content": "Patient reports severe temple headache"})
+    dm.history.append({"role": "assistant", "content": "Location recorded."})
+    dm.set_intake_mode("practitioner")
+    assert dm.history[0]["content"].startswith("Hello, I am Kent-AI")
+    assert dm.history[1]["content"] == "Patient reports severe temple headache"
+
+    # 5. Offline mock responses in practitioner mode return direct clinical templates
+    resp_greet = dm._mock_response_for_state()
+    assert "Kent-AI Practitioner Mode active" in resp_greet
+
+    dm.state_machine.current_state = IntakeState.LOCATION
+    resp_loc = dm._mock_response_for_state()
+    assert "Location recorded" in resp_loc
+
+
+
 
 

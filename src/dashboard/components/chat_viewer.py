@@ -132,10 +132,11 @@ def format_chat_transcript(dm: DialogueManager) -> str:
     if not dm.history:
         lines.append("*(No conversation turns recorded yet.)*")
     else:
+        is_practitioner = getattr(dm, "intake_mode", "patient") == "practitioner"
         for idx, turn in enumerate(dm.history, 1):
             role = turn.get("role", "unknown")
             content = turn.get("content", "").strip()
-            speaker = "Kent-AI (Assistant)" if role == "assistant" else "Patient (User)"
+            speaker = "Kent-AI (Assistant)" if role == "assistant" else ("Practitioner (Clinician)" if is_practitioner else "Patient (User)")
             clean_content = _safe_clean_bot_text(content) if role == "assistant" else content
             lines.append(f"### Turn {idx}: [{speaker}]\n{clean_content}\n")
 
@@ -230,14 +231,22 @@ def render_chat_interface(dm: DialogueManager) -> None:
         """
 
     col_hdr_left, col_hdr_right = st.columns([5, 6])
+    is_practitioner = getattr(dm, "intake_mode", "patient") == "practitioner"
+    mode_badge_html = (
+        '<span class="badge" style="background: rgba(16, 185, 129, 0.16); border: 1px solid rgba(16, 185, 129, 0.45); color: #34D399; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px;">Practitioner-Led</span>'
+        if is_practitioner
+        else '<span class="badge" style="background: rgba(59, 130, 246, 0.16); border: 1px solid rgba(59, 130, 246, 0.45); color: #93C5FD; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px;">Patient Self-Intake</span>'
+    )
+
     with col_hdr_left:
         st.html(
             f"""
-            <div style="display: flex; align-items: center; gap: 8px; padding-top: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px; padding-top: 4px; flex-wrap: wrap;">
                 <span style="font-size: 14.5px; font-weight: 700; color: #F3F4F6; display: flex; align-items: center; gap: 6px;">
                     {get_icon('forum', size=18, color='#10B981')} Clinical Dialogue Console
                 </span>
                 <span class="step-counter-badge">{get_current_step_label(dm)}</span>
+                {mode_badge_html}
             </div>
             """
         )
@@ -254,7 +263,17 @@ def render_chat_interface(dm: DialogueManager) -> None:
                 help="Patient self-intake (conversational) vs Practitioner-led (rapid clinical entry)",
             )
             if selected_style:
-                dm.intake_mode = selected_style.lower()
+                target_mode = selected_style.lower()
+                if target_mode != getattr(dm, "intake_mode", "patient"):
+                    if hasattr(dm, "set_intake_mode"):
+                        dm.set_intake_mode(target_mode)
+                    else:
+                        dm.intake_mode = target_mode
+                    st.toast(
+                        f"Switched to {selected_style} Intake Mode",
+                        icon="🩺" if target_mode == "practitioner" else "👤",
+                    )
+                    safe_rerun_fragment()
         with c_copy:
             with st.popover("Copy Chat", width="stretch", help="Copy complete conversation history and extracted symptom dimensions for debugging/analysis"):
                 st.markdown("##### Consultation Transcript")
@@ -293,15 +312,25 @@ def render_chat_interface(dm: DialogueManager) -> None:
         scroll_area = st.container(height=450)
         with scroll_area:
             if not dm.history:
+                empty_title = (
+                    "Kent-AI Clinical Workstation (Practitioner-Led)"
+                    if is_practitioner
+                    else "Kent-AI Clinical Companion Active"
+                )
+                empty_desc = (
+                    "Enter shorthand clinical notes, modalities, or direct patient observations. Kent-AI continuously extracts 7-dimension totality and maps rubrics in real time."
+                    if is_practitioner
+                    else "Speak naturally about your physical symptoms, modalities, triggers, and emotional state. Kent-AI guides dynamic clinical intake to discover matching repertory rubrics."
+                )
                 st.html(
                     f"""
                     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; color: #9CA3AF; padding: 36px 20px; text-align: center;">
                         <div style="width: 52px; height: 52px; border-radius: 14px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: center; margin-bottom: 12px; box-shadow: 0 4px 16px rgba(16, 185, 129, 0.15);">
                             {get_icon('sparkles', size=26, color='#10B981')}
                         </div>
-                        <div style="font-weight: 700; font-size: 16px; color: #F9FAFB; letter-spacing: -0.01em;">Kent-AI Clinical Companion Active</div>
+                        <div style="font-weight: 700; font-size: 16px; color: #F9FAFB; letter-spacing: -0.01em;">{empty_title}</div>
                         <div style="font-size: 13.5px; color: #9CA3AF; max-width: 460px; margin-top: 6px; line-height: 1.55;">
-                            Speak naturally about your physical symptoms, modalities, triggers, and emotional state. Kent-AI guides dynamic clinical intake to discover matching repertory rubrics.
+                            {empty_desc}
                         </div>
                     </div>
                     """
@@ -320,10 +349,11 @@ def render_chat_interface(dm: DialogueManager) -> None:
                             )
                             st.markdown(c_text)
                     else:
+                        speaker_label = "Practitioner" if is_practitioner else "You"
                         with st.chat_message("user", avatar=USER_AVATAR):
                             st.html(
                                 f"<div style='font-size: 11.5px; font-weight: 700; color: #94A3B8; margin-bottom: 4px; letter-spacing: 0.02em;'>"
-                                f"You"
+                                f"{speaker_label}"
                                 f"</div>"
                             )
                             st.markdown(c_text)
@@ -331,8 +361,13 @@ def render_chat_interface(dm: DialogueManager) -> None:
         # Suggested responses docked right above input inside chat panel
         selected_chip = render_quick_reply_chips(dm, in_container=False)
 
-        # Pinned chat input inside the chat panel
-        user_prompt = st.chat_input("Tell Kent-AI how you are feeling (e.g. 'I feel anxious and restless in the evening, worse when alone')...")
+        # Pinned chat input inside the chat panel with dynamic role placeholder
+        input_placeholder = (
+            "Enter clinical findings, patient quotes, or observations (e.g. 'Rt temple pain, worse 3pm, anxious')..."
+            if is_practitioner
+            else "Tell Kent-AI how you are feeling (e.g. 'I feel anxious and restless in the evening, worse when alone')..."
+        )
+        user_prompt = st.chat_input(input_placeholder)
 
     input_to_process = selected_chip or user_prompt
     if input_to_process:

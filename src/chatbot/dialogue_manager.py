@@ -62,6 +62,18 @@ __all__ = [
 ]
 
 
+PATIENT_GREETING = (
+    "Hello, I am Kent-AI, your clinical homeopathic intake assistant. "
+    "I'm here to understand what is troubling you today. "
+    "Please describe what primary symptoms or discomfort brought you in."
+)
+
+PRACTITIONER_GREETING = (
+    "Kent-AI Practitioner Mode active. Ready for clinical intake — "
+    "enter patient chief complaint, observations, or presenting symptoms."
+)
+
+
 class DialogueManager:
     """Orchestrates intake conversation turns, slot filling, and termination.
 
@@ -147,15 +159,25 @@ class DialogueManager:
 
     def get_greeting(self) -> str:
         """Return opening message and add to history if starting fresh."""
-        greeting = (
-            "Hello, I am Kent-AI, your clinical homeopathic intake assistant. "
-            "I'm here to understand what is troubling you today. "
-            "Please describe what primary symptoms or discomfort brought you in."
-        )
+        is_practitioner = getattr(self, "intake_mode", "patient") == "practitioner"
+        greeting = PRACTITIONER_GREETING if is_practitioner else PATIENT_GREETING
         if not self.history:
             self.history.append({"role": "assistant", "content": greeting})
             self.current_suggestions = self.generate_dynamic_suggestions(greeting)
         return greeting
+
+    def set_intake_mode(self, mode: str) -> None:
+        """Update intake mode ('patient' or 'practitioner') and update opening message if fresh."""
+        new_mode = (mode or "patient").lower().strip()
+        old_mode = getattr(self, "intake_mode", "patient")
+        self.intake_mode = new_mode
+
+        # If fresh session (only the initial greeting is present), update the greeting text
+        if len(self.history) == 1 and self.history[0]["role"] == "assistant":
+            if self.history[0]["content"] in (PATIENT_GREETING, PRACTITIONER_GREETING) or old_mode != new_mode:
+                new_greeting = PRACTITIONER_GREETING if new_mode == "practitioner" else PATIENT_GREETING
+                self.history[0]["content"] = new_greeting
+                self.current_suggestions = self.generate_dynamic_suggestions(new_greeting)
 
     # Delegated Slot Extraction Helpers
     def _extract_slots_heuristic(self, text: str) -> Dict[str, List[str]]:
@@ -243,6 +265,37 @@ class DialogueManager:
     def _mock_response_for_state(self) -> str:
         """Deterministic, clinically focused offline fallback responses per state."""
         state = self.state_machine.current_state
+        is_practitioner = getattr(self, "intake_mode", "patient") == "practitioner"
+
+        if is_practitioner:
+            if state == IntakeState.REVIEW:
+                summary_lines = []
+                for k, v in self.extracted_slots.items():
+                    if v:
+                        dim_title = k.replace("_", " ").title()
+                        summary_lines.append(f"• **{dim_title}**: {', '.join(v)}")
+                summary_block = "\n".join(summary_lines) if summary_lines else "• Primary complaint noted."
+                return (
+                    "Clinical Totality Review:\n\n"
+                    f"{summary_block}\n\n"
+                    "Verify recorded totality or enter additional clinical findings."
+                )
+            if state == IntakeState.CLARIFICATION:
+                return "Enter the specific clinical finding or modality to add."
+            practitioner_templates = {
+                IntakeState.GREETING: PRACTITIONER_GREETING,
+                IntakeState.CHIEF_COMPLAINT: "Chief complaint noted. Specify primary anatomical location or affected organ system.",
+                IntakeState.LOCATION: "Location recorded. Describe sensation quality (e.g., throbbing, stitching, burning, dull heaviness).",
+                IntakeState.SENSATION: "Sensation recorded. Specify modalities: what aggravates (MOD_AGG) or ameliorates (MOD_AMEL) this condition?",
+                IntakeState.MODALITY: "Modalities recorded. Are there any concomitant symptoms occurring simultaneously (e.g., nausea, vertigo, chills)?",
+                IntakeState.CONCOMITANT: "Concomitants recorded. Note temporal periodicity or specific diurnal aggravation hours (e.g., 3 AM, morning, evening).",
+                IntakeState.TEMPORAL: "Temporal pattern recorded. Note mental/emotional generals (e.g., anxiety, restlessness, irritability, depression).",
+                IntakeState.MENTAL: "Mental generals recorded. Clinical intake totality complete.",
+                IntakeState.DONE: (
+                    "Clinical totality recorded. Click **Proceed to Review →** above to inspect 7-dimension cards and compute repertorization ranking."
+                ),
+            }
+            return practitioner_templates.get(state, "Enter additional clinical observation.")
 
         if state == IntakeState.REVIEW:
             summary_lines = []
@@ -312,6 +365,7 @@ class DialogueManager:
             bot_message,
             extracted_slots=self.extracted_slots,
             current_state=self.state_machine.current_state,
+            intake_mode=getattr(self, "intake_mode", "patient"),
         )
 
     def get_current_suggestions(self) -> List[str]:

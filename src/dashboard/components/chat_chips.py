@@ -21,14 +21,18 @@ def render_quick_reply_chips(dm: DialogueManager, in_container: bool = False) ->
     if "None of these / other" not in display_chips and len(display_chips) < 4:
         display_chips.append("None of these / other")
 
+    is_practitioner = getattr(dm, "intake_mode", "patient") == "practitioner"
+    chips_title = "Clinical Shorthand Prompts:" if is_practitioner else "Suggested Responses:"
+    chips_caption = "Click to insert clinical finding" if is_practitioner else "Click to reply instantly"
+
     title_margin = "8px 0 4px 2px" if in_container else "10px 0 4px 2px"
     st.markdown(
         f"""
         <div style="display: flex; justify-content: space-between; align-items: center; margin: {title_margin};">
             <span style="font-size: 12.5px; font-weight: 600; color: #10B981; display: flex; align-items: center; gap: 6px;">
-                {get_icon('sparkles', size=15, color='#10B981')} Suggested Responses:
+                {get_icon('sparkles', size=15, color='#10B981')} {chips_title}
             </span>
-            <span style="font-size: 11px; color: #9CA3AF;">Click to reply instantly</span>
+            <span style="font-size: 11px; color: #9CA3AF;">{chips_caption}</span>
         </div>
         """,
         unsafe_allow_html=True,

@@ -169,13 +169,22 @@ def generate_dynamic_suggestions(
     bot_message: str,
     extracted_slots: Optional[Dict[str, List[str]]] = None,
     current_state: Optional[IntakeState] = None,
+    intake_mode: str = "patient",
 ) -> List[str]:
-    """Generate 3-4 contextual first-person instant-reply suggestions for the patient."""
+    """Generate 3-4 contextual first-person or clinical instant-reply suggestions."""
     text = (bot_message or "").lower()
     slots = extracted_slots or {}
+    is_practitioner = (intake_mode or "").lower() == "practitioner" or "practitioner" in text
 
     # Opening / Chief Complaint (Kentian anatomical location first)
-    if not text or any(p in text for p in ["troubling you", "primary symptoms", "bring you in", "bothers you", "what brings", "how are you"]):
+    if not text or any(p in text for p in ["troubling you", "primary symptoms", "bring you in", "bothers you", "what brings", "how are you", "practitioner mode", "chief complaint"]):
+        if is_practitioner:
+            return [
+                "Headache / Migraine (Frontal/Temporal)",
+                "Abdominal / Gastric distress",
+                "Chest / Respiratory tightness",
+                "Mental / Restless anxiety",
+            ]
         return [
             "Headache / Forehead / Temples",
             "Chest pain / Respiration",
@@ -184,7 +193,14 @@ def generate_dynamic_suggestions(
         ]
 
     # Concomitants
-    if any(w in text for w in ["alongside", "other symptom", "at the same time", "also notice", "nausea, dizziness"]):
+    if any(w in text for w in ["alongside", "other symptom", "at the same time", "also notice", "nausea, dizziness", "concomitant"]):
+        if is_practitioner:
+            return [
+                "Concomitant nausea & vertigo",
+                "Chills with cold perspiration",
+                "Extreme prostration & trembling",
+                "No physical concomitants observed",
+            ]
         return [
             "Accompanied by nausea",
             "Dizziness and lightheadedness",
@@ -212,6 +228,13 @@ def generate_dynamic_suggestions(
 
     # Sensation
     if any(w in text for w in ["sensation", "feel like", "kind of pain", "type of", "throbbing", "burning", "stabbing", "describe the", "how does it"]):
+        if is_practitioner:
+            return [
+                "Throbbing / Pulsating rhythm",
+                "Sharp / Stabbing pain",
+                "Burning / Acrid heat",
+                "Dull ache / Heavy pressure",
+            ]
         return [
             "Sharp, electric stabs",
             "Dull, heavy pressure",
@@ -220,7 +243,14 @@ def generate_dynamic_suggestions(
         ]
 
     # Modality
-    if any(w in text for w in ["makes it worse", "make it worse", "aggravat", "flare", "trigger", "worse from", "bring relief", "brings relief", "comfort", "soothe", "better from", "relieved by"]):
+    if any(w in text for w in ["makes it worse", "make it worse", "aggravat", "flare", "trigger", "worse from", "bring relief", "brings relief", "comfort", "soothe", "better from", "relieved by", "modality", "modalities"]):
+        if is_practitioner:
+            return [
+                "Worse: Motion & physical exertion",
+                "Worse: Cold air & draft",
+                "Better: Warmth & hot applications",
+                "Better: Absolute rest in dark",
+            ]
         return [
             "Worse in heat & bright sun",
             "Worse from motion or walking",
@@ -229,7 +259,14 @@ def generate_dynamic_suggestions(
         ]
 
     # Temporal
-    if any(w in text for w in ["what time", "time of day", "time pattern", "when does", "morning or night", "day or night", "waking up", "periodicity", "hour", "clock", "midnight"]):
+    if any(w in text for w in ["what time", "time of day", "time pattern", "when does", "morning or night", "day or night", "waking up", "periodicity", "hour", "clock", "midnight", "temporal"]):
+        if is_practitioner:
+            return [
+                "Aggravation: Morning on waking",
+                "Aggravation: 2-3 AM (Night)",
+                "Aggravation: 3-5 PM (Afternoon)",
+                "No distinct temporal pattern",
+            ]
         return [
             "Worse in morning on waking",
             "Worse after midnight (2-3 AM)",
@@ -238,7 +275,14 @@ def generate_dynamic_suggestions(
         ]
 
     # Mental/Emotional
-    if any(w in text for w in ["mood", "stress", "emotion", "feeling mentally", "anxious", "mind", "irritab", "peace of mind", "emotional"]):
+    if any(w in text for w in ["mood", "stress", "emotion", "feeling mentally", "anxious", "mind", "irritab", "peace of mind", "emotional", "mental"]):
+        if is_practitioner:
+            return [
+                "Restless, anxious, pacing",
+                "Irritable, intolerant of noise",
+                "Depressed, silent, tearful",
+                "Apathetic and indifferent",
+            ]
         return [
             "Restless, anxious, and uneasy",
             "Irritable and easily angered",
@@ -248,6 +292,13 @@ def generate_dynamic_suggestions(
 
     # Review / Confirmation / Clarification / Readiness
     if any(w in text for w in ["accurate", "summarize", "anything else", "sound right", "add anything", "confirm", "covers it", "got it right", "proceed", "repertoriz", "ready"]):
+        if is_practitioner:
+            return [
+                "Proceed to Review →",
+                "Add missing modality",
+                "Add mental general",
+                "Totality complete",
+            ]
         return [
             "Yes, that covers all my symptoms!",
             "Please proceed to repertorization",
