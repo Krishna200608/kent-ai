@@ -492,6 +492,7 @@ pytest tests/ -v
 | 2026-10-31 | 14 / Perf | Antigravity | Performance & Test Optimization: added AppTest smoke tests (tests/test_app_smoke.py), optimized SQLite indexes, instant rescore_report without vector re-search, deferred PDF creation, safe fragment reruns, resilient imports, 108/108 passing tests (37c7450, 93960e4). |
 | 2026-10-31 | 15 / Viewport | Antigravity | Responsive Full-Screen & Scroll Restoration: fixed sidebar collapse void by scoping min-width: 280px to aria-expanded="true"; restored smooth page scrolling (overflow-y: auto) and removed deprecated iframe injections (d2f3ccd, 57b5673). |
 | 2026-10-31 | 16 / Stream | Antigravity | Shimmer Reflection & Quick Replies Parser: mounted immediate skeleton thinking bubble during preparation/generation; hardened visible_only and _parse_and_strip_quick_replies for unbracketed QUICK_REPLIES syntax; added importlib.reload safeguards in app.py; 108/108 passing tests (12b0e81, 4078612). |
+| 2026-10-31 | 17 / PDF | Antigravity | Publication-Grade PDF Clinical Report Redesign: modernized src/dashboard/pdf_exporter.py with executive midnight/emerald hero header, Primary Clinical Simillimum Feature Box (Rank #1 highlight, Kent Grade breakdown G3/G2/G1, lead margin over #2), OCR artifact cleaner (_clean_rubric_path), calibrated 540pt table widths with repeatRows=1, and two-pass NumberedCanvas with running clinical headers and dynamic 'Page X of Y' footers (a86b27f). |
 
 ---
 
