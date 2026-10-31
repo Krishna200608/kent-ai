@@ -103,7 +103,7 @@ def render_slot_badges_html(slots: Dict[str, List[str]], dm: Optional[DialogueMa
             segments_html.append(
                 f'<div class="hud-segment hud-segment-unfilled" title="{title_text}" data-code="{dim.code}">'
                 f'<div class="hud-dim-title">{esc(dim.label)}{rec_tag}</div>'
-                f'<div class="hud-dim-sub" style="color: #6B7280;">Not recorded yet</div>'
+                f'<div class="hud-dim-sub" style="color: #9CA3AF;">Not recorded yet</div>'
                 f'</div>'
             )
 

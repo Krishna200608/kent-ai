@@ -105,8 +105,8 @@ def render_classical_totality_matrix(
     # Build Classical Totality Table
     # Sticky Table Header: Remedy Abbreviations as Columns
     th_cells = [
-        '<th style="min-width: 280px; text-align: left; position: sticky; left: 0; background: #111827; z-index: 2;">Symptom Rubric</th>',
-        '<th style="width: 70px; text-align: center;">Weight</th>',
+        '<th scope="col" style="min-width: 280px; text-align: left; position: sticky; left: 0; background: #111827; z-index: 2;">Symptom Rubric</th>',
+        '<th scope="col" style="width: 70px; text-align: center;">Weight</th>',
     ]
 
     for rem in remedies:
@@ -115,9 +115,9 @@ def render_classical_totality_matrix(
         score = rem.get("score", 0.0)
         rank = rem.get("rank", 1)
         th_cells.append(
-            f'<th style="min-width: 58px; text-align: center;" title="#{rank} {esc(name)}&#10;Score: {score:.2f}">'
+            f'<th scope="col" style="min-width: 58px; text-align: center;" title="#{rank} {esc(name)}&#10;Score: {score:.2f}">'
             f'<div style="font-size: 13px; font-weight: 800; color: #10B981;">{esc(abbr)}</div>'
-            f'<div style="font-size: 9.5px; color: #9CA3AF; font-weight: normal;">#{rank}</div>'
+            f'<div style="font-size: 11px; color: #9CA3AF; font-weight: normal;">#{rank}</div>'
             f'</th>'
         )
 
@@ -136,25 +136,25 @@ def render_classical_totality_matrix(
         if len(parts) > 1:
             crumb_prefix = " &rsaquo; ".join(esc(p) for p in parts[:-1])
             crumb_leaf = esc(parts[-1])
-            breadcrumb_html = f'<div style="font-size: 10px; color: #9CA3AF;">{crumb_prefix}</div><div style="font-size: 12px; font-weight: 700; color: #F9FAFB;">{crumb_leaf}</div>'
+            breadcrumb_html = f'<div style="font-size: 11px; color: #9CA3AF;">{crumb_prefix}</div><div style="font-size: 12px; font-weight: 700; color: #F9FAFB;">{crumb_leaf}</div>'
         else:
             breadcrumb_html = f'<div style="font-size: 12px; font-weight: 700; color: #F9FAFB;">{esc(full_path)}</div>'
 
         # Badges
         status_badges = []
         if r_id in elim_set:
-            status_badges.append('<span class="status-pill" style="color:#EF4444; border-color:#EF4444; font-size:9.5px;">ELIM</span>')
+            status_badges.append('<span class="status-pill" style="color:#EF4444; border-color:#EF4444; font-size:11px;">ELIM</span>')
         if r_id in muted_set:
-            status_badges.append('<span class="status-pill" style="color:#6B7280; font-size:9.5px;">MUTED</span>')
+            status_badges.append('<span class="status-pill" style="color:#9CA3AF; font-size:11px;">MUTED</span>')
         badge_str = " ".join(status_badges)
 
         row_tds = [
-            f'<td style="position: sticky; left: 0; background: #111827; z-index: 1;">'
+            f'<th scope="row" style="position: sticky; left: 0; background: #111827; z-index: 1; font-weight: normal; text-align: left;">'
             f'<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">'
             f'<div>{breadcrumb_html}</div>'
             f'<div>{badge_str}</div>'
             f'</div>'
-            f'</td>',
+            f'</th>',
             f'<td style="text-align: center; font-size: 11px; color: #34D399;">{sim:.2f}</td>',
         ]
 
@@ -170,7 +170,7 @@ def render_classical_totality_matrix(
             elif grade == 1:
                 row_tds.append('<td style="text-align: center;"><span class="grade-1" title="Grade 1 (Clinical)">1</span></td>')
             else:
-                row_tds.append('<td style="text-align: center; color: #374151;">&middot;</td>')
+                row_tds.append('<td style="text-align: center; color: #9CA3AF;">&middot;</td>')
 
         row_opacity = "opacity: 0.45;" if r_id in muted_set else ""
         tbody_rows.append(f'<tr style="{row_opacity}">{"".join(row_tds)}</tr>')
@@ -191,7 +191,7 @@ def render_classical_totality_matrix(
 
     tfoot_html = f"""
     <tfoot>
-        <tr style="background: #0F172A; border-top: 2px solid #374151;">{"".join(score_tds)}</tr>
+        <tr style="background: #0F172A; border-top: 2px solid rgba(255, 255, 255, 0.12);">{"".join(score_tds)}</tr>
         <tr style="background: #0F172A;">{"".join(count_tds)}</tr>
     </tfoot>
     """
@@ -199,6 +199,7 @@ def render_classical_totality_matrix(
     table_html = f"""
     <div style="overflow-x: auto; margin-top: 10px; margin-bottom: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
         <table class="repertory-grid" style="width: 100%; border-collapse: collapse;">
+            <caption class="sr-only">Classical Repertorization Totality Matrix</caption>
             <thead>
                 <tr>{"".join(th_cells)}</tr>
             </thead>
@@ -214,9 +215,18 @@ def render_classical_totality_matrix(
             <span class="grade-3">3</span> Bold Keynote &nbsp;|&nbsp;
             <span class="grade-2">2</span> Italic Characteristic &nbsp;|&nbsp;
             <span class="grade-1">1</span> Plain Verified &nbsp;|&nbsp;
-            <span style="color:#6B7280;">&middot;</span> Unlisted
+            <span style="color:#9CA3AF;">&middot;</span> Unlisted
         </div>
         <div style="font-style: italic;">Hover remedy abbreviations for full Latin names.</div>
     </div>
     """
     st.html(table_html)
+
+    with st.expander("Remedy Catalog Reference (Full Latin Names & Abbreviations)", expanded=False):
+        c_rem_cols = st.columns(4)
+        for i_rem, rem in enumerate(remedies):
+            with c_rem_cols[i_rem % 4]:
+                r_abbr = rem.get("abbreviation", "")
+                r_full = rem.get("full_name", r_abbr)
+                r_sc = rem.get("score", 0.0)
+                st.markdown(f"**{esc(r_abbr)}** &mdash; {esc(r_full)} (`{r_sc:.2f}`)")

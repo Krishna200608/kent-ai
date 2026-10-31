@@ -72,10 +72,10 @@ logger = logging.getLogger("dashboard")
 
 # Canonical Inference Engine Options for Clinician Workspace
 ENGINE_OPTIONS = [
-    "⚡ BioLinkBERT Fast Mode (~18ms)",
-    "🎯 PubMedBERT (Top Rubric Alignment)",
-    "🛡️ Multi-Model Ensemble (4 Encoders, Majority Voting)",
-    "🔬 Two-Stage Hybrid (Ensemble Mining + LLaMA 3 Arbitration)",
+    "BioLinkBERT Fast Mode (~18ms)",
+    "PubMedBERT (Top Rubric Alignment)",
+    "Multi-Model Ensemble (4 Encoders, Majority Voting)",
+    "Two-Stage Hybrid (Ensemble Mining + LLaMA 3 Arbitration)",
 ]
 
 # Set wide page layout
@@ -93,7 +93,7 @@ def get_db() -> KentDB:
 
 
 @st.cache_resource
-def get_pipeline(engine_name: str = "⚡ BioLinkBERT Fast Mode (~18ms)"):
+def get_pipeline(engine_name: str = "BioLinkBERT Fast Mode (~18ms)"):
     """Cache dense vector store, embedder, and pipeline orchestrator for selected engine."""
     embedder = RubricEmbedder(mock_mode=False)
     vector_store = RubricVectorStore(embedder=embedder)

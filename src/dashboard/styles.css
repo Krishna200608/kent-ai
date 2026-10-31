@@ -1,9 +1,56 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+:root {
+    --accent: #10B981;
+    --accent-hover: #059669;
+    --on-accent: #FFFFFF;
+    --text-1: #F9FAFB;
+    --text-2: #D1D5DB;
+    --text-3: #9CA3AF;
+    --surface-0: #0B0F17;
+    --surface-1: #111827;
+    --surface-2: #1F2937;
+    --border: rgba(255, 255, 255, 0.08);
+    --focus: #38BDF8;
+}
+
+/* Accessible focus ring for keyboard navigation (WCAG 2.1 AA) */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible,
+[role="tab"]:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid var(--focus) !important;
+    outline-offset: 2px !important;
+}
+
+/* Reduced motion preference for clinical accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Screen-reader only utility */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
 
 html, body, [class*="css"], .stApp {
-    font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
     background-color: #0A0F1D !important;
-    color: #F9FAFB !important;
+    color: var(--text-1) !important;
     font-size: 14px;
 }
 
@@ -313,7 +360,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.st-key-report_card):hover {
 .stage-step-todo {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    color: #6B7280;
+    color: var(--text-3);
 }
 
 .stage-sep {
@@ -1022,7 +1069,7 @@ footer {
 
 .rubric-dev-id {
     font-size: 11px;
-    color: #6B7280;
+    color: var(--text-3);
     font-family: monospace;
     margin-left: 6px;
     padding: 1px 4px;
@@ -1042,7 +1089,7 @@ button[disabled],
     opacity: 0.35 !important;
     cursor: not-allowed !important;
     background: rgba(255, 255, 255, 0.04) !important;
-    color: #6B7280 !important;
+    color: var(--text-3) !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
     box-shadow: none !important;
     transform: none !important;
@@ -1211,7 +1258,7 @@ button:disabled:hover,
 }
 
 .stepper-arrow {
-    color: #6B7280;
+    color: var(--text-3);
     font-size: 12px;
 }
 
