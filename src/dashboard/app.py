@@ -784,6 +784,7 @@ def render_bedside_dialogue_panel(dm: DialogueManager, current_case: ClinicalCas
 
 
 def main():
+    # Inject Google Stitch design system and full-screen responsive layout
     inject_custom_css()
     initialize_session()
     render_sidebar()
