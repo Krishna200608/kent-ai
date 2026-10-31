@@ -120,7 +120,6 @@ def initialize_session():
     if "current_case" not in st.session_state:
         new_cid = generate_case_id()
         fresh_case = ClinicalCase(case_id=new_cid)
-        save_case(fresh_case)
         st.session_state.current_case = fresh_case
 
     case: ClinicalCase = st.session_state.current_case

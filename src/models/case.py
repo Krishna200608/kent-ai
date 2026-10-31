@@ -106,6 +106,15 @@ class ClinicalCase:
         """A case is eligible for repertorization if at least 1 dimension is captured."""
         return self.filled_dimensions_count >= 1
 
+    @property
+    def is_blank(self) -> bool:
+        """True when no dimensions are filled, no chief complaint, no transcript, and patient_name is 'Anonymous Patient'."""
+        has_dims = any(bool(v) for v in self.dimensions.values())
+        has_complaint = bool(self.chief_complaint and self.chief_complaint.strip())
+        has_transcript = bool(self.transcript and self.transcript.strip())
+        is_default_name = (self.patient_name or "").strip() == "Anonymous Patient"
+        return not has_dims and not has_complaint and not has_transcript and is_default_name
+
     def add_symptom(self, dimension: str, text: str) -> None:
         """Add a symptom to a dimension, avoiding case-insensitive duplicates."""
         dim_key = dimension.lower().strip()

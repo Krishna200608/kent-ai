@@ -4,16 +4,18 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import sqlite3
 import pytest
 
 from src.models.case import ClinicalCase
 from src.data.case_store import (
-    generate_case_id,
-    init_case_db,
-    save_case,
-    get_case,
-    list_cases,
     delete_case,
+    generate_case_id,
+    get_case,
+    init_case_db,
+    list_cases,
+    purge_blank_cases,
+    save_case,
 )
 from src.dashboard.pdf_exporter import generate_case_pdf
 from src.pipeline.orchestrator import PipelineOrchestrator, PatientReport
@@ -203,3 +205,95 @@ def test_repertorize_case_mock():
     assert "location" in report.dimensions
     assert len(report.matched_rubrics) > 0
     assert len(report.ranked_remedies) > 0
+
+
+def test_case_is_blank_and_save_case_skips_blank(tmp_path):
+    """Verify is_blank accurately detects empty cases and save_case returns without writing."""
+    db_path = tmp_path / "blank_test.sqlite"
+    init_case_db(db_path)
+
+    blank_case = ClinicalCase(case_id="CASE-BLANK-001")
+    assert blank_case.is_blank is True
+
+    # save_case should not write blank case
+    save_case(blank_case, db_path=db_path)
+    assert get_case("CASE-BLANK-001", db_path=db_path) is None
+    assert len(list_cases(db_path=db_path)) == 0
+
+    # Non-blank: has symptom
+    case_with_sym = ClinicalCase(case_id="CASE-SYM-001")
+    case_with_sym.add_symptom("location", "head")
+    assert case_with_sym.is_blank is False
+    save_case(case_with_sym, db_path=db_path)
+    assert get_case("CASE-SYM-001", db_path=db_path) is not None
+
+    # Non-blank: has chief complaint
+    case_with_cc = ClinicalCase(case_id="CASE-CC-001", chief_complaint="Throbbing migraine")
+    assert case_with_cc.is_blank is False
+    save_case(case_with_cc, db_path=db_path)
+    assert get_case("CASE-CC-001", db_path=db_path) is not None
+
+    # Non-blank: patient name changed
+    case_with_name = ClinicalCase(case_id="CASE-NAME-001", patient_name="John Doe")
+    assert case_with_name.is_blank is False
+    save_case(case_with_name, db_path=db_path)
+    assert get_case("CASE-NAME-001", db_path=db_path) is not None
+
+
+def test_generate_case_id_delete_then_create_no_collision(tmp_path):
+    """Verify generate_case_id uses MAX suffix so deleting an earlier case never collides."""
+    db_path = tmp_path / "id_test.sqlite"
+    init_case_db(db_path)
+
+    import datetime
+    year = datetime.date.today().year
+
+    # Create cases 1, 2, 3
+    c1 = ClinicalCase(case_id=f"CASE-{year}-001", chief_complaint="Case 1")
+    c2 = ClinicalCase(case_id=f"CASE-{year}-002", chief_complaint="Case 2")
+    c3 = ClinicalCase(case_id=f"CASE-{year}-003", chief_complaint="Case 3")
+    save_case(c1, db_path=db_path)
+    save_case(c2, db_path=db_path)
+    save_case(c3, db_path=db_path)
+
+    # Delete case #2
+    delete_case(f"CASE-{year}-002", db_path=db_path)
+    assert get_case(f"CASE-{year}-002", db_path=db_path) is None
+
+    # Next generated ID must be 004, NOT 003 (which would collide/overwrite case 3)
+    next_id = generate_case_id(db_path=db_path)
+    assert next_id == f"CASE-{year}-004"
+
+
+def test_purge_blank_cases(tmp_path):
+    """Verify purge_blank_cases removes cases with 0 captured dimensions and empty chief complaint."""
+    db_path = tmp_path / "purge_test.sqlite"
+    init_case_db(db_path)
+
+    # Force save a blank case directly by bypassing is_blank check
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            """
+            INSERT INTO clinical_cases (
+                case_id, patient_name, chief_complaint, status, created_at, updated_at,
+                dimensions_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            ("CASE-DRAFT-001", "Anonymous Patient", "", "intake", "2026-01-01", "2026-01-01", "{}"),
+        )
+        conn.commit()
+
+    # Save an active case with symptoms
+    active_case = ClinicalCase(case_id="CASE-ACTIVE-001", patient_name="Jane Active")
+    active_case.add_symptom("mental", "anxiety")
+    save_case(active_case, db_path=db_path)
+
+    assert len(list_cases(db_path=db_path)) == 2
+
+    # Purge
+    deleted_count = purge_blank_cases(db_path=db_path)
+    assert deleted_count == 1
+
+    remaining = list_cases(db_path=db_path)
+    assert len(remaining) == 1
+    assert remaining[0]["case_id"] == "CASE-ACTIVE-001"

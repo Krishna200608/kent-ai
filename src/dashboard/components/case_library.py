@@ -9,7 +9,14 @@ import streamlit as st
 
 from src.dashboard.components.icons import get_icon
 from src.dashboard.pdf_exporter import generate_case_pdf
-from src.data.case_store import delete_case, generate_case_id, get_case, list_cases, save_case
+from src.data.case_store import (
+    delete_case,
+    generate_case_id,
+    get_case,
+    list_cases,
+    purge_blank_cases,
+    save_case,
+)
 from src.models.case import ClinicalCase
 
 
@@ -29,7 +36,17 @@ def render_case_library(current_case: ClinicalCase) -> None:
         """
     )
 
-    col_search, col_new = st.columns([4, 1.2], vertical_alignment="bottom")
+    all_cases = list_cases(limit=100)
+    blank_count = sum(
+        1 for c in all_cases
+        if c.get("dimensions_captured", 0) == 0 and not (c.get("chief_complaint") or "").strip()
+    )
+
+    if blank_count > 0:
+        col_search, col_clean, col_new = st.columns([3, 1.4, 1.2], vertical_alignment="bottom")
+    else:
+        col_search, col_new = st.columns([4, 1.2], vertical_alignment="bottom")
+        col_clean = None
 
     with col_search:
         search_q = st.text_input(
@@ -38,11 +55,22 @@ def render_case_library(current_case: ClinicalCase) -> None:
             key="case_lib_search",
         )
 
+    if col_clean is not None:
+        with col_clean:
+            if st.button(
+                f"Clean up {blank_count} empty draft{'s' if blank_count > 1 else ''}",
+                type="secondary",
+                width="stretch",
+                help="Purge cases with 0 captured dimensions and no chief complaint",
+            ):
+                purged = purge_blank_cases()
+                st.toast(f"Purged {purged} empty draft(s).")
+                st.rerun()
+
     with col_new:
         if st.button("+ New Case", type="primary", width="stretch", help="Start a new patient intake"):
             new_id = generate_case_id()
             fresh_case = ClinicalCase(case_id=new_id)
-            save_case(fresh_case)
             st.session_state.current_case = fresh_case
             dm = st.session_state.dialogue_manager
             dm.reset()
@@ -54,7 +82,7 @@ def render_case_library(current_case: ClinicalCase) -> None:
             st.toast(f"Created new consultation: {new_id}")
             st.rerun()
 
-    cases = list_cases(limit=100)
+    cases = all_cases
     if search_q.strip():
         q = search_q.strip().lower()
         cases = [

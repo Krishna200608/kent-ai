@@ -63,6 +63,8 @@ def init_case_db(db_path: Optional[Union[str, Path]] = None) -> None:
 
 def save_case(case: ClinicalCase, db_path: Optional[Union[str, Path]] = None) -> str:
     """Save or update a ClinicalCase instance in SQLite."""
+    if case.is_blank:
+        return case.case_id
     init_case_db(db_path)
     target_path = get_case_db_path(db_path)
     case.updated_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -221,13 +223,59 @@ def delete_case(case_id: str, db_path: Optional[Union[str, Path]] = None) -> boo
 
 
 def generate_case_id(db_path: Optional[Union[str, Path]] = None) -> str:
-    """Generate a clean, readable case ID (e.g. CASE-2026-001)."""
+    """Generate a clean, readable case ID (e.g. CASE-2026-001) using MAX numeric suffix."""
     init_case_db(db_path)
     target_path = get_case_db_path(db_path)
     year = datetime.date.today().year
+    prefix = f"CASE-{year}-"
+    start_pos = len(prefix) + 1
 
     with sqlite3.connect(target_path) as conn:
         cur = conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM clinical_cases WHERE case_id LIKE ?", (f"CASE-{year}-%",))
-        count = cur.fetchone()[0]
-        return f"CASE-{year}-{count + 1:03d}"
+        cur.execute(
+            """
+            SELECT COALESCE(MAX(CAST(SUBSTR(case_id, ?) AS INTEGER)), 0) + 1
+            FROM clinical_cases
+            WHERE case_id LIKE ?
+            """,
+            (start_pos, f"{prefix}%"),
+        )
+        next_n = cur.fetchone()[0]
+        return f"CASE-{year}-{next_n:03d}"
+
+
+def purge_blank_cases(db_path: Optional[Union[str, Path]] = None) -> int:
+    """Delete cases with dimensions_captured == 0 and an empty chief_complaint.
+
+    Returns the number of deleted cases.
+    """
+    init_case_db(db_path)
+    target_path = get_case_db_path(db_path)
+
+    with sqlite3.connect(target_path) as conn:
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute("SELECT case_id, dimensions_json, chief_complaint FROM clinical_cases")
+        rows = cur.fetchall()
+
+        to_delete = []
+        for r in rows:
+            chief = (r["chief_complaint"] or "").strip()
+            if chief:
+                continue
+            dims_str = r["dimensions_json"]
+            has_dims = False
+            if dims_str:
+                try:
+                    dims = json.loads(dims_str)
+                    has_dims = any(bool(v) for v in dims.values())
+                except Exception:
+                    pass
+            if not has_dims:
+                to_delete.append(r["case_id"])
+
+        if to_delete:
+            cur.executemany("DELETE FROM clinical_cases WHERE case_id = ?", [(cid,) for cid in to_delete])
+            conn.commit()
+
+        return len(to_delete)

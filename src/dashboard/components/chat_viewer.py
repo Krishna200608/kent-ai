@@ -12,6 +12,7 @@ import streamlit as st
 logger = logging.getLogger("chat_viewer")
 
 from src.chatbot.dialogue_manager import DialogueManager
+from src.data.case_store import save_case
 from src.dashboard.components.icons import get_icon
 from src.dashboard.dimensions import (
     DIMENSION_MAP,
@@ -370,6 +371,13 @@ def render_chat_interface(dm: DialogueManager) -> None:
                 except Exception as err:
                     logger.warning("Error processing dialogue turn: %s", err)
                     bot_reply = dm._mock_response_for_state()
+
+                # Persist case updates on dialogue turns
+                active_case = st.session_state.get("current_case")
+                if active_case:
+                    dm.sync_to_case(active_case)
+                    save_case(active_case)
+
                 thinking_box.markdown(
                     f"<div style='font-size: 11.5px; font-weight: 700; color: #10B981; margin-bottom: 4px; letter-spacing: 0.02em;'>"
                     f"Kent-AI"
