@@ -434,7 +434,7 @@ def generate_case_pdf(
     # Clinical Case Summary (Physician Brief) Card
     # -----------------------------------------------------------------------
     summary_text = (
-        case.clinical_summary
+        getattr(case, "clinical_summary", "")
         or (rep_dict.get("clinical_summary", "") if rep_dict else "")
         or ""
     ).strip()

@@ -231,7 +231,7 @@ class PipelineOrchestrator:
         )
 
         # 5. Synthesize clinical case summary (Physician Brief) if not already generated
-        if not case.clinical_summary:
+        if not getattr(case, "clinical_summary", ""):
             case.clinical_summary = self.summarizer.generate_summary(case, use_llm=not self.mock_mode)
 
         report = PatientReport(
@@ -242,7 +242,7 @@ class PipelineOrchestrator:
             ranked_remedies=ranked_remedies,
             search_queries=queries,
             entities=[],
-            clinical_summary=case.clinical_summary,
+            clinical_summary=getattr(case, "clinical_summary", ""),
         )
         case.report_data = report.to_dict()
         return report
@@ -271,7 +271,7 @@ def rescore_report(
         ranking_mode=case.ranking_mode,
         eliminatory_rubric_ids=elim,
     )
-    if not report.clinical_summary and case.clinical_summary:
-        report.clinical_summary = case.clinical_summary
+    if not getattr(report, "clinical_summary", "") and getattr(case, "clinical_summary", ""):
+        report.clinical_summary = getattr(case, "clinical_summary", "")
     case.report_data = report.to_dict()
     return report

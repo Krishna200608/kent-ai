@@ -415,3 +415,15 @@ def test_case_summarizer(tmp_path: Path):
         assert "CLINICAL CASE SUMMARY" in doc[0].get_text()
     except ImportError:
         pass
+
+
+def test_clinical_case_legacy_attribute_resilience():
+    """Verify that older in-memory session_state ClinicalCase objects safely default clinical_summary to '' without raising AttributeError."""
+    case = ClinicalCase()
+    if "clinical_summary" in case.__dict__:
+        del case.__dict__["clinical_summary"]
+    # Should not raise AttributeError
+    assert case.clinical_summary == ""
+    case.clinical_summary = "Updated physician summary"
+    assert case.clinical_summary == "Updated physician summary"
+

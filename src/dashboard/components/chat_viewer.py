@@ -390,7 +390,7 @@ def render_chat_interface(dm: DialogueManager) -> None:
             active_case = st.session_state.get("current_case")
             if active_case:
                 dm.sync_to_case(active_case)
-                if not active_case.clinical_summary and active_case.is_ready_for_repertorization:
+                if not getattr(active_case, "clinical_summary", "") and active_case.is_ready_for_repertorization:
                     try:
                         from src.pipeline.case_summarizer import CaseSummarizer
                         active_case.clinical_summary = CaseSummarizer().generate_summary(active_case)
