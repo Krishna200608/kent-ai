@@ -1,7 +1,7 @@
 # Kent-AI — Gotchas & Known Quirks
 
-> Last updated: 2026-10-29 by Antigravity
-> Phase: Complete through Phase 5 / Phase B & C
+> Last updated: 2026-10-31 by Antigravity
+> Phase: Complete through Phase 12 (Clinician-Centric Stepper, SQLite Case Store, Classical Totality Matrix, Bedside Streaming Dialogue, Shimmer Reflection Animation & Full-Screen Responsive Viewport; 108 Unit & Integration Tests Passing, 0 Warnings)
 
 ---
 
@@ -189,6 +189,40 @@ When computing evaluation metrics on datasets or mock batches where certain enti
 Streamlit's internal runner keeps `sys.modules` alive across browser re-runs. If child modules (e.g. `chat_viewer.py`) are dynamically reloaded via `importlib.reload()` before their parent dependencies (`dialogue_manager.py`), child modules can bind to stale class definitions, triggering `AttributeError: type object 'DialogueManager' has no attribute '...'`.
 - **Root Cause**: Non-topological module reload order in `src/dashboard/app.py`.
 - **Verified Workaround**: Reload dependencies in strict topological order (`src.config` $\rightarrow$ `src.chatbot.prompts` $\rightarrow$ `src.chatbot.state_machine` $\rightarrow$ `src.chatbot.dialogue_manager` $\rightarrow$ `src.dashboard.styles` $\rightarrow$ `src.dashboard.components.*`). Additionally, provide defensive `getattr()` fallback helpers in child components.
+
+### 8.4 Sidebar Collapse Right-Side Void & Viewport Width
+When collapsing the sidebar in Streamlit, an empty black void appeared on the right side of the screen; the main content container remained capped as if the sidebar were still occupying horizontal space.
+- **Root Cause**: Direct CSS had an unconditional `min-width: 280px !important;` rule on `section[data-testid="stSidebar"]`. When collapsed, Streamlit sets `aria-expanded="false"`, but the CSS forced the element to retain a 280px minimum width layout footprint, squeezing `.stMain` into `calc(100vw - 280px)`.
+- **Verified Workaround**: In `src/dashboard/styles.css`, scope `min-width: 280px !important;` strictly to `section[data-testid="stSidebar"][aria-expanded="true"]`. For `[aria-expanded="false"]`, enforce `min-width: 0 !important; width: 0 !important; margin: 0 !important; padding: 0 !important; transform: translateX(-100%) !important;` and allow `.stMain` and `[data-testid="stMainBlockContainer"]` to expand to `width: 100% !important; max-width: 100% !important;`.
+
+### 8.5 Streamlit Page Scroll Locking (`overflow: hidden`)
+The consultation dashboard unexpectedly became unscrollable past ~900px, cutting off the Totality Matrix, Review step, and Repertorization report tables.
+- **Root Cause**: An over-aggressive CSS rule placed `overflow: hidden !important;` on `.stMain` and `[data-testid="stAppViewContainer"]` to prevent double scrollbars.
+- **Verified Workaround**: Set `overflow-y: auto !important; overflow-x: hidden !important;` with smooth scrolling behavior on `.stMain`. Scroll confinement should only be applied to internal sub-containers (e.g. the 450px chat scroll area).
+
+### 8.6 `QUICK_REPLIES:` Control Tag Leaking into Streaming Chat
+LLaMA 3 occasionally produced assistant responses containing raw control text: `QUICK_REPLIES: Worst after exercise, Better when sitting`, while the suggested response pills remained stale.
+- **Root Cause**: `visible_only` and `_parse_and_strip_quick_replies` in `dialogue_manager.py` strictly expected bracketed JSON arrays (e.g. `[QUICK_REPLIES: ["..."]]`). When LLaMA 3 emitted plain comma-separated text or unbracketed lines, `visible_only` failed to detect the control boundary, streaming raw text into the UI, and the parser discarded the suggestions.
+- **Verified Workaround**:
+  1. In `visible_only`, implement regex lookahead and prefix boundary buffering to detect and halt immediately on `QUICK_REPLIES`, `SLOT_UPDATE`, or bracket markers across chunk boundaries.
+  2. In `_parse_and_strip_quick_replies`, parse bracketed JSON, plain comma-separated strings, and markdown bullet lists into clean patient chips.
+  3. In `clean_message_text` and `_safe_clean_bot_text`, strip any unbracketed `QUICK_REPLIES:.*$` and `SLOT_UPDATE:.*$` from current and historic turns.
+
+### 8.7 Streamlit Submodule Caching in `sys.modules`
+Editing submodules under `src/dashboard/components/` or `src/chatbot/` did not take effect in an active Streamlit server session, leaving old bytecode running in memory until the server process was terminated.
+- **Root Cause**: Streamlit's file watcher re-executes `app.py` on save, but standard Python `import` returns cached modules from `sys.modules`.
+- **Verified Workaround**: In `src/dashboard/app.py`, wrap submodules with explicit `importlib.reload()`:
+  ```python
+  import src.chatbot.dialogue_manager as _dm_mod
+  importlib.reload(_dm_mod)
+  import src.dashboard.components.chat_viewer as _cv_mod
+  importlib.reload(_cv_mod)
+  ```
+
+### 8.8 Immediate Rendering of Thinking Skeleton Before Synchronous LLM Calls
+The assistant chat bubble appeared completely blank with no loading indicator while Kent-AI was generating a response.
+- **Root Cause**: `dm.prepare_turn()` executed heavy multi-second slot extraction (Tier 3 LLM calls) synchronously *before* entering `with scroll_area:` and mounting the assistant message container.
+- **Verified Workaround**: Mount `thinking_box.markdown(skeleton_html)` inside `with st.chat_message("assistant"):` *prior* to running `dm.prepare_turn()` and `dm.stream_reply()`. The shimmering bars animate during the entire reflection window and clear the exact millisecond the first visible chunk is yielded.
 
 ---
 

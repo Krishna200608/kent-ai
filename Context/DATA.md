@@ -1,7 +1,7 @@
 # Kent-AI — Data Context
 
-> Last updated: 2026-10-29 by Antigravity
-> Phase: Complete through Phase 5 / Phase B & C (19,732 MIND Cases & 74,513 Rubrics Vectorized)
+> Last updated: 2026-10-31 by Antigravity
+> Phase: Complete through Phase 12 (19,732 MIND Cases, 74,513 Rubrics Vectorized, SQLite Case Store, 6 Model Checkpoints & Adapters)
 
 ---
 
@@ -218,10 +218,11 @@ Kent's Repertory uses a typographic grading system for remedy prominence:
 
 ---
 
-## Processed Data Artifacts (Phase 1)
+## Processed Data Artifacts & Storage
 
-| File | Status | Format | Description |
+| File / Directory | Status | Format | Description |
 |---|---|---|---|
+| `data/cases.sqlite` | Verified ✅ | SQLite 3 | Patient consultations store (typed `ClinicalCase` records, totality slots, active rubrics, scores) |
 | `data/processed/pilot_100_cases.jsonl` | Verified ✅ | JSONL | 100 stratified pilot validation cases across 25 MIND rubrics (4 diverse archetypes/rubric, 225 KB) |
 | `data/processed/pilot_checkpoint.json` | Verified ✅ | JSON | Atomic checkpoint for 100-case pilot generation |
 | `data/processed/mind_cases.jsonl` | Verified ✅ | JSONL | Full synthetic case corpus (19,732 cases across all 4,933 MIND rubrics, 43.3 MB) |
@@ -231,6 +232,38 @@ Kent's Repertory uses a typographic grading system for remedy prominence:
 | `data/processed/test.jsonl` | Verified ✅ | JSONL | 10% stratified test partition (1,973 cases, 9,955 entities, 4.3 MB) |
 | `data/embeddings/kent_rubrics/` | Verified ✅ | ChromaDB | Dense HNSW index of all 74,513 rubrics (100% indexed, persistent vector store) |
 | `data/models/clinicalbert_homeoNER/` | Verified ✅ | HuggingFace | Fine-tuned Bio_ClinicalBERT weights (411 MB model.safetensors, 15 BIO labels) |
+| `data/models/biolinkbert_homeoNER/` | Verified ✅ | HuggingFace | Fine-tuned BioLinkBERT weights (top token BIO F1 34.86%, 15 BIO labels) |
+| `data/models/pubmedbert_homeoNER/` | Verified ✅ | HuggingFace | Fine-tuned PubMedBERT weights (top dense Recall@20 41.56%, 15 BIO labels) |
+| `data/models/deberta_homeoNER/` | Verified ✅ | HuggingFace | Fine-tuned DeBERTa-v3 weights (15 BIO labels, trained with BF16) |
+| `data/models/qwen_homeoQLoRA/` | Verified ✅ | PEFT LoRA | 4-bit NF4 QLoRA adapter for Qwen 2.5 7B Instruct (78 MB safetensors) |
+| `data/models/biomistral_homeoQLoRA/` | Verified ✅ | PEFT LoRA | 4-bit NF4 QLoRA adapter for BioMistral 7B (81 MB safetensors) |
+
+---
+
+## Consultation Case Store Schema (`data/cases.sqlite`)
+
+Created in Phase 11 via `src/data/case_store.py` to persist active and historical patient consultations:
+
+```sql
+CREATE TABLE IF NOT EXISTS cases (
+    id                   TEXT PRIMARY KEY,  -- e.g. "CASE-2026-001"
+    created_at           TEXT NOT NULL,     -- ISO-8601 timestamp
+    updated_at           TEXT NOT NULL,     -- ISO-8601 timestamp
+    patient_name         TEXT NOT NULL,     -- Default "Anonymous Patient"
+    patient_age          INTEGER,           -- Optional age (e.g. 42)
+    patient_sex          TEXT,              -- Optional sex (e.g. "Female", "Male", "Other")
+    chief_complaint      TEXT,              -- Brief symptom complaint
+    raw_narrative        TEXT,              -- Full intake narrative or consultation transcript
+    intake_mode          TEXT,              -- "dialogue" or "narrative"
+    symptom_profile_json TEXT,              -- Serialized 7-dimension symptom dictionary
+    active_rubrics_json  TEXT,              -- Serialized matched & pinned rubric objects
+    remedy_scores_json   TEXT,              -- Serialized ranked remedy scores dictionary
+    status               TEXT NOT NULL      -- "intake", "review", "analyzed", "closed"
+);
+
+CREATE INDEX IF NOT EXISTS idx_cases_updated_at ON cases(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_cases_status ON cases(status);
+```
 
 ---
 

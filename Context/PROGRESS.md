@@ -1,7 +1,7 @@
 # Kent-AI — Progress Tracker
 
-> Last updated: 2026-10-30 by Antigravity
-> Phase: Complete through Week 2 (Generative LLM PEFT/QLoRA Fine-Tuning & Comparative Benchmark Completed; Ready for Week 3 Multi-Model Ensemble)
+> Last updated: 2026-10-31 by Antigravity
+> Phase: Complete through Phase 12 (Clinician-Centric Stepper, SQLite Case Store, Classical Totality Matrix, Bedside Streaming Dialogue, Shimmer Reflection Animation & Full-Screen Responsive Viewport; 108 Unit & Integration Tests Passing, 0 Warnings)
 
 ---
 
@@ -431,6 +431,36 @@ pytest tests/ -v
 
 ---
 
+## Phase 11 — Clinician-Centric Stepper, Case Persistence & Classical Totality Matrix ✅
+
+**Status**: Complete (Single Typed `ClinicalCase` State, SQLite Case Store, 4-Step Consultation Stepper, Classical Totality Matrix, Side-by-Side Differential Materia Medica, and Multi-Page PDF Export) 🎯  
+**Date**: 2026-10-31  
+**Agent**: Antigravity (Gemini 3.8 Flash)  
+**Deliverables**:
+- **Single Source of Truth (`ClinicalCase`)**: Implemented in [`src/models/case.py`](../src/models/case.py) with typed fields for patient demographics, 7-dimension symptom totality, active rubrics, remedy scores, and status lifecycle.
+- **SQLite Case Repository**: Implemented in [`src/data/case_store.py`](../src/data/case_store.py) (`data/cases.sqlite`) for persistent autosaving, listing, deletion, and retrieval.
+- **4-Step Consultation Stepper**: Streamlined workflow (`1. Intake` → `2. Review` → `3. Analysis` → `4. Report`) with step navigation and progress indicators.
+- **Persistent Case Bar (`case_bar.py`)**: Top-anchored bar displaying active case ID, patient info popover, totality completion pill, and quick save.
+- **Classical Repertory Totality Matrix (`totality_grid.py`)**: High-contrast HTML/CSS matrix displaying Rubrics as rows and candidate Remedies as columns with Kentian grades (3/2/1), eliminatory indicators, and interactive Mute/Eliminatory toggles with instant rescoring via `rescore_report`.
+- **Differential Materia Medica Inspector (`remedy_comparison.py`)**: Side-by-side comparison for top indicated remedies with Grade 3 keynotes.
+- **Multi-Page Clinical PDF Export (`pdf_exporter.py`)**: Built with ReportLab 5.1 with clinical headers, patient demographics, totality summary, rubric matches, and remedy scores.
+
+---
+
+## Phase 12 — Bedside Streaming Dialogue, Shimmer Reflection & Responsive Viewport ✅
+
+**Status**: Complete (Real-Time Chunk Streaming, Shimmer Reflection Animation, Strict Control Syntax Filtering, Full-Screen Responsive Viewport, 108/108 Tests Passing) 🎯  
+**Date**: 2026-10-31  
+**Agent**: Antigravity (Gemini 3.8 Flash)  
+**Deliverables**:
+- **Real-Time NDJSON Streaming**: Wired `_call_ollama_chat_stream` to `st.write_stream` with immediate first-token response yielding.
+- **Shimmer Reflection Skeleton**: Restored `.skeleton-thinking-bubble` with emerald status dot and 3 animated shimmer bars (`styles.css`), rendering immediately inside `st.chat_message("assistant")` while extraction and initial token generation are pending.
+- **Control Syntax Leak Elimination**: Hardened `visible_only` with regex prefix lookahead to detect and halt immediately on `QUICK_REPLIES`, `SLOT_UPDATE`, or code blocks; updated `_parse_and_strip_quick_replies` to seamlessly parse bracketed JSON, unbracketed comma-separated items, and bullet lists; updated `clean_message_text` and `_safe_clean_bot_text` to automatically cleanse existing history turns.
+- **Full-Screen Responsive Viewport**: Eliminated right-side void upon sidebar collapse by scoping `min-width: 280px !important;` strictly to `section[data-testid="stSidebar"][aria-expanded="true"]`; restored smooth vertical page scrolling via `overflow-y: auto !important; overflow-x: hidden !important;` on `.stMain`.
+- **AppTest Smoke & Regression Suite**: Expanded test suite to **108 passing tests** across 15 files with comprehensive coverage of dialogue management, case lifecycle, dashboard components, and full-pipeline end-to-end flow.
+
+---
+
 ## Changelog
 
 | Date | Phase | Agent | Change |
@@ -459,6 +489,9 @@ pytest tests/ -v
 | 2026-10-30 | 11 / UI | Antigravity | Workstream 4.1 Dashboard Multi-Engine Selector & Consensus Badges: added 4-engine selector in sidebar (BioLinkBERT, PubMedBERT, Ensemble, Hybrid) with consensus agreement badges and tests (tests/test_dashboard.py). |
 | 2026-10-30 | 12 / Chat | Antigravity | Clinical Intake Dialogue & Slot Sanitization Overhaul: eliminated doctor questions from suggestion chips in favor of authentic first-person patient replies; implemented sanitize_extracted_slots (stopword pruning, sensation vs. aggravation resolution, worse alone disambiguation, root stem subsumption); expanded state machine confirmation triggers; 90/90 tests passing. |
 | 2026-10-31 | 13 / UI-UX | Antigravity | Clinician-Centric Dashboard UI/UX & Clinical Architecture Overhaul: single typed ClinicalCase source of truth (no transcript re-parsing), SQLite case store (data/cases.sqlite), 4-step consultation stepper (Intake -> Review -> Analysis -> Report), persistent case bar, classical totality matrix (rubrics as rows, remedies as columns, Kentian grades, live Mute/Eliminatory toggles), differential Materia Medica side-by-side comparison, ReportLab PDF export, ReportLab 5.1 installed, Streamlit stale-element opacity fix, and tests/test_case.py (97/97 tests passing). |
+| 2026-10-31 | 14 / Perf | Antigravity | Performance & Test Optimization: added AppTest smoke tests (tests/test_app_smoke.py), optimized SQLite indexes, instant rescore_report without vector re-search, deferred PDF creation, safe fragment reruns, resilient imports, 108/108 passing tests (37c7450, 93960e4). |
+| 2026-10-31 | 15 / Viewport | Antigravity | Responsive Full-Screen & Scroll Restoration: fixed sidebar collapse void by scoping min-width: 280px to aria-expanded="true"; restored smooth page scrolling (overflow-y: auto) and removed deprecated iframe injections (d2f3ccd, 57b5673). |
+| 2026-10-31 | 16 / Stream | Antigravity | Shimmer Reflection & Quick Replies Parser: mounted immediate skeleton thinking bubble during preparation/generation; hardened visible_only and _parse_and_strip_quick_replies for unbracketed QUICK_REPLIES syntax; added importlib.reload safeguards in app.py; 108/108 passing tests (12b0e81, 4078612). |
 
 ---
 

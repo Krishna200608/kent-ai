@@ -1,7 +1,7 @@
 # Kent-AI — Code Conventions
 
-> Last updated: 2026-10-29 by Antigravity
-> Phase: Complete through Phase 5 / Phase B & C
+> Last updated: 2026-10-31 by Antigravity
+> Phase: Complete through Phase 12 (Clinician-Centric Stepper, SQLite Case Store, Classical Totality Matrix, Bedside Streaming Dialogue, Shimmer Reflection Animation & Full-Screen Responsive Viewport; 108 Unit & Integration Tests Passing, 0 Warnings)
 
 ---
 
@@ -200,6 +200,29 @@ def get_rubric_path(rubric_id: int, db_path: Optional[Union[str, Path]] = None) 
 
 - All token classification training scripts must expose `--model-name` to accept arbitrary HuggingFace backbone identifiers (e.g., `microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext`, `michiyasunaga/BioLinkBERT-base`, `microsoft/deberta-v3-base`).
 - Default model identifier must point to `emilyalsentzer/Bio_ClinicalBERT` for backwards compatibility.
+
+---
+
+## 15. Streamlit CSS & Viewport Conventions
+
+- **Sidebar Scoping**: Never apply static `min-width` rules to `section[data-testid="stSidebar"]` unconditionally. Always scope via `section[data-testid="stSidebar"][aria-expanded="true"]` to avoid phantom layout footprints when collapsed.
+- **Scroll Integrity**: Never lock the main page viewport with `overflow: hidden !important;` on `.stMain` or `[data-testid="stAppViewContainer"]`. Always maintain `overflow-y: auto !important; overflow-x: hidden !important;` and confine scrolling to designated sub-containers (e.g. `st.container(height=450)`).
+- **Fragment Reruns**: Use `safe_rerun_fragment()` from `src.dashboard.utils` when re-evaluating isolated UI components (`st.fragment`), with graceful fallback to `st.rerun()`.
+
+---
+
+## 16. ReportLab PDF Generation Conventions
+
+- **Deferred Generation**: Never generate PDF binaries during standard dashboard script re-runs. Always defer generation inside popovers or download callbacks to preserve interface responsiveness.
+- **Document Flow**: Build clinical consultation PDFs using ReportLab Flowables (`SimpleDocTemplate`, `Paragraph`, `Table`, `Spacer`, `HRFlowable`). Set explicit column widths (`colWidths`) and wrap table cell strings in `Paragraph` to enable text wrapping.
+
+---
+
+## 17. LLM Chat Streaming & Control Syntax Filtering
+
+- **Chunk Lookahead Buffering**: Generators feeding `st.write_stream` must buffer potential control markers (`QUICK_REPLIES`, `SLOT_UPDATE`, code fences) across chunk boundaries to prevent control tags from leaking into visible chat messages.
+- **Dual Format Support**: Quick reply parsers must seamlessly support both bracketed JSON arrays (`QUICK_REPLIES: ["..."]`) and plain comma/newline-separated lists.
+- **Immediate Feedback**: Always render visual thinking indicators (`.skeleton-thinking-bubble`) inside the assistant message container before initiating synchronous extraction or inference calls.
 
 ---
 

@@ -1,7 +1,7 @@
 # Kent-AI — Project Context
 
-> Last updated: 2026-10-30 by Antigravity
-> Phase: Complete through Week 3 / Phase 10 (Multi-Model Ensembling & Generative Decoders Operational; Week 4 UI Integration & Manuscript Active)
+> Last updated: 2026-10-31 by Antigravity
+> Phase: Complete through Phase 12 (Clinician-Centric Stepper, SQLite Case Store, Classical Totality Matrix, Bedside Streaming Dialogue, Shimmer Reflection Animation & Full-Screen Responsive Viewport; 108 Unit & Integration Tests Passing, 0 Warnings)
 
 ---
 
@@ -73,7 +73,11 @@ It takes a patient's natural-language symptom description, extracts structured c
 | 5 | Pipeline & Remedy Ranking Engine | ✅ Complete (Phase B Two-Stage Pipeline & Phase C Academic Evaluation Suite operational) | 13–15 |
 | 6 | Conversational Intake Chatbot | ✅ Complete (10-state FSM, adaptive slot skipping, empathetic dialogue manager) | 16–19 |
 | 7 | Streamlit Clinical Dashboard (Stitch Standard) | ✅ Complete (Google Stitch UI tokens, 4 clinical workspaces, Plotly charts, Totality Matrix) | 20–24 |
-| 8 | Multi-Model Comparative Benchmark & Ensembling | 🔄 Active (Supervisor directive integrated: PubMedBERT, BioLinkBERT, DeBERTa-v3, BioMistral, LLaMA 3.1, ensemble evaluation) | 25–28 |
+| 8 | Multi-Model Comparative Benchmark | ✅ Complete (PubMedBERT, BioLinkBERT, DeBERTa-v3 benchmarked over 1,973 held-out test cases) | 25–28 |
+| 9 | Generative Decoders QLoRA PEFT (Qwen 2.5 & BioMistral) | ✅ Complete (4-bit NF4 QLoRA, 100% JSON validity, 99.7% grounding, SOTA extraction F1) | 29–30 |
+| 10 | Multi-Model Ensembling & Hybrid Pipeline | ✅ Complete (Weighted voting, IoU span clustering, two-stage encoder-mining + LLM arbitration) | 31–32 |
+| 11 | Clinician-Centric Stepper, Case Persistence & Totality Matrix | ✅ Complete (Single typed ClinicalCase, SQLite case store, 4-step stepper, Totality Matrix, ReportLab PDF) | 33–34 |
+| 12 | Bedside Streaming Dialogue, Shimmer Reflection & Responsive Viewport | ✅ Complete (NDJSON chunk streaming, immediate reflection skeleton, syntax leak elimination, full-screen collapse) | 35 |
 
 Full roadmap & phase tracking details: [`Context/PROGRESS.md`](PROGRESS.md)
 
