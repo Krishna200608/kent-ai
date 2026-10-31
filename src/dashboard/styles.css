@@ -69,21 +69,21 @@ html, body, [class*="css"], .stApp {
     transition: all 0.2s ease !important;
 }
 
-/* Ensure stMain always uses all available flex space.
-   The JS MutationObserver in styles.py dynamically sets width: 100%
-   when the sidebar is collapsed; this CSS rule is the static baseline. */
+/* Ensure stMain uses all available flex space while preserving vertical scrolling. */
 [data-testid="stMain"],
 .stMain {
     flex: 1 1 auto !important;
     min-width: 0 !important;
-    overflow: hidden !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
 }
 
 [data-testid="stAppViewContainer"] {
     display: flex !important;
     flex-direction: row !important;
     width: 100% !important;
-    overflow: hidden !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
 }
 
 h1, h2, h3, h4, h5, h6, .brand-title {

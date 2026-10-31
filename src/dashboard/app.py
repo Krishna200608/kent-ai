@@ -52,12 +52,12 @@ from src.search.ranker import RemedyRanker
 from src.search.vector_store import RubricVectorStore
 
 try:
-    from src.dashboard.styles import inject_custom_css, inject_full_screen_layout_js
+    from src.dashboard.styles import inject_custom_css
 except ImportError:
     import importlib
     import src.dashboard.styles as _styles_mod
     importlib.reload(_styles_mod)
-    from src.dashboard.styles import inject_custom_css, inject_full_screen_layout_js
+    from src.dashboard.styles import inject_custom_css
 from src.dashboard.utils import esc, safe_rerun_fragment
 from src.dashboard.components.icons import get_icon
 from src.dashboard.components.chat_viewer import (
@@ -792,7 +792,6 @@ def render_bedside_dialogue_panel(dm: DialogueManager, current_case: ClinicalCas
 def main():
     # Inject Google Stitch design system and full-screen responsive layout
     inject_custom_css()
-    inject_full_screen_layout_js()
     initialize_session()
     render_sidebar()
     render_header()
