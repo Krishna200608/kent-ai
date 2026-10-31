@@ -21,12 +21,31 @@ from src.dashboard.dimensions import (
     KENT_DIMENSIONS_ORDERED,
     pluralize,
 )
+from src.dashboard.components.symptom_strip import (
+    render_slot_badges,
+    render_slot_badges_html,
+)
+from src.dashboard.components.chat_chips import render_quick_reply_chips
 
 _ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 _ASSISTANT_SVG = _ASSETS_DIR / "assistant_avatar.svg"
 _USER_SVG = _ASSETS_DIR / "user_avatar.svg"
 ASSISTANT_AVATAR = str(_ASSISTANT_SVG.resolve()) if _ASSISTANT_SVG.is_file() else "assistant"
 USER_AVATAR = str(_USER_SVG.resolve()) if _USER_SVG.is_file() else "user"
+
+# Re-exports for 100% backward compatibility
+__all__ = [
+    "check_ollama_online",
+    "ollama_online",
+    "get_current_step_label",
+    "render_slot_badges_html",
+    "render_slot_badges",
+    "render_quick_reply_chips",
+    "format_chat_transcript",
+    "render_chat_interface",
+    "ASSISTANT_AVATAR",
+    "USER_AVATAR",
+]
 
 
 def _safe_clean_bot_text(text: str) -> str:
@@ -45,7 +64,7 @@ def _safe_clean_bot_text(text: str) -> str:
 @st.cache_data(ttl=10, show_spinner=False)
 def check_ollama_online(api_base: str = "http://127.0.0.1:11434") -> bool:
     """Direct HTTP ping to check if local Ollama daemon is active and responding.
-    
+
     Checks 127.0.0.1 (IPv4) first to bypass Windows IPv6 resolution latency.
     Bypasses system proxies for local addresses. Cached for 10s to eliminate latency.
     """
@@ -72,7 +91,7 @@ ollama_online = check_ollama_online
 
 
 def get_current_step_label(dm: DialogueManager) -> str:
-    """Return compact Step X of 9 label."""
+    """Return compact Step X of 10 label."""
     stages = dm.state_machine.get_clinical_stage_flow()
     current_state = dm.state_machine.current_state
 
@@ -85,74 +104,6 @@ def get_current_step_label(dm: DialogueManager) -> str:
             break
 
     return f"Step {current_idx + 1} of {len(stages)}: {current_label}"
-
-
-def render_slot_badges_html(slots: Dict[str, List[str]], dm: Optional[DialogueManager] = None) -> str:
-    """Render single, high-contrast 7-segment Live Symptom Dimension Strip."""
-    segments_html = []
-
-    for dim in KENT_DIMENSIONS_ORDERED:
-        items = slots.get(dim.key, [])
-        is_filled = bool(items) or (dm is not None and (dim.key in dm.state_machine.filled_slots or dm.detected_dimensions.get(dim.key, False)))
-        if is_filled:
-            val_str = ", ".join(esc(it) for it in items) if items else "Recorded"
-            title_text = esc(f"{dim.label} ({dim.code}): {dim.captures}\nCaptured: {', '.join(items)}")
-            segments_html.append(
-                f'<div class="hud-segment hud-segment-filled {dim.badge_class}" title="{title_text}" data-code="{dim.code}">'
-                f'<div class="hud-dim-title"><span class="status-dot" style="width:6px;height:6px;display:inline-block;margin-right:4px;"></span>{esc(dim.label)}</div>'
-                f'<div class="hud-dim-sub" style="white-space: normal; line-height: 1.25;">{val_str}</div>'
-                f'</div>'
-            )
-        else:
-            rec_tag = " <span style='font-size:9px; color:#F59E0B;'>(Recommended)</span>" if dim.key in ("modality_amel", "temporal") else ""
-            title_text = esc(f"{dim.label} ({dim.code}): {dim.captures}\nStatus: Not recorded yet")
-            segments_html.append(
-                f'<div class="hud-segment hud-segment-unfilled" title="{title_text}" data-code="{dim.code}">'
-                f'<div class="hud-dim-title">{esc(dim.label)}{rec_tag}</div>'
-                f'<div class="hud-dim-sub" style="color: #9CA3AF;">Not recorded yet</div>'
-                f'</div>'
-            )
-
-    return f'<div class="hud-segments-grid">{ "".join(segments_html) }</div>'
-
-
-def render_slot_badges(slots: Dict[str, List[str]]) -> None:
-    """Render slot badges into Streamlit DOM."""
-    st.markdown(render_slot_badges_html(slots), unsafe_allow_html=True)
-
-
-def render_quick_reply_chips(dm: DialogueManager, in_container: bool = False) -> Optional[str]:
-    """Render dynamic instant answer chips tailored to Kent-AI's active question using st.pills."""
-    current_suggestions = dm.get_current_suggestions()
-    if not current_suggestions:
-        return None
-
-    display_chips = list(current_suggestions[:4])
-    if "None of these / other" not in display_chips and len(display_chips) < 4:
-        display_chips.append("None of these / other")
-
-    title_margin = "8px 0 4px 2px" if in_container else "10px 0 4px 2px"
-    st.markdown(
-        f"""
-        <div style="display: flex; justify-content: space-between; align-items: center; margin: {title_margin};">
-            <span style="font-size: 12.5px; font-weight: 600; color: #10B981; display: flex; align-items: center; gap: 6px;">
-                {get_icon('sparkles', size=15, color='#10B981')} Suggested Responses:
-            </span>
-            <span style="font-size: 11px; color: #9CA3AF;">Click to reply instantly</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    selected = st.pills(
-        "Suggested Responses:",
-        display_chips,
-        key=f"pills_turn_{dm.state_machine.turn_count}_{'box' if in_container else 'dock'}",
-        label_visibility="collapsed",
-    )
-    if selected:
-        dm.current_suggestions = []  # Clear immediately so stale chips never linger
-    return selected
 
 
 def format_chat_transcript(dm: DialogueManager) -> str:
@@ -466,5 +417,3 @@ def render_chat_interface(dm: DialogueManager) -> None:
             save_case(active_case)
 
         safe_rerun_fragment()
-
-
