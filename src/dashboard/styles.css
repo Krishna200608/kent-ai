@@ -69,27 +69,21 @@ html, body, [class*="css"], .stApp {
     transition: all 0.2s ease !important;
 }
 
-/* When sidebar is closed / collapsed: rest of content explicitly covers the whole screen */
-body:has([data-testid="stExpandSidebarButton"]) .block-container,
-.stApp:has([data-testid="stExpandSidebarButton"]) .block-container,
-:has([data-testid="stExpandSidebarButton"]) .block-container,
-body:has([data-testid="stSidebar"][aria-expanded="false"]) .block-container,
-.stApp:has([data-testid="stSidebar"][aria-expanded="false"]) .block-container,
-:has([data-testid="stSidebar"][aria-expanded="false"]) .block-container,
-body:has(section[aria-expanded="false"]) .block-container,
-.stApp:has(section[aria-expanded="false"]) .block-container,
-[data-testid="stAppViewContainer"]:has([data-testid="stSidebar"][aria-expanded="false"]) .block-container,
-[data-testid="stAppViewContainer"]:has([data-testid="stExpandSidebarButton"]) .block-container,
-[data-testid="stSidebar"][aria-expanded="false"] ~ .stMain .block-container,
-[data-testid="stSidebar"][aria-expanded="false"] ~ [data-testid="stMain"] .block-container,
-[data-testid="stSidebar"][aria-expanded="false"] ~ .main .block-container,
-[data-testid="stSidebar"][aria-expanded="false"] ~ div .block-container {
-    max-width: 100% !important;
+/* Ensure stMain always uses all available flex space.
+   The JS MutationObserver in styles.py dynamically sets width: 100%
+   when the sidebar is collapsed; this CSS rule is the static baseline. */
+[data-testid="stMain"],
+.stMain {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+}
+
+[data-testid="stAppViewContainer"] {
+    display: flex !important;
+    flex-direction: row !important;
     width: 100% !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    padding-left: 1.5rem !important;
-    padding-right: 1.5rem !important;
+    overflow: hidden !important;
 }
 
 h1, h2, h3, h4, h5, h6, .brand-title {
