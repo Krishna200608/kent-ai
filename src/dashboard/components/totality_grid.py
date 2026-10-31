@@ -35,11 +35,43 @@ def render_classical_totality_matrix(
     allow_toggles: bool = True,
 ) -> None:
     """Render authentic classical repertorization matrix (Rubrics as Rows, Remedies as Columns)."""
-    remedies = report.ranked_remedies[:12]
     rubrics = report.matched_rubrics
-    if not remedies or not rubrics:
+    if not report.ranked_remedies or not rubrics:
         st.info("No rubrics or candidate remedies available to display in matrix.")
         return
+
+    # Column count selector for matrix table
+    total_candidates = len(report.ranked_remedies)
+    col_options = [8, 12]
+    if total_candidates > 12:
+        col_options.append(min(16, total_candidates))
+    if total_candidates > 16:
+        col_options.append(min(20, total_candidates))
+    if total_candidates > 20 and total_candidates not in col_options:
+        col_options.append(total_candidates)
+    # Deduplicate while preserving order
+    col_options = list(dict.fromkeys(col_options))
+
+    c_meta_left, c_meta_right = st.columns([4, 2], vertical_alignment="center")
+    with c_meta_left:
+        st.markdown(
+            "<div style='font-size: 12.5px; color: #9CA3AF;'>"
+            "Classical Repertorization Matrix &bull; Evaluates all <b>679 cataloged Kent remedies</b> &bull; Showing top ranked candidates matching case."
+            "</div>",
+            unsafe_allow_html=True,
+        )
+    with c_meta_right:
+        default_idx = col_options.index(12) if 12 in col_options else 0
+        selected_count = st.selectbox(
+            "Visible Matrix Remedies:",
+            options=col_options,
+            index=default_idx,
+            format_func=lambda n: f"Top {n} Candidates" if n != total_candidates else f"All {n} Candidates",
+            key=f"sel_matrix_cols_{report.patient_id}",
+            help="Choose how many candidate remedies to display as columns in the totality matrix.",
+        )
+
+    remedies = report.ranked_remedies[:selected_count]
 
     # Pre-fetch remedies for each rubric to obtain exact Kentian grades
     rubric_remedy_map: Dict[int, Dict[str, int]] = {}
@@ -229,11 +261,66 @@ def render_classical_totality_matrix(
     """
     st.html(table_html)
 
-    with st.expander("Remedy Catalog Reference (Full Latin Names & Abbreviations)", expanded=False):
-        c_rem_cols = st.columns(4)
-        for i_rem, rem in enumerate(remedies):
-            with c_rem_cols[i_rem % 4]:
-                r_abbr = rem.get("abbreviation", "")
-                r_full = rem.get("full_name", r_abbr)
-                r_sc = rem.get("score", 0.0)
-                st.markdown(f"**{esc(r_abbr)}** &mdash; {esc(r_full)} (`{r_sc:.2f}`)")
+    with st.expander(f"Active Matrix Candidates & 679-Remedy Catalog Reference", expanded=False):
+        tab_active_rems, tab_all_catalog = st.tabs([
+            f"Active Matrix Candidates ({len(remedies)})",
+            "Search Full Catalog (679 Remedies)",
+        ])
+
+        with tab_active_rems:
+            st.markdown(
+                f"<div style='font-size: 12px; color: #9CA3AF; margin-bottom: 8px; line-height: 1.5;'>"
+                f"<b>Totality Differential Overview:</b> Displaying top {len(remedies)} ranked remedy candidates in this matrix out of <b>679 remedies</b> in Kent's complete database. "
+                f"Green numbers in parentheses indicate each remedy's weighted totality match score for this consultation."
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+            c_rem_cols = st.columns(4)
+            for i_rem, rem in enumerate(remedies):
+                with c_rem_cols[i_rem % 4]:
+                    r_abbr = rem.get("abbreviation", "")
+                    r_full = rem.get("full_name", r_abbr)
+                    r_sc = rem.get("score", 0.0)
+                    st.markdown(f"**{esc(r_abbr)}** &mdash; {esc(r_full)} (`{r_sc:.2f}`)")
+
+        with tab_all_catalog:
+            st.markdown(
+                "<div style='font-size: 12px; color: #9CA3AF; margin-bottom: 8px;'>"
+                "Kent-AI indexes the complete catalog of <b>679 homeopathic remedies</b> across 74,513 rubrics in Kent's Repertory. "
+                "Search any remedy by abbreviation or Latin botanical/mineral name below:"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+            cat_search = st.text_input(
+                "Filter Kent's 679 Remedies:",
+                key="totality_cat_search_inp",
+                placeholder="e.g. 'Phos', 'Lach', 'Acon', 'Bell', 'Puls'...",
+            )
+            with db.connect() as conn:
+                cur = conn.cursor()
+                if cat_search.strip():
+                    like_q = f"%{cat_search.strip()}%"
+                    cur.execute(
+                        "SELECT id, abbreviation, full_name, "
+                        "(SELECT COUNT(*) FROM rubric_remedies WHERE remedy_id = remedies.id) as r_count "
+                        "FROM remedies WHERE abbreviation LIKE ? OR full_name LIKE ? "
+                        "ORDER BY r_count DESC LIMIT 20",
+                        (like_q, like_q),
+                    )
+                else:
+                    cur.execute(
+                        "SELECT id, abbreviation, full_name, "
+                        "(SELECT COUNT(*) FROM rubric_remedies WHERE remedy_id = remedies.id) as r_count "
+                        "FROM remedies ORDER BY r_count DESC LIMIT 16"
+                    )
+                cat_rows = cur.fetchall()
+
+            if cat_rows:
+                c_cat_cols = st.columns(4)
+                for i_c, row in enumerate(cat_rows):
+                    with c_cat_cols[i_c % 4]:
+                        st.markdown(
+                            f"**{esc(row['abbreviation'])}** &mdash; <i>{esc(row['full_name'])}</i> <br/>"
+                            f"<span style='font-size:11px; color:#10B981;'>{row['r_count']:,} rubrics in Kent</span>",
+                            unsafe_allow_html=True,
+                        )
