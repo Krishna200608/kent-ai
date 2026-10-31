@@ -385,6 +385,21 @@ def render_chat_interface(dm: DialogueManager) -> None:
 
     input_to_process = selected_chip or user_prompt
     if input_to_process:
+        # If user selected or requested 'Proceed to Review', navigate directly to Step 2
+        if "proceed to review" in input_to_process.lower():
+            active_case = st.session_state.get("current_case")
+            if active_case:
+                dm.sync_to_case(active_case)
+                if not active_case.clinical_summary and active_case.is_ready_for_repertorization:
+                    try:
+                        from src.pipeline.case_summarizer import CaseSummarizer
+                        active_case.clinical_summary = CaseSummarizer().generate_summary(active_case)
+                    except Exception as e:
+                        logger.info("Auto-summary on review chip: %s", e)
+                save_case(active_case)
+            st.session_state.workspace_step = 2
+            st.rerun()
+
         raw = []
         with scroll_area:
             with st.chat_message("user", avatar=USER_AVATAR):

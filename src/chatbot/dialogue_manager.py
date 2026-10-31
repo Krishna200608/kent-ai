@@ -748,8 +748,8 @@ class DialogueManager:
                 "or emotional state — any anxiety, irritability, or low energy?"
             ),
             IntakeState.DONE: (
-                "Thank you — I have gathered all your clinical details into the Kentian totality framework. "
-                "Your comprehensive homeopathic repertorization report has been generated below!"
+                "Thank you — I have gathered and structured all your clinical symptoms into the Kentian totality framework. "
+                "You can now click on **Proceed to Review →** above to inspect your captured dimensions, validate the doctor's case summary, and run repertorization analysis."
             ),
         }
         return templates.get(state, "Please tell me more about that.")
@@ -1031,7 +1031,7 @@ class DialogueManager:
             IntakeState.CONCOMITANT: ["Nausea and dizziness", "Chills and perspiration", "Extreme fatigue", "No other symptoms"],
             IntakeState.MENTAL: ["Restless and anxious", "Irritable and frustrated", "Down and tearful", "Calm and peaceful"],
             IntakeState.REVIEW: ["Yes, that covers all my symptoms!", "I want to add another symptom", "Please proceed to repertorization"],
-            IntakeState.DONE: ["View Top Remedies", "Export Consultation", "Explore Rubrics", "Start New Consultation"],
+            IntakeState.DONE: ["Proceed to Review →", "Check Captured Symptoms", "Add Another Detail", "Start New Consultation"],
         }
         return state_fallback.get(self.state_machine.current_state, [
             "Yes, exactly like that",

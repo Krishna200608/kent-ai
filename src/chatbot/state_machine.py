@@ -193,7 +193,7 @@ class ConversationStateMachine:
             IntakeState.MENTAL: "Ask with compassion how this issue has been affecting their mood, energy, or stress levels.",
             IntakeState.REVIEW: "Warmly summarize the key symptoms they described and ask if this sounds accurate or if they'd like to add anything.",
             IntakeState.CLARIFICATION: "Thank the patient for clarifying and confirm the updated detail.",
-            IntakeState.DONE: "Acknowledge the details the patient shared, confirm they are incorporated into their repertory totality, and guide them to view their repertorization report below.",
+            IntakeState.DONE: "Acknowledge the details the patient shared, confirm they are incorporated into their repertory totality, and guide them to click 'Proceed to Review →' above.",
         }
         return goals.get(self.current_state, "Listen attentively and support the patient.")
 
