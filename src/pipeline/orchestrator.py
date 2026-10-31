@@ -206,32 +206,62 @@ class PipelineOrchestrator:
             except Exception:
                 continue
 
-        # 3. Filter out muted rubrics
+        # 3. Mark muted rubrics without dropping them from report
         muted_set = set(case.muted_rubric_ids or [])
-        active_rubrics = [
-            r for r_id, r in matched_rubrics_dict.items()
-            if r_id not in muted_set
-        ]
+        all_matched_rubrics = list(matched_rubrics_dict.values())
+        for r in all_matched_rubrics:
+            r_id = r.get("rubric_id")
+            r["muted"] = r_id in muted_set
 
-        # Sort by similarity descending
-        active_rubrics.sort(key=lambda x: x.get("similarity", 0.0), reverse=True)
+        # Sort all rubrics by similarity descending
+        all_matched_rubrics.sort(key=lambda x: x.get("similarity", 0.0), reverse=True)
 
-        # 4. Rank remedies according to case ranking_mode and eliminatory rubrics
+        active_rubrics = [r for r in all_matched_rubrics if not r.get("muted")]
+        elim_rubrics = [i for i in (case.eliminatory_rubric_ids or []) if i not in muted_set]
+
+        # 4. Rank remedies according to case ranking_mode and active eliminatory rubrics
         ranked_remedies = self.ranker.rank(
             active_rubrics,
             top_n=top_remedies,
             ranking_mode=case.ranking_mode,
-            eliminatory_rubric_ids=case.eliminatory_rubric_ids,
+            eliminatory_rubric_ids=elim_rubrics,
         )
 
         report = PatientReport(
             patient_id=case.case_id,
             transcript=case.transcript or case.chief_complaint or "Structured clinical intake",
             dimensions=dict(case.dimensions),
-            matched_rubrics=active_rubrics,
+            matched_rubrics=all_matched_rubrics,
             ranked_remedies=ranked_remedies,
             search_queries=queries,
             entities=[],
         )
         case.report_data = report.to_dict()
         return report
+
+
+def rescore_report(
+    ranker: RemedyRanker,
+    report: PatientReport,
+    case: ClinicalCase,
+    top_n: int = 20,
+) -> PatientReport:
+    """Rescore report when rubrics are muted or eliminatory constraints change, without vector search."""
+    muted = set(case.muted_rubric_ids or [])
+    for r in report.matched_rubrics:
+        raw_id = r.get("rubric_id") if r.get("rubric_id") is not None else r.get("id")
+        try:
+            r_id = int(raw_id)
+        except (ValueError, TypeError):
+            r_id = raw_id
+        r["muted"] = r_id in muted
+    active = [r for r in report.matched_rubrics if not r.get("muted")]
+    elim = [i for i in (case.eliminatory_rubric_ids or []) if i not in muted]
+    report.ranked_remedies = ranker.rank(
+        active,
+        top_n=top_n,
+        ranking_mode=case.ranking_mode,
+        eliminatory_rubric_ids=elim,
+    )
+    case.report_data = report.to_dict()
+    return report

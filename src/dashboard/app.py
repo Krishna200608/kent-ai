@@ -407,6 +407,7 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
     st.html('</div>')
 
     remedies = report.ranked_remedies
+    active_rubrics = [r for r in report.matched_rubrics if not r.get("muted")]
     if remedies:
         top_rem = remedies[0]
         margin_html = ""
@@ -425,7 +426,7 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
                     {top_rem.get('full_name')} <span style="color: #34D399; font-size: 20px;">({top_rem.get('abbreviation')})</span>
                 </div>
                 <div style="font-size: 14px; color: #D1D5DB;">
-                    Covers <b>{top_rem.get('rubric_count')} of {len(report.matched_rubrics)}</b> symptom rubrics ({top_rem.get('coverage_ratio', 0)*100:.0f}% coverage) with a weighted totality score of <b>{top_rem.get('score')}</b>.
+                    Covers <b>{top_rem.get('rubric_count')} of {len(active_rubrics)}</b> symptom rubrics ({top_rem.get('coverage_ratio', 0)*100:.0f}% coverage) with a weighted totality score of <b>{top_rem.get('score')}</b>.
                     {margin_html}
                 </div>
                 <div style="font-size: 11.5px; color: #9CA3AF; margin-top: 6px; font-style: italic;">
@@ -472,7 +473,7 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
                     "Remedy": r.get("abbreviation"),
                     "Full Name": r.get("full_name"),
                     "Score": r.get("score"),
-                    "Coverage": f"{r.get('rubric_count')}/{len(report.matched_rubrics)} ({cov_pct})",
+                    "Coverage": f"{r.get('rubric_count')}/{len(active_rubrics)} ({cov_pct})",
                 })
             st.dataframe(pd.DataFrame(table_data), width="stretch", hide_index=True)
 
@@ -490,11 +491,11 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
         f"""
         <div style="display: flex; align-items: center; gap: 8px; margin: 20px 0 8px 0;">
             {get_icon('format_list_bulleted', size=20, color='#34D399')}
-            <h4 style="margin: 0;">5. Matched Kent Repertory Rubrics ({len(report.matched_rubrics)})</h4>
+            <h4 style="margin: 0;">5. Matched Kent Repertory Rubrics ({len(active_rubrics)})</h4>
         </div>
         """
     )
-    for r in report.matched_rubrics:
+    for r in active_rubrics:
         render_rubric_card(r, db)
 
 

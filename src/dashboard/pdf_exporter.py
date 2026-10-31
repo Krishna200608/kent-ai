@@ -168,10 +168,11 @@ def generate_case_pdf(
         rep_dict = case.report_data
 
     # 2. Leading Remedy Candidates
+    active_rubrics = [r for r in rep_dict.get("matched_rubrics", []) if not r.get("muted")]
     if rep_dict and rep_dict.get("ranked_remedies"):
         story.append(Paragraph("2. Leading Remedy Candidates (Totality Ranking)", section_heading))
         rems = rep_dict["ranked_remedies"][:8]
-        total_r = len(rep_dict.get("matched_rubrics", []))
+        total_r = len(active_rubrics)
 
         rem_rows = [
             [
@@ -206,7 +207,7 @@ def generate_case_pdf(
         story.append(Spacer(1, 10))
 
     # 3. Matched Rubrics Table
-    if rep_dict and rep_dict.get("matched_rubrics"):
+    if active_rubrics:
         story.append(Paragraph("3. Supporting Kent Repertory Rubrics", section_heading))
         rub_rows = [
             [
@@ -215,7 +216,7 @@ def generate_case_pdf(
                 Paragraph("Remedies", bold_label),
             ]
         ]
-        for idx, r in enumerate(rep_dict["matched_rubrics"][:12], start=1):
+        for idx, r in enumerate(active_rubrics[:12], start=1):
             p_text = r.get("path") or f"Rubric #{r.get('rubric_id')}"
             rub_rows.append([
                 Paragraph(f"R{idx}", bold_label),

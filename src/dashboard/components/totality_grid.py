@@ -15,9 +15,10 @@ from typing import Any, Dict, List, Optional
 import streamlit as st
 
 from src.dashboard.components.icons import get_icon
+from src.data.case_store import save_case
 from src.data.kent_db import KentDB
 from src.models.case import ClinicalCase
-from src.pipeline.orchestrator import PatientReport
+from src.pipeline.orchestrator import PatientReport, rescore_report
 
 
 def render_classical_totality_matrix(
@@ -95,7 +96,9 @@ def render_classical_totality_matrix(
                         changed = True
 
             if changed:
-                st.toast("Rubric filtering updated. Recomputing totality scores...")
+                st.session_state.current_report = rescore_report(
+                    st.session_state.pipeline.ranker, report, case)
+                save_case(case)
                 st.rerun()
 
     # Build Classical Totality Table

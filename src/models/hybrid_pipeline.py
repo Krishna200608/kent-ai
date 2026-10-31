@@ -189,3 +189,22 @@ class HybridPipelineOrchestrator:
             search_queries=search_queries,
             entities=candidates,
         )
+
+    def repertorize_case(
+        self,
+        case: Any,
+        top_rubrics_per_query: int = 3,
+        top_remedies: int = 20,
+    ) -> PatientReport:
+        """Repertorize a typed ClinicalCase using dense vector retrieval and classical ranker."""
+        orchestrator = PipelineOrchestrator(
+            ner=None,
+            vector_store=self.vector_store,
+            ranker=self.ranker,
+            mock_mode=self.mock_mode,
+        )
+        return orchestrator.repertorize_case(
+            case,
+            top_rubrics_per_query=top_rubrics_per_query,
+            top_remedies=top_remedies,
+        )

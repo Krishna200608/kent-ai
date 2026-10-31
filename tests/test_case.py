@@ -18,7 +18,7 @@ from src.data.case_store import (
     save_case,
 )
 from src.dashboard.pdf_exporter import generate_case_pdf
-from src.pipeline.orchestrator import PipelineOrchestrator, PatientReport
+from src.pipeline.orchestrator import PipelineOrchestrator, PatientReport, rescore_report
 from src.search.ranker import RemedyRanker
 from src.search.vector_store import RubricVectorStore
 from src.search.embedder import RubricEmbedder
@@ -297,3 +297,48 @@ def test_purge_blank_cases(tmp_path):
     remaining = list_cases(db_path=db_path)
     assert len(remaining) == 1
     assert remaining[0]["case_id"] == "CASE-ACTIVE-001"
+
+
+def test_rescore_report_excludes_muted_from_ranking_but_keeps_in_matched():
+    """Verify rescore_report excludes muted rubrics from ranker.rank while keeping them in matched_rubrics."""
+    ranker = RemedyRanker()
+    case = ClinicalCase(case_id="CASE-MUTE-001")
+
+    # Matched rubrics with 2 entries
+    r1 = {"rubric_id": 1, "path": "MIND > ANXIETY", "similarity": 0.9, "remedy_count": 10}
+    r2 = {"rubric_id": 2, "path": "HEAD > PAIN", "similarity": 0.85, "remedy_count": 15}
+
+    report = PatientReport(
+        patient_id=case.case_id,
+        transcript="Test transcript",
+        dimensions={"mental": ["anxiety"], "location": ["head"]},
+        matched_rubrics=[r1, r2],
+        ranked_remedies=ranker.rank([r1, r2]),
+        search_queries=["anxiety", "head"],
+    )
+
+    # Initial rescore: nothing muted
+    rescored = rescore_report(ranker, report, case)
+    assert len(rescored.matched_rubrics) == 2
+    assert not rescored.matched_rubrics[0].get("muted")
+    assert not rescored.matched_rubrics[1].get("muted")
+
+    # Mute rubric #2
+    case.muted_rubric_ids = [2]
+    rescored_muted = rescore_report(ranker, report, case)
+
+    # Both rubrics must still be present in matched_rubrics!
+    assert len(rescored_muted.matched_rubrics) == 2
+    assert rescored_muted.matched_rubrics[0]["muted"] is False
+    assert rescored_muted.matched_rubrics[1]["muted"] is True
+
+    # Case report_data must be synced
+    assert case.report_data is not None
+    assert len(case.report_data["matched_rubrics"]) == 2
+
+    # Un-mute rubric #2
+    case.muted_rubric_ids = []
+    rescored_unmuted = rescore_report(ranker, report, case)
+    assert len(rescored_unmuted.matched_rubrics) == 2
+    assert rescored_unmuted.matched_rubrics[1]["muted"] is False
+
