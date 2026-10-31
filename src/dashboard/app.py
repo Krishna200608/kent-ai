@@ -45,6 +45,7 @@ from src.search.ranker import RemedyRanker
 from src.search.vector_store import RubricVectorStore
 
 from src.dashboard.styles import inject_custom_css
+from src.dashboard.utils import esc
 from src.dashboard.components.icons import get_icon
 from src.dashboard.components.chat_viewer import (
     check_ollama_online,
@@ -361,50 +362,49 @@ def render_repertorization_chart(remedies: List[Dict[str, Any]]):
 
 def render_report_view(report: PatientReport, db: KentDB, case: Optional[ClinicalCase] = None):
     """Render comprehensive clinical repertorization decision-support report."""
-    st.html('<div class="stGlassCard">')
-    col_rep_head, col_rep_dl = st.columns([3, 1])
-    with col_rep_head:
+    with st.container(border=True, key="report_card"):
+        col_rep_head, col_rep_dl = st.columns([3, 1])
+        with col_rep_head:
+            st.html(
+                f"""
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    {get_icon('clinical_notes', size=24, color='#10B981')}
+                    <h3 style="margin: 0;">Case Repertorization Report &mdash; <code>{esc(report.patient_id)}</code></h3>
+                </div>
+                """
+            )
+            if case:
+                st.markdown(f"**Patient**: {case.patient_name} ({case.demographics_string}) &nbsp;&middot;&nbsp; **Chief Complaint**: {case.chief_complaint or 'Clinical Consultation'}")
+        with col_rep_dl:
+            if case:
+                pdf_bytes = generate_case_pdf(case)
+                st.download_button(
+                    "Export PDF Report",
+                    data=pdf_bytes,
+                    file_name=f"{case.case_id}_clinical_report.pdf",
+                    mime="application/pdf",
+                    width="stretch",
+                    key="btn_rep_dl_pdf",
+                )
+            st.download_button(
+                "Export Markdown",
+                data=report.to_markdown(),
+                file_name=f"{report.patient_id}_repertorization.md",
+                mime="text/markdown",
+                width="stretch",
+                key="btn_rep_dl_md",
+            )
+        st.markdown("---")
+
         st.html(
             f"""
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                {get_icon('clinical_notes', size=24, color='#10B981')}
-                <h3 style="margin: 0;">Case Repertorization Report &mdash; <code>{report.patient_id}</code></h3>
+            <div style="display: flex; align-items: center; gap: 8px; margin: 12px 0 8px 0;">
+                {get_icon('account_tree', size=20, color='#06B6D4')}
+                <h4 style="margin: 0;">1. Validated 7-Dimension Clinical Totality</h4>
             </div>
             """
         )
-        if case:
-            st.markdown(f"**Patient**: {case.patient_name} ({case.demographics_string}) &nbsp;&middot;&nbsp; **Chief Complaint**: {case.chief_complaint or 'Clinical Consultation'}")
-    with col_rep_dl:
-        if case:
-            pdf_bytes = generate_case_pdf(case)
-            st.download_button(
-                "Export PDF Report",
-                data=pdf_bytes,
-                file_name=f"{case.case_id}_clinical_report.pdf",
-                mime="application/pdf",
-                width="stretch",
-                key="btn_rep_dl_pdf",
-            )
-        st.download_button(
-            "Export Markdown",
-            data=report.to_markdown(),
-            file_name=f"{report.patient_id}_repertorization.md",
-            mime="text/markdown",
-            width="stretch",
-            key="btn_rep_dl_md",
-        )
-    st.markdown("---")
-
-    st.html(
-        f"""
-        <div style="display: flex; align-items: center; gap: 8px; margin: 12px 0 8px 0;">
-            {get_icon('account_tree', size=20, color='#06B6D4')}
-            <h4 style="margin: 0;">1. Validated 7-Dimension Clinical Totality</h4>
-        </div>
-        """
-    )
-    render_dimensions_grid(report.dimensions, report=report)
-    st.html('</div>')
+        render_dimensions_grid(report.dimensions, report=report)
 
     remedies = report.ranked_remedies
     active_rubrics = [r for r in report.matched_rubrics if not r.get("muted")]

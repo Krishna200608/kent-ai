@@ -5,10 +5,12 @@ Allows clinicians to save, search, resume, delete, and export patient consultati
 
 from __future__ import annotations
 
+import logging
 import streamlit as st
 
 from src.dashboard.components.icons import get_icon
 from src.dashboard.pdf_exporter import generate_case_pdf
+from src.dashboard.utils import esc
 from src.data.case_store import (
     delete_case,
     generate_case_id,
@@ -18,6 +20,9 @@ from src.data.case_store import (
     save_case,
 )
 from src.models.case import ClinicalCase
+from src.pipeline.orchestrator import PatientReport
+
+logger = logging.getLogger("case_library")
 
 
 def render_case_library(current_case: ClinicalCase) -> None:
@@ -108,18 +113,18 @@ def render_case_library(current_case: ClinicalCase) -> None:
                 st.html(
                     f"""
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                        <span style="font-weight: 800; font-size: 15px; color: #FFFFFF;">{c_info['patient_name']}</span>
-                        <span style="font-size: 12px; color: #9CA3AF;">({c_info['demographics']})</span>
-                        <code style="font-size: 11px; color: #10B981; background: rgba(16, 185, 129, 0.1); padding: 2px 6px; border-radius: 4px;">{cid}</code>
+                        <span style="font-weight: 800; font-size: 15px; color: #FFFFFF;">{esc(c_info['patient_name'])}</span>
+                        <span style="font-size: 12px; color: #9CA3AF;">({esc(c_info['demographics'])})</span>
+                        <code style="font-size: 11px; color: #10B981; background: rgba(16, 185, 129, 0.1); padding: 2px 6px; border-radius: 4px;">{esc(cid)}</code>
                         {active_badge}
                     </div>
                     <div style="font-size: 12.5px; color: #D1D5DB; margin-bottom: 6px;">
-                        <b>Chief Complaint:</b> {c_info['chief_complaint'] or 'Not specified'}
+                        <b>Chief Complaint:</b> {esc(c_info['chief_complaint'] or 'Not specified')}
                     </div>
                     <div style="font-size: 11.5px; color: #9CA3AF; display: flex; gap: 14px; flex-wrap: wrap;">
                         <span>Totality: <b>{c_info['dimensions_captured']}/7</b> dimensions ({c_info['total_symptoms']} symptoms)</span>
-                        <span>Leading Remedy: <b>{c_info['top_remedy']}</b></span>
-                        <span>Updated: {c_info['updated_at'][:16].replace('T', ' ')}</span>
+                        <span>Leading Remedy: <b>{esc(c_info['top_remedy'])}</b></span>
+                        <span>Updated: {esc(c_info['updated_at'][:16].replace('T', ' '))}</span>
                     </div>
                     """
                 )
@@ -147,8 +152,8 @@ def render_case_library(current_case: ClinicalCase) -> None:
                                         search_queries=loaded_case.report_data.get("search_queries", []),
                                         entities=loaded_case.report_data.get("entities", []),
                                     )
-                                except Exception:
-                                    pass
+                                except Exception as err:
+                                    logger.warning("Failed to restore PatientReport for case %s: %s", cid, err)
                             st.session_state.workspace_step = 4 if loaded_case.report_data else (2 if loaded_case.filled_dimensions_count >= 1 else 1)
                             st.session_state.active_nav_tab = "Case Workspace"
                             st.toast(f"Resumed consultation: {cid}")

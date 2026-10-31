@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 import streamlit as st
 
 from src.dashboard.components.icons import get_icon
+from src.dashboard.utils import esc
 from src.data.case_store import save_case
 from src.data.kent_db import KentDB
 from src.models.case import ClinicalCase
@@ -114,8 +115,8 @@ def render_classical_totality_matrix(
         score = rem.get("score", 0.0)
         rank = rem.get("rank", 1)
         th_cells.append(
-            f'<th style="min-width: 58px; text-align: center;" title="#{rank} {html.escape(name)}&#10;Score: {score:.2f}">'
-            f'<div style="font-size: 13px; font-weight: 800; color: #10B981;">{abbr}</div>'
+            f'<th style="min-width: 58px; text-align: center;" title="#{rank} {esc(name)}&#10;Score: {score:.2f}">'
+            f'<div style="font-size: 13px; font-weight: 800; color: #10B981;">{esc(abbr)}</div>'
             f'<div style="font-size: 9.5px; color: #9CA3AF; font-weight: normal;">#{rank}</div>'
             f'</th>'
         )
@@ -133,11 +134,11 @@ def render_classical_totality_matrix(
         # Hierarchical Breadcrumbs
         parts = [p.strip() for p in full_path.split(">")]
         if len(parts) > 1:
-            crumb_prefix = " &rsaquo; ".join(parts[:-1])
-            crumb_leaf = parts[-1]
+            crumb_prefix = " &rsaquo; ".join(esc(p) for p in parts[:-1])
+            crumb_leaf = esc(parts[-1])
             breadcrumb_html = f'<div style="font-size: 10px; color: #9CA3AF;">{crumb_prefix}</div><div style="font-size: 12px; font-weight: 700; color: #F9FAFB;">{crumb_leaf}</div>'
         else:
-            breadcrumb_html = f'<div style="font-size: 12px; font-weight: 700; color: #F9FAFB;">{full_path}</div>'
+            breadcrumb_html = f'<div style="font-size: 12px; font-weight: 700; color: #F9FAFB;">{esc(full_path)}</div>'
 
         # Badges
         status_badges = []

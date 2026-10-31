@@ -14,6 +14,7 @@ logger = logging.getLogger("chat_viewer")
 from src.chatbot.dialogue_manager import DialogueManager
 from src.data.case_store import save_case
 from src.dashboard.components.icons import get_icon
+from src.dashboard.utils import esc
 from src.dashboard.dimensions import (
     DIMENSION_MAP,
     KENT_DIMENSIONS_ORDERED,
@@ -84,20 +85,20 @@ def render_slot_badges_html(slots: Dict[str, List[str]], dm: Optional[DialogueMa
         items = slots.get(dim.key, [])
         is_filled = bool(items) or (dm is not None and (dim.key in dm.state_machine.filled_slots or dm.detected_dimensions.get(dim.key, False)))
         if is_filled:
-            val_str = ", ".join(items) if items else "Recorded"
-            title_text = f"{dim.label} ({dim.code}): {dim.captures}&#10;Captured: {val_str}"
+            val_str = ", ".join(esc(it) for it in items) if items else "Recorded"
+            title_text = esc(f"{dim.label} ({dim.code}): {dim.captures}\nCaptured: {', '.join(items)}")
             segments_html.append(
                 f'<div class="hud-segment hud-segment-filled {dim.badge_class}" title="{title_text}" data-code="{dim.code}">'
-                f'<div class="hud-dim-title"><span class="status-dot" style="width:6px;height:6px;display:inline-block;margin-right:4px;"></span>{dim.label}</div>'
+                f'<div class="hud-dim-title"><span class="status-dot" style="width:6px;height:6px;display:inline-block;margin-right:4px;"></span>{esc(dim.label)}</div>'
                 f'<div class="hud-dim-sub" style="white-space: normal; line-height: 1.25;">{val_str}</div>'
                 f'</div>'
             )
         else:
             rec_tag = " <span style='font-size:9px; color:#F59E0B;'>(Recommended)</span>" if dim.key in ("modality_amel", "temporal") else ""
-            title_text = f"{dim.label} ({dim.code}): {dim.captures}&#10;Status: Not recorded yet"
+            title_text = esc(f"{dim.label} ({dim.code}): {dim.captures}\nStatus: Not recorded yet")
             segments_html.append(
                 f'<div class="hud-segment hud-segment-unfilled" title="{title_text}" data-code="{dim.code}">'
-                f'<div class="hud-dim-title">{dim.label}{rec_tag}</div>'
+                f'<div class="hud-dim-title">{esc(dim.label)}{rec_tag}</div>'
                 f'<div class="hud-dim-sub" style="color: #6B7280;">Not recorded yet</div>'
                 f'</div>'
             )
@@ -378,12 +379,13 @@ def render_chat_interface(dm: DialogueManager) -> None:
                     dm.sync_to_case(active_case)
                     save_case(active_case)
 
-                thinking_box.markdown(
-                    f"<div style='font-size: 11.5px; font-weight: 700; color: #10B981; margin-bottom: 4px; letter-spacing: 0.02em;'>"
-                    f"Kent-AI"
-                    f"</div>\n\n{bot_reply}",
-                    unsafe_allow_html=True,
-                )
+                with thinking_box.container():
+                    st.html(
+                        f"<div style='font-size: 11.5px; font-weight: 700; color: #10B981; margin-bottom: 4px; letter-spacing: 0.02em;'>"
+                        f"Kent-AI"
+                        f"</div>"
+                    )
+                    st.markdown(bot_reply)
         st.rerun()
 
 
