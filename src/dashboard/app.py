@@ -40,7 +40,13 @@ from src.models.case import ClinicalCase
 from src.models.symptom_ner import SymptomNER
 from src.models.ensemble import EnsembleNER
 from src.models.hybrid_pipeline import HybridPipelineOrchestrator
-from src.pipeline.orchestrator import PatientReport, PipelineOrchestrator, rescore_report
+try:
+    from src.pipeline.orchestrator import PatientReport, PipelineOrchestrator, rescore_report
+except ImportError:
+    import importlib
+    import src.pipeline.orchestrator as _orch_mod
+    importlib.reload(_orch_mod)
+    from src.pipeline.orchestrator import PatientReport, PipelineOrchestrator, rescore_report
 from src.search.embedder import RubricEmbedder
 from src.search.ranker import RemedyRanker
 from src.search.vector_store import RubricVectorStore

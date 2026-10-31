@@ -19,7 +19,13 @@ from src.dashboard.utils import esc
 from src.data.case_store import save_case
 from src.data.kent_db import KentDB
 from src.models.case import ClinicalCase
-from src.pipeline.orchestrator import PatientReport, rescore_report
+try:
+    from src.pipeline.orchestrator import PatientReport, rescore_report
+except ImportError:
+    import importlib
+    import src.pipeline.orchestrator as _orch_mod
+    importlib.reload(_orch_mod)
+    from src.pipeline.orchestrator import PatientReport, rescore_report
 
 
 def render_classical_totality_matrix(
