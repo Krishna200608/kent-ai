@@ -391,11 +391,40 @@ def render_chat_interface(dm: DialogueManager) -> None:
                     f"Kent-AI"
                     f"</div>"
                 )
+                thinking_box = st.empty()
+                thinking_box.markdown(
+                    f"""
+                    <div class="skeleton-thinking-bubble">
+                        <div style="font-size: 11.5px; color: #10B981; font-weight: 700; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                            <span class="status-dot"></span> {get_icon('sparkles', size=13, color='#10B981')} Kent-AI is reflecting...
+                        </div>
+                        <div class="skeleton-shimmer-line line-1"></div>
+                        <div class="skeleton-shimmer-line line-2"></div>
+                        <div class="skeleton-shimmer-line line-3"></div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+                def _stream_with_thinking(stream_gen):
+                    cleared = False
+                    try:
+                        for chunk in stream_gen:
+                            if not cleared:
+                                thinking_box.empty()
+                                cleared = True
+                            yield chunk
+                    finally:
+                        if not cleared:
+                            thinking_box.empty()
+
                 try:
-                    st.write_stream(dm.visible_only(dm.stream_reply(prompt), raw))
+                    st.write_stream(_stream_with_thinking(dm.visible_only(dm.stream_reply(prompt), raw)))
                 except Exception as err:
                     logger.warning("Error streaming assistant reply: %s", err)
                     dm.last_call_failed = True
+                finally:
+                    thinking_box.empty()
 
         if getattr(dm, "last_call_failed", False) or not raw:
             fallback_text = dm._mock_response_for_state()
