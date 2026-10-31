@@ -787,8 +787,15 @@ header[data-testid="stHeader"],
 }
 
 /* Sidebar sizing & padding protection against clipping on narrow/scaled viewports */
-section[data-testid="stSidebar"] {
+section[data-testid="stSidebar"][aria-expanded="true"] {
     min-width: 280px !important;
+}
+
+section[data-testid="stSidebar"][aria-expanded="false"] {
+    min-width: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 [data-testid="stSidebarUserContent"] {

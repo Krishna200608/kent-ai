@@ -51,7 +51,13 @@ from src.search.embedder import RubricEmbedder
 from src.search.ranker import RemedyRanker
 from src.search.vector_store import RubricVectorStore
 
-from src.dashboard.styles import inject_custom_css, inject_full_screen_layout_js
+try:
+    from src.dashboard.styles import inject_custom_css, inject_full_screen_layout_js
+except ImportError:
+    import importlib
+    import src.dashboard.styles as _styles_mod
+    importlib.reload(_styles_mod)
+    from src.dashboard.styles import inject_custom_css, inject_full_screen_layout_js
 from src.dashboard.utils import esc, safe_rerun_fragment
 from src.dashboard.components.icons import get_icon
 from src.dashboard.components.chat_viewer import (
