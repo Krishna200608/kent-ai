@@ -39,11 +39,12 @@ def _safe_clean_bot_text(text: str) -> str:
     return text.strip().rstrip("[\n\r\t `:,-({")
 
 
+@st.cache_data(ttl=10, show_spinner=False)
 def check_ollama_online(api_base: str = "http://127.0.0.1:11434") -> bool:
     """Direct HTTP ping to check if local Ollama daemon is active and responding.
     
     Checks 127.0.0.1 (IPv4) first to bypass Windows IPv6 resolution latency.
-    Bypasses system proxies for local addresses.
+    Bypasses system proxies for local addresses. Cached for 10s to eliminate latency.
     """
     candidates = ["http://127.0.0.1:11434", api_base, "http://localhost:11434"]
     seen = set()
@@ -59,6 +60,9 @@ def check_ollama_online(api_base: str = "http://127.0.0.1:11434") -> bool:
         except Exception:
             continue
     return False
+
+
+ollama_online = check_ollama_online
 
 
 def get_current_step_label(dm: DialogueManager) -> str:
@@ -241,7 +245,11 @@ def render_chat_interface(dm: DialogueManager) -> None:
                                 dm.extracted_slots[dim.key].remove(item)
                                 if not dm.extracted_slots[dim.key] and dim.key in dm.state_machine.filled_slots:
                                     dm.state_machine.filled_slots.remove(dim.key)
-                                st.rerun()
+                                active_case = st.session_state.get("current_case")
+                                if active_case:
+                                    dm.sync_to_case(active_case)
+                                    save_case(active_case)
+                                st.rerun(scope="fragment")
 
     # Console Subheader with live LLM engine status indicator
     is_llm_online = check_ollama_online(getattr(dm, "api_base", "http://127.0.0.1:11434"))
@@ -297,6 +305,16 @@ def render_chat_interface(dm: DialogueManager) -> None:
                 """
             )
 
+    if getattr(dm, "last_call_failed", False):
+        col_warn, col_retry = st.columns([5, 1])
+        with col_warn:
+            st.warning("The language model is offline or timed out. Questions are now scripted.")
+        with col_retry:
+            if st.button("Retry", key="btn_retry_llm_conn"):
+                dm.last_call_failed = False
+                check_ollama_online.clear()
+                st.rerun(scope="fragment")
+
     # Chat panel with internal scroll area and pinned chat input
     with st.container(border=True):
         scroll_area = st.container(height=450)
@@ -345,6 +363,8 @@ def render_chat_interface(dm: DialogueManager) -> None:
 
     input_to_process = selected_chip or user_prompt
     if input_to_process:
+        prompt = dm.prepare_turn(input_to_process)
+        raw = []
         with scroll_area:
             with st.chat_message("user", avatar=USER_AVATAR):
                 st.html(
@@ -354,38 +374,30 @@ def render_chat_interface(dm: DialogueManager) -> None:
                 )
                 st.markdown(input_to_process)
             with st.chat_message("assistant", avatar=ASSISTANT_AVATAR):
-                thinking_box = st.empty()
-                thinking_box.html(
-                    f"""
-                    <div class="skeleton-thinking-bubble">
-                        <div style="font-size: 11.5px; color: #10B981; font-weight: 700; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-                            <span class="status-dot"></span> {get_icon('sparkles', size=13, color='#10B981')} Kent-AI is reflecting...
-                        </div>
-                        <div class="skeleton-shimmer-line line-1"></div>
-                        <div class="skeleton-shimmer-line line-2"></div>
-                        <div class="skeleton-shimmer-line line-3"></div>
-                    </div>
-                    """
+                st.html(
+                    f"<div style='font-size: 11.5px; font-weight: 700; color: #10B981; margin-bottom: 4px; letter-spacing: 0.02em;'>"
+                    f"Kent-AI"
+                    f"</div>"
                 )
                 try:
-                    bot_reply = dm.process_turn(input_to_process)
+                    st.write_stream(dm.visible_only(dm.stream_reply(prompt), raw))
                 except Exception as err:
-                    logger.warning("Error processing dialogue turn: %s", err)
-                    bot_reply = dm._mock_response_for_state()
+                    logger.warning("Error streaming assistant reply: %s", err)
+                    dm.last_call_failed = True
 
-                # Persist case updates on dialogue turns
-                active_case = st.session_state.get("current_case")
-                if active_case:
-                    dm.sync_to_case(active_case)
-                    save_case(active_case)
+        if getattr(dm, "last_call_failed", False) or not raw:
+            fallback_text = dm._mock_response_for_state()
+            raw = [fallback_text]
+            st.toast("Language model connection offline or timed out.", icon="⚠️")
 
-                with thinking_box.container():
-                    st.html(
-                        f"<div style='font-size: 11.5px; font-weight: 700; color: #10B981; margin-bottom: 4px; letter-spacing: 0.02em;'>"
-                        f"Kent-AI"
-                        f"</div>"
-                    )
-                    st.markdown(bot_reply)
-        st.rerun()
+        dm.finalize_turn("".join(raw))
+
+        # Persist case updates on dialogue turns
+        active_case = st.session_state.get("current_case")
+        if active_case:
+            dm.sync_to_case(active_case)
+            save_case(active_case)
+
+        st.rerun(scope="fragment")
 
 

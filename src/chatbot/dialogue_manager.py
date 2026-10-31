@@ -135,6 +135,7 @@ class DialogueManager:
         }
         self.patient_report: Optional[PatientReport] = None
         self.current_suggestions: List[str] = []
+        self.last_call_failed: bool = False
 
         if case is not None:
             self.load_from_case(case)
@@ -534,11 +535,13 @@ class DialogueManager:
     # Ollama Chat Helpers
     # =========================================================================
 
-    def _call_ollama_chat(self, user_prompt: str) -> str:
-        """Call Ollama /api/chat with concise prompt context."""
+    def _call_ollama_chat_stream(self, user_prompt: str):
+        """Call Ollama /api/chat with streaming NDJSON and yield content pieces.
+
+        Streams chunks from local Ollama daemon with 120s timeout and num_predict: 256.
+        """
         url = f"{self.api_base}/api/chat"
 
-        # Use lean context: system prompt + structured turn prompt (turn prompt already embeds recent history)
         messages = [
             {"role": "system", "content": CHATBOT_SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
@@ -547,7 +550,7 @@ class DialogueManager:
         payload = {
             "model": self.model_name,
             "messages": messages,
-            "stream": False,
+            "stream": True,
             "options": {
                 "temperature": self.temperature,
                 "top_p": 0.9,
@@ -565,11 +568,78 @@ class DialogueManager:
 
         try:
             with opener.open(req, timeout=120) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                return data.get("message", {}).get("content", "").strip()
+                self.last_call_failed = False
+                for line in resp:
+                    line_str = line.decode("utf-8").strip()
+                    if not line_str:
+                        continue
+                    try:
+                        chunk = json.loads(line_str)
+                    except json.JSONDecodeError:
+                        continue
+                    piece = chunk.get("message", {}).get("content", "")
+                    if piece:
+                        yield piece
+                    if chunk.get("done", False):
+                        break
         except (urllib.error.URLError, TimeoutError, OSError, Exception) as err:
+            logger.warning("Ollama streaming call failed or timed out (%s).", err)
+            self.last_call_failed = True
+            raise err
+
+    def _call_ollama_chat(self, user_prompt: str, stream: bool = False):
+        """Call Ollama /api/chat.
+
+        If stream=True, yields NDJSON chunks as a generator.
+        If stream=False, returns the complete reply string, falling back safely on error.
+        """
+        if stream:
+            return self._call_ollama_chat_stream(user_prompt)
+        try:
+            full = "".join(self._call_ollama_chat_stream(user_prompt)).strip()
+            return full or self._mock_response_for_state()
+        except Exception as err:
             logger.warning("Ollama call failed or timed out (%s). Using fallback template.", err)
+            self.last_call_failed = True
             return self._mock_response_for_state()
+
+    def stream_reply(self, turn_prompt: str):
+        """Expose a generator yielding reply pieces from Ollama or fallback template."""
+        current_state = self.state_machine.current_state
+        if self.mock_mode or current_state == IntakeState.DONE or not turn_prompt:
+            yield self._mock_response_for_state()
+            return
+
+        had_chunks = False
+        try:
+            for piece in self._call_ollama_chat(turn_prompt, stream=True):
+                had_chunks = True
+                yield piece
+        except Exception as err:
+            logger.warning("Error in stream_reply (%s). Using fallback.", err)
+            self.last_call_failed = True
+            if not had_chunks:
+                yield self._mock_response_for_state()
+
+    @staticmethod
+    def visible_only(chunks, sink: list):
+        """Yield visible text chunks while collecting the complete raw stream in sink.
+
+        Stops yielding visible text as soon as control tags like [QUICK_REPLIES...]
+        or [SLOT_UPDATE...] appear, keeping the user-facing chat free of raw control syntax.
+        """
+        stopped = False
+        for piece in chunks:
+            sink.append(piece)
+            if stopped:
+                continue
+            if "[" in piece:
+                stopped = True
+                before, _ = piece.split("[", 1)
+                if before:
+                    yield before
+            else:
+                yield piece
 
     def is_ollama_online(self) -> bool:
         """Check if local Ollama daemon is responding.
@@ -927,25 +997,10 @@ class DialogueManager:
     # Core Turn Processing
     # =========================================================================
 
-    def process_turn(self, user_utterance: str) -> str:
-        """Process one conversational turn from the patient.
+    def prepare_turn(self, user_utterance: str) -> str:
+        """Run FSM transitions, history recording, and slot extraction.
 
-        Steps:
-            1. Record patient utterance.
-            2. Run 3-tier slot extraction (YAML heuristic → ClinicalBERT → LLaMA).
-            3. Merge new slots into session accumulated slots (deduplication).
-            4. Transition FSM to next state.
-            5. Generate bot response (LLaMA or offline fallback).
-            6. Parse SLOT_UPDATE from bot reply if present (zero-cost Tier 3 enrichment).
-            7. Parse QUICK_REPLIES from bot reply.
-            8. Record clean bot response to history.
-            9. Handover to pipeline orchestrator when DONE.
-
-        Args:
-            user_utterance: Patient's message.
-
-        Returns:
-            Friendly clinical response message from Kent-AI.
+        Returns the formatted turn prompt for LLM generation (or empty string if mock/done).
         """
         # 1. Record patient utterance
         self.history.append({"role": "user", "content": user_utterance})
@@ -967,36 +1022,37 @@ class DialogueManager:
         current_state = self.state_machine.current_state
         goal_desc = self.state_machine.get_current_goal_description()
 
-        # 5. Generate bot response
+        # 5. Build prompt if not mock / done
         if self.mock_mode or current_state == IntakeState.DONE:
+            return ""
+
+        slots_summary = "\n".join(
+            f"- {k.capitalize()}: {', '.join(v)}"
+            for k, v in self.extracted_slots.items()
+            if v
+        ) or "- None yet."
+
+        recent_history = "\n".join(
+            f"{turn['role'].capitalize()}: {turn['content']}"
+            for turn in self.history[-4:]
+        )
+
+        turn_prompt = CHATBOT_TURN_PROMPT.format(
+            current_goal=goal_desc,
+            slots_summary=slots_summary,
+            history=recent_history,
+            user_utterance=user_utterance,
+        )
+        return turn_prompt
+
+    def finalize_turn(self, raw_reply: str) -> str:
+        """Parse inline tags, update slots, record assistant message in history,
+        and trigger pipeline handover if intake reached DONE.
+
+        Returns clean reply text.
+        """
+        if not raw_reply:
             raw_reply = self._mock_response_for_state()
-        else:
-            slots_summary = "\n".join(
-                f"- {k.capitalize()}: {', '.join(v)}"
-                for k, v in self.extracted_slots.items()
-                if v
-            ) or "- None yet."
-
-            recent_history = "\n".join(
-                f"{turn['role'].capitalize()}: {turn['content']}"
-                for turn in self.history[-4:]
-            )
-
-            turn_prompt = CHATBOT_TURN_PROMPT.format(
-                current_goal=goal_desc,
-                slots_summary=slots_summary,
-                history=recent_history,
-                user_utterance=user_utterance,
-            )
-
-            try:
-                raw_reply = self._call_ollama_chat(turn_prompt)
-            except Exception as err:
-                logger.warning("Error during chat generation (%s). Using fallback.", err)
-                raw_reply = self._mock_response_for_state()
-
-            if not raw_reply:
-                raw_reply = self._mock_response_for_state()
 
         # 6. Extract inline SLOT_UPDATE from bot reply (free Tier 3 enrichment)
         raw_reply, inline_slots = self._parse_and_strip_slot_update(raw_reply)
@@ -1019,6 +1075,7 @@ class DialogueManager:
         self.history.append({"role": "assistant", "content": clean_reply})
 
         # 9. Handover to pipeline orchestrator when intake is complete
+        current_state = self.state_machine.current_state
         if current_state == IntakeState.DONE and self.orchestrator:
             try:
                 active_case = self.sync_to_case(self.case)
@@ -1031,6 +1088,23 @@ class DialogueManager:
                 logger.error("Error executing handover to pipeline orchestrator: %s", e)
 
         return clean_reply
+
+    def process_turn(self, user_utterance: str) -> str:
+        """Process a single turn of clinical intake dialogue.
+
+        Coordinates slot extraction, state transition, LLM response generation,
+        and post-turn slot persistence.
+
+        Args:
+            user_utterance: Patient's message.
+
+        Returns:
+            Friendly clinical response message from Kent-AI.
+        """
+        turn_prompt = self.prepare_turn(user_utterance)
+        full_reply = "".join(self.stream_reply(turn_prompt))
+        return self.finalize_turn(full_reply)
+
 
     def get_full_transcript(self) -> str:
         """Compile complete multi-turn dialogue into a coherent clinical narrative."""
@@ -1050,3 +1124,4 @@ class DialogueManager:
         self.extracted_slots = {k: [] for k in self.extracted_slots}
         self.patient_report = None
         self.current_suggestions = []
+        self.last_call_failed = False

@@ -317,4 +317,32 @@ def test_done_transition_instant_response(mock_dialogue_manager):
     assert any("remed" in s.lower() or "consultation" in s.lower() for s in dm.current_suggestions)
 
 
+def test_dialogue_manager_streaming_and_visible_only(mock_dialogue_manager):
+    """Verify that stream_reply yields chunks and visible_only filters control tags."""
+    dm = mock_dialogue_manager
+    prompt = dm.prepare_turn("Severe throbbing headache in forehead")
+    assert "forehead" in dm.extracted_slots.get("location", []) or "head" in dm.extracted_slots.get("location", [])
+
+    chunks = list(dm.stream_reply(prompt))
+    assert len(chunks) > 0
+    full_text = "".join(chunks)
+
+    # Test visible_only filter
+    test_stream = [
+        "I understand your discomfort. ",
+        "Can you describe when it worsens? ",
+        "[QUICK_REPLIES: [\"Morning\", \"Afternoon\"]]",
+    ]
+    raw_sink = []
+    visible_chunks = list(dm.visible_only(test_stream, raw_sink))
+    assert "".join(visible_chunks) == "I understand your discomfort. Can you describe when it worsens? "
+    assert "".join(raw_sink) == "".join(test_stream)
+
+    # Finalize turn
+    clean_reply = dm.finalize_turn(full_text)
+    assert len(clean_reply) > 0
+    assert dm.history[-1]["role"] == "assistant"
+
+
+
 
