@@ -54,14 +54,33 @@ html, body, [class*="css"], .stApp {
     font-size: 14px;
 }
 
-/* Phase 1 & 7: Cap content width at ~1200px, centered */
+/* Responsive layout container sizing */
 .stMain .block-container,
-[data-testid="stAppViewBlockContainer"] > .block-container {
-    max-width: 1200px !important;
+[data-testid="stAppViewBlockContainer"] > .block-container,
+.main .block-container {
+    max-width: 1400px !important;
     margin-left: auto !important;
     margin-right: auto !important;
-    padding-left: 20px !important;
-    padding-right: 20px !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    transition: max-width 0.2s ease, padding 0.2s ease !important;
+}
+
+/* When sidebar is closed / collapsed: rest of content covers the whole screen */
+[data-testid="stAppViewContainer"]:has([data-testid="stSidebar"][aria-expanded="false"]) .block-container,
+[data-testid="stAppViewContainer"]:has([data-testid="stSidebarCollapsedControl"]) .block-container,
+.stApp:has([data-testid="stSidebar"][aria-expanded="false"]) .block-container,
+.stApp:has([data-testid="stSidebarCollapsedControl"]) .block-container,
+[data-testid="stSidebar"][aria-expanded="false"] ~ .stMain .block-container,
+[data-testid="stSidebar"][aria-expanded="false"] ~ [data-testid="stMain"] .block-container,
+[data-testid="stSidebar"][aria-expanded="false"] ~ .main .block-container,
+[data-testid="stSidebar"][aria-expanded="false"] ~ div .block-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 28px !important;
+    padding-right: 28px !important;
 }
 
 h1, h2, h3, h4, h5, h6, .brand-title {
