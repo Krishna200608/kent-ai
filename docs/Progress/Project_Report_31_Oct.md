@@ -67,6 +67,9 @@ The complete dataset was generated on an **NVIDIA RTX 5000 Ada (32GB VRAM)** acr
 | **Validation Split (`val.jsonl`, 10%)** | **1,973** | 1,973 | 9,850 | 4.3 MB |
 | **Test Split (`test.jsonl`, 10%)** | **1,973** | 1,973 | 9,955 | 4.3 MB |
 
+![Figure 1: Kentian 7-Dimension Totality Distribution in Synthetic Corpus](figures/fig1_entity_distribution.png)
+*Figure 1: Distribution of 99,854 annotated clinical entities across Kent's 7 canonical totality dimensions in the 19,732 synthetic case corpus.*
+
 **Quality Metrics**:
 - **Character Offset Drift**: **0 errors** (100.00% alignment across 99,854 entities).
 - **Pairwise Jaccard Lexical Overlap**: **13.10%** (demonstrating 86.9% non-repetitive lexical diversity).
@@ -114,6 +117,9 @@ Per supervisor directives (Dr. Nikhilanand Arya), four representative transforme
 | **PubMedBERT** | 108M | 34.34% | 33.91% | 34.78% | **25.80%** | **41.56%** | **35.02%** | 18.5 ms |
 | **BioLinkBERT** | 108M | **34.86%** | **34.20%** | **35.54%** | 24.95% | 40.80% | 34.46% | 18.4 ms |
 
+![Figure 2: Comparative Benchmark of 4 Fine-Tuned Biomedical Encoders](figures/fig2_encoder_benchmark.png)
+*Figure 2: Multi-metric evaluation of four fine-tuned biomedical encoders over N = 1,973 held-out test narratives.*
+
 **Key Academic Takeaways**:
 - **BioLinkBERT** achieved the highest token-level extraction F1 (**34.86%**) due to its citation-linked context representations.
 - **PubMedBERT** achieved the highest downstream rubric retrieval recall (**41.56% Recall@20**) and Simillimum accuracy (**35.02%**), proving superior at semantic rubric mapping.
@@ -144,6 +150,9 @@ To overcome rigid token-boundary constraints and model complex semantic symptoms
 | **Mean Reciprocal Rank (MRR)** | 0.1529 | **0.1904** | **+0.0375** (BioMistral) | $\ge 0.50$ |
 | **Inference Latency** | **2,672 ms** | 3,093 ms | +421 ms | < 5,000 ms |
 
+![Figure 3: Domain Adaptation Comparison: BioMistral 7B vs. Qwen 2.5 7B](figures/fig3_generative_vs_encoder.png)
+*Figure 3: Performance advantage of medical domain-adapted BioMistral 7B over general instruction-tuned Qwen 2.5 7B across extraction F1 and downstream ChromaDB recall tiers.*
+
 **Clinical Implications**:
 - **Zero Syntax Failures**: Both adapters achieved 100% JSON parse reliability without a single malformed object across 1,973 test cases.
 - **Biomedical Domain Adaptation**: Pretraining on PubMed Central gave **BioMistral 7B** a pronounced advantage in clinical vocabulary, outperforming Qwen across all 7 dimensions and raising Recall@20 from 31.7% to **37.7%**.
@@ -163,6 +172,9 @@ To combine the ultra-low latency of biomedical encoders with the nuanced semanti
   - **Micro Recall**: **49.91%** (highest recall achieved across all individual systems).
   - **Micro F1**: **46.10%** (Macro F1: 41.05%).
   - **Inference Latency**: **54.62 ms / narrative** (18.3 cases/second across 4 combined models).
+
+![Figure 4: Pareto Frontier: Entity Recall vs. Inference Latency](figures/fig4_ensemble_recall_latency.png)
+*Figure 4: Empirical Pareto frontier contrasting entity extraction recall against inference latency per narrative across individual encoders, generative LLMs, and the 4-encoder voting ensemble (Paradigm 1).*
 
 ### 5.2 Paradigm 2: Two-Stage Hybrid Pipeline (`HybridPipelineOrchestrator`)
 - Implemented in [`src/models/hybrid_pipeline.py`](../../src/models/hybrid_pipeline.py).
