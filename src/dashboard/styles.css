@@ -669,9 +669,10 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.st-key-report_card):hover {
 /* ========================================================= */
 
 /* Keep Streamlit header transparent so the sidebar collapse/expand toggle button remains functional */
-header[data-testid="stHeader"] {
+header[data-testid="stHeader"],
+.stApp header {
     background: transparent !important;
-    height: 3.5rem !important;
+    height: 2.25rem !important;
     z-index: 9999 !important;
 }
 
@@ -728,9 +729,11 @@ section[data-testid="stSidebar"] {
 }
 
 /* Adjust main app block top padding so brand-header sits cleanly below the top header */
-[data-testid="stAppViewBlockContainer"] {
-    padding-top: 3.5rem !important;
-    padding-bottom: 3rem !important;
+.main .block-container,
+[data-testid="stAppViewBlockContainer"],
+.block-container {
+    padding-top: 1.75rem !important;
+    padding-bottom: 2.5rem !important;
 }
 
 /* Make buttons look sleek instead of generic Streamlit ones */

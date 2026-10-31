@@ -589,24 +589,13 @@ def render_sidebar():
                 <div style='margin-bottom: 8px; display: inline-flex; justify-content: center; align-items: center; width: 50px; height: 50px; border-radius: 14px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3);'>
                     {get_icon('local_florist', size=28, color='#10B981')}
                 </div>
-                <div style='font-size: 16px; font-weight: 800; color: #10B981; line-height: 1.25;'>Kent-AI Clinical Suite</div>
+                <div style='font-size: 16px; font-weight: 800; color: #10B981; line-height: 1.25;'>Kent-AI Clinical Decision Support</div>
                 <div style='font-size: 11px; color: #9CA3AF; margin-top: 2px;'>Classical Decision Support</div>
             </div>
             """
         )
 
         case: ClinicalCase = st.session_state.get("current_case")
-        if case:
-            st.html(
-                f"""
-                <div style="background: rgba(17, 24, 39, 0.85); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px;">
-                    <div style="font-size: 11px; color: #10B981; font-weight: 700; text-transform: uppercase;">Active Consultation</div>
-                    <div style="font-size: 13.5px; font-weight: 800; color: #FFFFFF; margin-top: 2px;">{case.patient_name}</div>
-                    <div style="font-size: 11px; color: #9CA3AF;">{case.case_id} &middot; {case.demographics_string}</div>
-                    <div style="font-size: 11.5px; color: #D1D5DB; margin-top: 4px;">Totality: <b>{case.filled_dimensions_count}/7</b> dimensions captured</div>
-                </div>
-                """
-            )
 
         st.html(
             f"""
@@ -937,6 +926,8 @@ def main():
                         save_case(current_case)
                         st.session_state.workspace_step = 3
                         st.rerun()
+                if not can_repertorize:
+                    st.caption("Add at least one symptom dimension above to enable analysis.")
 
         # ---------------------------------------------------------------------
         # STEP 3: Repertorization & Analysis (Rubric Curation)
