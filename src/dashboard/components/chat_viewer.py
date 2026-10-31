@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 import logging
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 import urllib.request
@@ -46,6 +47,9 @@ def check_ollama_online(api_base: str = "http://127.0.0.1:11434") -> bool:
     Checks 127.0.0.1 (IPv4) first to bypass Windows IPv6 resolution latency.
     Bypasses system proxies for local addresses. Cached for 10s to eliminate latency.
     """
+    if os.environ.get("KENT_MOCK_PIPELINE", "0") == "1":
+        return False
+
     candidates = ["http://127.0.0.1:11434", api_base, "http://localhost:11434"]
     seen = set()
     unique_candidates = [c for c in candidates if c and not (c in seen or seen.add(c))]
@@ -245,7 +249,10 @@ def render_chat_interface(dm: DialogueManager) -> None:
                                 if active_case:
                                     dm.sync_to_case(active_case)
                                     save_case(active_case)
-                                st.rerun(scope="fragment")
+                                try:
+                                    st.rerun(scope="fragment")
+                                except Exception:
+                                    st.rerun()
 
     # Console Subheader with live LLM engine status indicator
     is_llm_online = check_ollama_online(getattr(dm, "api_base", "http://127.0.0.1:11434"))
@@ -321,7 +328,10 @@ def render_chat_interface(dm: DialogueManager) -> None:
             if st.button("Retry", key="btn_retry_llm_conn"):
                 dm.last_call_failed = False
                 check_ollama_online.clear()
-                st.rerun(scope="fragment")
+                try:
+                    st.rerun(scope="fragment")
+                except Exception:
+                    st.rerun()
 
     # Chat panel with internal scroll area and pinned chat input
     with st.container(border=True):
@@ -406,6 +416,9 @@ def render_chat_interface(dm: DialogueManager) -> None:
             dm.sync_to_case(active_case)
             save_case(active_case)
 
-        st.rerun(scope="fragment")
+        try:
+            st.rerun(scope="fragment")
+        except Exception:
+            st.rerun()
 
 

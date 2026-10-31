@@ -342,3 +342,14 @@ def test_rescore_report_excludes_muted_from_ranking_but_keeps_in_matched():
     assert len(rescored_unmuted.matched_rubrics) == 2
     assert rescored_unmuted.matched_rubrics[1]["muted"] is False
 
+
+def test_html_escaping():
+    """Verify esc() helper safely escapes malicious HTML/XSS payloads and handles edge cases."""
+    from src.dashboard.utils import esc
+    assert esc("<script>alert('xss')</script>") == "&lt;script&gt;alert(&#x27;xss&#x27;)&lt;/script&gt;"
+    assert esc('"hello" & "world"') == "&quot;hello&quot; &amp; &quot;world&quot;"
+    assert esc("<b>bold</b>") == "&lt;b&gt;bold&lt;/b&gt;"
+    assert esc(None) == ""
+    assert esc("") == ""
+    assert esc(12345) == "12345"
+

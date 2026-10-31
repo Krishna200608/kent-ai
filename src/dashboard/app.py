@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import copy
 import logging
+import os
 import sys
 import uuid
 from datetime import datetime
@@ -95,10 +96,15 @@ def get_db() -> KentDB:
 @st.cache_resource
 def get_pipeline(engine_name: str = "BioLinkBERT Fast Mode (~18ms)"):
     """Cache dense vector store, embedder, and pipeline orchestrator for selected engine."""
-    embedder = RubricEmbedder(mock_mode=False)
-    vector_store = RubricVectorStore(embedder=embedder)
+    mock_mode = os.environ.get("KENT_MOCK_PIPELINE", "0") == "1"
+    embedder = RubricEmbedder(mock_mode=mock_mode)
+    vector_store = RubricVectorStore(embedder=embedder, in_memory=mock_mode)
     ranker = RemedyRanker()
     root = get_project_root()
+
+    if mock_mode:
+        ner = SymptomNER(mock_mode=True)
+        return PipelineOrchestrator(ner=ner, vector_store=vector_store, ranker=ranker, mock_mode=True)
 
     if "PubMedBERT" in engine_name:
         model_p = root / "data" / "models" / "pubmedbert_homeoNER"
@@ -136,10 +142,11 @@ def initialize_session():
         st.session_state.pipeline = get_pipeline(active_engine)
 
     if "dialogue_manager" not in st.session_state or not hasattr(st.session_state.dialogue_manager, "is_ollama_online"):
+        mock_dm = os.environ.get("KENT_MOCK_PIPELINE", "0") == "1"
         dm = DialogueManager(
             orchestrator=st.session_state.pipeline,
             model_name="llama3:8b",
-            mock_mode=False,
+            mock_mode=mock_dm,
         )
         dm.load_from_case(case)
         st.session_state.dialogue_manager = dm
@@ -747,15 +754,24 @@ def render_bedside_dialogue_panel(dm: DialogueManager, current_case: ClinicalCas
                         st.session_state.current_report = None
                         st.session_state.confirm_intake_reset = False
                         st.toast("Consultation reset.")
-                        st.rerun(scope="fragment")
+                        try:
+                            st.rerun(scope="fragment")
+                        except Exception:
+                            st.rerun()
                 with col_cf2:
                     if st.button("Cancel", width="stretch", key="confirm_reset_no"):
                         st.session_state.confirm_intake_reset = False
-                        st.rerun(scope="fragment")
+                        try:
+                            st.rerun(scope="fragment")
+                        except Exception:
+                            st.rerun()
             else:
                 if st.button("Reset Consultation", type="secondary", width="stretch", key="btn_reset_consult"):
                     st.session_state.confirm_intake_reset = True
-                    st.rerun(scope="fragment")
+                    try:
+                        st.rerun(scope="fragment")
+                    except Exception:
+                        st.rerun()
 
     with col_chat:
         render_chat_interface(dm)
