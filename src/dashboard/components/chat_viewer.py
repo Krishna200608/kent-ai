@@ -226,7 +226,15 @@ def render_chat_interface(dm: DialogueManager) -> None:
         with c_rev2:
             if st.button("Proceed to Review \u2192", type="primary", width="stretch", key="intake_to_review_btn"):
                 if hasattr(st.session_state, "current_case") and st.session_state.current_case:
-                    dm.sync_to_case(st.session_state.current_case)
+                    active_case = st.session_state.current_case
+                    dm.sync_to_case(active_case)
+                    if not active_case.clinical_summary and active_case.is_ready_for_repertorization:
+                        try:
+                            from src.pipeline.case_summarizer import CaseSummarizer
+                            active_case.clinical_summary = CaseSummarizer().generate_summary(active_case)
+                        except Exception as e:
+                            logger.info("Auto-summary generation on review handover: %s", e)
+                    save_case(active_case)
                 st.session_state.workspace_step = 2
                 st.rerun()
 

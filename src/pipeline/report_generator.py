@@ -14,11 +14,11 @@ def generate_json_report(report_data: Dict[str, Any]) -> str:
 
 def generate_markdown_report(report_data: Dict[str, Any]) -> str:
     """Format report into structured clinical consultation Markdown.
-    
+
     Args:
         report_data: Dictionary containing patient_id, transcript, dimensions,
-                     matched_rubrics, and ranked_remedies.
-                     
+                     matched_rubrics, ranked_remedies, and optional clinical_summary.
+
     Returns:
         Formatted Markdown report suitable for clinical records and UI display.
     """
@@ -28,6 +28,7 @@ def generate_markdown_report(report_data: Dict[str, Any]) -> str:
     dims = report_data.get("dimensions", {})
     rubrics = report_data.get("matched_rubrics", [])
     remedies = report_data.get("ranked_remedies", [])
+    clinical_summary = (report_data.get("clinical_summary") or "").strip()
 
     lines: List[str] = [
         "# Kent-AI — Clinical Repertorization Report",
@@ -36,11 +37,28 @@ def generate_markdown_report(report_data: Dict[str, Any]) -> str:
         "",
         "---",
         "",
-        "## 1. Patient Intake Narrative",
+    ]
+
+    sec_idx = 1
+    if clinical_summary:
+        lines.extend([
+            f"## {sec_idx}. Clinical Case Summary (Physician Brief)",
+            "",
+            f"{clinical_summary}",
+            "",
+        ])
+        sec_idx += 1
+
+    lines.extend([
+        f"## {sec_idx}. Patient Intake Narrative",
         "",
-        f"> *\"{transcript}\"*",
+        f'> *"{transcript}"*',
         "",
-        "## 2. Kent's 7-Dimension Analysis",
+    ])
+    sec_idx += 1
+
+    lines.extend([
+        f"## {sec_idx}. Kent's 7-Dimension Analysis",
         "",
         "| Dimension | Clinical Findings |",
         "|---|---|",
@@ -53,9 +71,14 @@ def generate_markdown_report(report_data: Dict[str, Any]) -> str:
         f"| **Mental (MENT)** | {', '.join(dims.get('mental', [])) or 'None reported'} |",
         f"| **Negated / Denied** | {', '.join(dims.get('negated', [])) or 'None'} |",
         "",
-        "## 3. Matched Kent Repertory Rubrics",
+    ])
+    sec_idx += 1
+
+    lines.extend([
+        f"## {sec_idx}. Matched Kent Repertory Rubrics",
         "",
-    ]
+    ])
+    sec_idx += 1
 
     if rubrics:
         lines.extend([
@@ -72,7 +95,7 @@ def generate_markdown_report(report_data: Dict[str, Any]) -> str:
 
     lines.extend([
         "",
-        "## 4. Totality Remedy Ranking",
+        f"## {sec_idx}. Totality Remedy Ranking",
         "",
     ])
 

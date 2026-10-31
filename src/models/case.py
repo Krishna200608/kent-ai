@@ -65,6 +65,7 @@ class ClinicalCase:
     # Serialized or attached PatientReport dict
     report_data: Optional[Dict[str, Any]] = None
     clinical_notes: str = ""
+    clinical_summary: str = ""
 
     def __post_init__(self) -> None:
         # Guarantee all 7 dimensions exist as lists

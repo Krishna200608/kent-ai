@@ -421,7 +421,52 @@ def generate_case_pdf(
         ])
     )
     story.append(t_meta)
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 6))
+
+    # Retrieve repertorization data
+    rep_dict: Optional[Dict[str, Any]] = None
+    if report is not None:
+        rep_dict = report.to_dict()
+    elif case.report_data:
+        rep_dict = case.report_data
+
+    # -----------------------------------------------------------------------
+    # Clinical Case Summary (Physician Brief) Card
+    # -----------------------------------------------------------------------
+    summary_text = (
+        case.clinical_summary
+        or (rep_dict.get("clinical_summary", "") if rep_dict else "")
+        or ""
+    ).strip()
+    if not summary_text and case.is_ready_for_repertorization:
+        from src.pipeline.case_summarizer import CaseSummarizer
+        summary_text = CaseSummarizer._generate_extractive_summary(case)
+
+    if summary_text:
+        summary_box_data = [
+            [
+                Paragraph("<font color='#065F46'><b>CLINICAL CASE SUMMARY (PHYSICIAN BRIEF)</b></font>", body_bold),
+            ],
+            [
+                Paragraph(
+                    summary_text,
+                    ParagraphStyle("SummaryBody", parent=body_cell, fontSize=8, leading=11, textColor=_SLATE_TEXT),
+                ),
+            ],
+        ]
+        t_summary = Table(summary_box_data, colWidths=[540])
+        t_summary.setStyle(
+            TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), _CARD_BG),
+                ("BOX", (0, 0), (-1, -1), 0.7, _BORDER_EMERALD),
+                ("PADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 2),
+                ("TOPPADDING", (0, 1), (-1, 1), 2),
+                ("BOTTOMPADDING", (0, 1), (-1, 1), 4),
+            ])
+        )
+        story.append(t_summary)
+        story.append(Spacer(1, 6))
 
     # -----------------------------------------------------------------------
     # 3. Section 1: Kent's 7-Dimension Clinical Totality

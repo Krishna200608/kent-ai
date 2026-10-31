@@ -12,6 +12,7 @@ from src.data.kent_db import KentDB
 from src.models.case import ClinicalCase
 from src.models.symptom_ner import SymptomNER
 from src.models.resolver import SymptomProfile, SymptomResolver
+from src.pipeline.case_summarizer import CaseSummarizer
 from src.pipeline.report_generator import generate_json_report, generate_markdown_report
 from src.search.embedder import RubricEmbedder
 from src.search.ranker import RemedyRanker
@@ -31,6 +32,7 @@ class PatientReport:
     ranked_remedies: List[Dict[str, Any]]
     search_queries: List[str] = field(default_factory=list)
     entities: List[Dict[str, Any]] = field(default_factory=list)
+    clinical_summary: str = ""
     timestamp: str = field(
         default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat()
     )
@@ -70,6 +72,7 @@ class PipelineOrchestrator:
             self.vector_store = RubricVectorStore(embedder=embedder)
 
         self.ranker = ranker or RemedyRanker()
+        self.summarizer = CaseSummarizer()
 
     def process_transcript(
         self,
@@ -227,6 +230,10 @@ class PipelineOrchestrator:
             eliminatory_rubric_ids=elim_rubrics,
         )
 
+        # 5. Synthesize clinical case summary (Physician Brief) if not already generated
+        if not case.clinical_summary:
+            case.clinical_summary = self.summarizer.generate_summary(case, use_llm=not self.mock_mode)
+
         report = PatientReport(
             patient_id=case.case_id,
             transcript=case.transcript or case.chief_complaint or "Structured clinical intake",
@@ -235,6 +242,7 @@ class PipelineOrchestrator:
             ranked_remedies=ranked_remedies,
             search_queries=queries,
             entities=[],
+            clinical_summary=case.clinical_summary,
         )
         case.report_data = report.to_dict()
         return report
@@ -263,5 +271,7 @@ def rescore_report(
         ranking_mode=case.ranking_mode,
         eliminatory_rubric_ids=elim,
     )
+    if not report.clinical_summary and case.clinical_summary:
+        report.clinical_summary = case.clinical_summary
     case.report_data = report.to_dict()
     return report

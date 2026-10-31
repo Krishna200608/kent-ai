@@ -353,3 +353,65 @@ def test_html_escaping():
     assert esc("") == ""
     assert esc(12345) == "12345"
 
+
+
+def test_case_summarizer(tmp_path: Path):
+    """Verify CaseSummarizer generates clinical briefs with LLM sanitization and extractive fallback."""
+    from src.pipeline.case_summarizer import CaseSummarizer
+
+    summarizer = CaseSummarizer()
+
+    # Empty case returns initial notice
+    empty_case = ClinicalCase(case_id="EMPTY-CASE")
+    assert "No clinical symptoms recorded yet" in summarizer.generate_summary(empty_case)
+
+    # Active clinical case
+    case = ClinicalCase(
+        case_id="SUM-TEST-001",
+        patient_name="Arthur Dent",
+        patient_age=42,
+        patient_sex="Male",
+        chief_complaint="Severe migraine",
+    )
+    case.add_symptom("location", "temples, forehead")
+    case.add_symptom("sensation", "throbbing, hammering")
+    case.add_symptom("modality_agg", "bright sunlight, motion")
+    case.add_symptom("modality_amel", "cold pressure")
+    case.add_symptom("concomitant", "nausea")
+    case.add_symptom("mental", "irritable, desires solitude")
+
+    # Extractive fallback verification
+    summary_text = summarizer.generate_summary(case, use_llm=False)
+    assert "42-year-old male" in summary_text
+    assert "temples, forehead" in summary_text
+    assert "throbbing, hammering" in summary_text
+    assert "bright sunlight, motion" in summary_text
+    assert "cold pressure" in summary_text
+    assert "nausea" in summary_text
+    assert "irritable, desires solitude" in summary_text
+
+    # Sanitizer verification
+    raw_llm = 'Here is a concise clinical summary for the physician:\n\n"The patient presents with severe migraine..."'
+    cleaned = CaseSummarizer._sanitize_llm_output(raw_llm)
+    assert not cleaned.startswith("Here is")
+    assert not cleaned.startswith('"')
+    assert "The patient presents" in cleaned
+
+    # Persistence verification
+    db_path = tmp_path / "summary_cases.sqlite"
+    case.clinical_summary = summary_text
+    save_case(case, db_path=db_path)
+
+    retrieved = get_case(case.case_id, db_path=db_path)
+    assert retrieved is not None
+    assert retrieved.clinical_summary == summary_text
+
+    # PDF Exporter verification
+    pdf_bytes = generate_case_pdf(case)
+    assert len(pdf_bytes) > 2000
+    try:
+        import fitz
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        assert "CLINICAL CASE SUMMARY" in doc[0].get_text()
+    except ImportError:
+        pass

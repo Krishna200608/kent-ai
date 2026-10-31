@@ -204,9 +204,9 @@ def render_header():
     """Render top brand navigation bar with clinical logo and active consultation telemetry."""
     active_scope = st.session_state.get("repertory_scope", "MIND Chapter Focus (4,933 rubrics)")
     is_mind = "MIND" in active_scope
-    short_scope = "MIND (4.9k)" if is_mind else "All Chapters (74k)"
+    short_scope = "MIND" if is_mind else "All Chapters"
 
-    case: ClinicalCase = st.session_state.get("current_case")
+    case: ClinicalCase | None = st.session_state.get("current_case")
     case_label = case.case_id if case else "Active Case"
 
     dm = st.session_state.get("dialogue_manager")
@@ -426,6 +426,29 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
             )
         st.markdown("---")
 
+        summary_to_show = getattr(report, "clinical_summary", "") or (case.clinical_summary if case else "")
+        if not summary_to_show and case and case.is_ready_for_repertorization:
+            try:
+                from src.pipeline.case_summarizer import CaseSummarizer
+                summary_to_show = CaseSummarizer().generate_summary(case, use_llm=False)
+            except Exception:
+                pass
+
+        if summary_to_show:
+            st.html(
+                f"""
+                <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(16, 185, 129, 0.35); border-left: 4px solid #10B981; border-radius: 8px; padding: 14px 16px; margin: 10px 0 16px 0;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                        {get_icon('clinical_notes', size=18, color='#10B981')}
+                        <span style="font-weight: 700; font-size: 13px; color: #10B981; letter-spacing: 0.02em;">CLINICAL CASE SUMMARY (PHYSICIAN BRIEF)</span>
+                    </div>
+                    <div style="font-size: 13.5px; line-height: 1.6; color: #F3F4F6;">
+                        {esc(summary_to_show)}
+                    </div>
+                </div>
+                """
+            )
+
         st.html(
             f"""
             <div style="display: flex; align-items: center; gap: 8px; margin: 12px 0 8px 0;">
@@ -625,7 +648,7 @@ def render_sidebar():
             """
         )
 
-        case: ClinicalCase = st.session_state.get("current_case")
+        case: ClinicalCase | None = st.session_state.get("current_case")
 
         st.html(
             f"""
@@ -900,6 +923,51 @@ def main():
                     f"💡 **Kentian Repertorization Advice**: Dr. Kent emphasized that **{' and '.join(missing_dims)}** "
                     "carry paramount weight when finding the simillimum. Consider adding them below if observed."
                 )
+
+            # Auto-generate or display Patient Clinical Case Summary (Physician Brief)
+            if not current_case.clinical_summary and current_case.is_ready_for_repertorization:
+                try:
+                    from src.pipeline.case_summarizer import CaseSummarizer
+                    current_case.clinical_summary = CaseSummarizer().generate_summary(current_case)
+                    save_case(current_case)
+                except Exception as e:
+                    logger.info("Summary auto-generation in Step 2: %s", e)
+
+            if current_case.clinical_summary:
+                with st.container(border=True):
+                    col_sum_title, col_sum_acts = st.columns([4, 2], vertical_alignment="center")
+                    with col_sum_title:
+                        st.html(
+                            f"""
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                {get_icon('clinical_notes', size=18, color='#10B981')}
+                                <span style="font-weight: 700; font-size: 14px; color: #F9FAFB;">Patient Clinical Case Summary (Physician Brief)</span>
+                            </div>
+                            """
+                        )
+                    with col_sum_acts:
+                        if st.button("↻ Regenerate with AI", key="btn_regen_summary_step2", help="Regenerate clinical brief using local LLaMA 3"):
+                            with st.spinner("Synthesizing patient summary..."):
+                                from src.pipeline.case_summarizer import CaseSummarizer
+                                current_case.clinical_summary = CaseSummarizer().generate_summary(current_case, use_llm=True)
+                                save_case(current_case)
+                                st.rerun()
+
+                    st.markdown(
+                        f"""
+                        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 12px 14px; font-size: 13.5px; line-height: 1.55; color: #E2E8F0; margin: 6px 0 10px 0;">
+                            {esc(current_case.clinical_summary)}
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    with st.expander("Edit Clinical Summary (Physician Adjustments)", expanded=False):
+                        edited_sum = st.text_area("Adjust case summary for medical records:", value=current_case.clinical_summary, height=90, key="ta_edit_sum_step2")
+                        if st.button("Save Edited Summary", key="btn_save_sum_step2"):
+                            current_case.clinical_summary = edited_sum.strip()
+                            save_case(current_case)
+                            st.toast("Clinical summary saved.", icon="✅")
+                            st.rerun()
 
             # 4 Columns of Cards
             c1, c2, c3, c4 = st.columns(4)
