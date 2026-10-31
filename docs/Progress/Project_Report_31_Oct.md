@@ -217,13 +217,7 @@ Structured intake flow replacing fragmented tabs:
 
 ## Section 7: Current Active Workstream — Bedside Dialogue & Dashboard UI/UX Polish
 
-The current active engineering workstream focuses on comprehensive refinements to the clinical interaction layer, bridging model inference with real-time practitioner experience:
-
-- **Real-Time Streaming Dialogue**: Replaced synchronous turn generation with token-by-token NDJSON streaming from Ollama `/api/chat` directly into Streamlit's `st.write_stream`, supported by connection timeouts and deterministic FSM template fallbacks.
-- **Immediate Shimmer Reflection Skeleton**: Integrated an animated `.skeleton-thinking-bubble` featuring an emerald status dot and pulsating shimmer bars that mount immediately upon patient utterance submission. This eliminates blank latency windows during 3-tier slot extraction and smoothly clears the instant first-token streaming begins.
-- **Robust Control Tag Suppression & Quick Replies**: Implemented stream lookahead boundary buffering and multi-format parsing to detect, halt, and cleanly strip internal tags (`QUICK_REPLIES`, `SLOT_UPDATE`) across stream chunks. The parser converts both bracketed JSON and unbracketed comma-separated suggestions into clickable first-person patient replies.
-- **Responsive Full-Screen Layout & Viewport Polish**: Scoped sidebar minimum-width constraints strictly to `[aria-expanded="true"]`, allowing the consultation interface to expand smoothly to 100% full-screen width when the sidebar is collapsed, while restoring unrestricted vertical scrolling (`overflow-y: auto`) across the dashboard.
-- **Dynamic Session Hot-Reloading**: Added explicit `importlib.reload` safeguards in `app.py` for dialogue and chat components to ensure running clinical sessions immediately reflect code updates without requiring server process restarts.
+We are currently actively focused on upgrading and refining our clinical dashboard and bedside dialogue interface. This work centers on modernizing the user experience, enhancing real-time chat interactivity, polishing responsive layouts, and streamlining doctor-facing workflows to ensure a smooth, professional, and intuitive clinical decision support environment.
 
 ---
 
