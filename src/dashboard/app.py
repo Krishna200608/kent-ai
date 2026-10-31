@@ -142,7 +142,6 @@ def initialize_session():
             mock_mode=False,
         )
         dm.load_from_case(case)
-        dm.get_greeting()
         st.session_state.dialogue_manager = dm
     else:
         dm = st.session_state.dialogue_manager

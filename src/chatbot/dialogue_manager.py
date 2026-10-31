@@ -20,7 +20,11 @@ import urllib.request
 from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple
 
-from src.chatbot.prompts import CHATBOT_SYSTEM_PROMPT, CHATBOT_TURN_PROMPT
+from src.chatbot.prompts import (
+    CHATBOT_PRACTITIONER_SYSTEM_PROMPT,
+    CHATBOT_SYSTEM_PROMPT,
+    CHATBOT_TURN_PROMPT,
+)
 from src.chatbot.state_machine import ConversationStateMachine, IntakeState
 from src.models.case import ClinicalCase
 
@@ -136,6 +140,7 @@ class DialogueManager:
         self.patient_report: Optional[PatientReport] = None
         self.current_suggestions: List[str] = []
         self.last_call_failed: bool = False
+        self.intake_mode: str = "patient"
 
         if case is not None:
             self.load_from_case(case)
@@ -542,8 +547,13 @@ class DialogueManager:
         """
         url = f"{self.api_base}/api/chat"
 
+        sys_prompt = (
+            CHATBOT_PRACTITIONER_SYSTEM_PROMPT
+            if getattr(self, "intake_mode", "patient") == "practitioner"
+            else CHATBOT_SYSTEM_PROMPT
+        )
         messages = [
-            {"role": "system", "content": CHATBOT_SYSTEM_PROMPT},
+            {"role": "system", "content": sys_prompt},
             {"role": "user", "content": user_prompt},
         ]
 
@@ -857,13 +867,13 @@ class DialogueManager:
         text = (bot_message or "").lower()
         slots = self.extracted_slots
 
-        # Opening / Chief Complaint
-        if any(p in text for p in ["troubling you", "primary symptoms", "bring you in", "bothers you", "what brings", "how are you"]):
+        # Opening / Chief Complaint (Kentian anatomical location first)
+        if not text or any(p in text for p in ["troubling you", "primary symptoms", "bring you in", "bothers you", "what brings", "how are you"]):
             return [
-                "Severe anxiety & fearful apprehension",
-                "Emotional pain & sadness, worse alone",
-                "Restless pacing & irritability",
-                "Absent-mindedness & memory lapses",
+                "Headache / Forehead / Temples",
+                "Chest pain / Respiration",
+                "Stomach pain / Digestion",
+                "Joint pain / Musculoskeletal",
             ]
 
         # Concomitants

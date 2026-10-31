@@ -116,22 +116,21 @@ def render_slot_badges(slots: Dict[str, List[str]]) -> None:
 
 
 def render_quick_reply_chips(dm: DialogueManager, in_container: bool = False) -> Optional[str]:
-    """Render dynamic instant answer chips tailored to Kent-AI's active question."""
+    """Render dynamic instant answer chips tailored to Kent-AI's active question using st.pills."""
     current_suggestions = dm.get_current_suggestions()
     if not current_suggestions:
         return None
 
-    # Limit to at most 3 authentic patient responses + "None / something else"
-    display_chips = list(current_suggestions[:3])
-    if "None of these / other" not in display_chips:
+    display_chips = list(current_suggestions[:4])
+    if "None of these / other" not in display_chips and len(display_chips) < 4:
         display_chips.append("None of these / other")
 
-    title_margin = "10px 0 6px 2px" if in_container else "12px 0 6px 2px"
+    title_margin = "8px 0 4px 2px" if in_container else "10px 0 4px 2px"
     st.markdown(
         f"""
         <div style="display: flex; justify-content: space-between; align-items: center; margin: {title_margin};">
-            <span style="font-size: 13px; font-weight: 600; color: #10B981; display: flex; align-items: center; gap: 6px;">
-                {get_icon('sparkles', size=16, color='#10B981')} Suggested Responses:
+            <span style="font-size: 12.5px; font-weight: 600; color: #10B981; display: flex; align-items: center; gap: 6px;">
+                {get_icon('sparkles', size=15, color='#10B981')} Suggested Responses:
             </span>
             <span style="font-size: 11px; color: #9CA3AF;">Click to reply instantly</span>
         </div>
@@ -139,17 +138,14 @@ def render_quick_reply_chips(dm: DialogueManager, in_container: bool = False) ->
         unsafe_allow_html=True,
     )
 
-    selected = None
-    cols = st.columns(len(display_chips))
-    for idx, suggestion in enumerate(display_chips):
-        with cols[idx]:
-            if st.button(
-                suggestion,
-                key=f"chip_turn_{dm.state_machine.turn_count}_{idx}_{'box' if in_container else 'dock'}",
-                width="stretch",
-            ):
-                selected = suggestion
-                dm.current_suggestions = []  # Clear immediately so stale chips never linger
+    selected = st.pills(
+        "Suggested Responses:",
+        display_chips,
+        key=f"pills_turn_{dm.state_machine.turn_count}_{'box' if in_container else 'dock'}",
+        label_visibility="collapsed",
+    )
+    if selected:
+        dm.current_suggestions = []  # Clear immediately so stale chips never linger
     return selected
 
 
@@ -268,7 +264,7 @@ def render_chat_interface(dm: DialogueManager) -> None:
         </span>
         """
 
-    col_hdr_left, col_hdr_right = st.columns([6, 5])
+    col_hdr_left, col_hdr_right = st.columns([5, 6])
     with col_hdr_left:
         st.html(
             f"""
@@ -281,7 +277,19 @@ def render_chat_interface(dm: DialogueManager) -> None:
             """
         )
     with col_hdr_right:
-        c_copy, c_status = st.columns([1, 1])
+        c_mode, c_copy, c_status = st.columns([1.5, 1, 1], vertical_alignment="center")
+        with c_mode:
+            curr_mode = getattr(dm, "intake_mode", "patient").capitalize()
+            selected_style = st.segmented_control(
+                "Intake Style",
+                options=["Patient", "Practitioner"],
+                default="Patient" if curr_mode == "Patient" else "Practitioner",
+                key="intake_style_control",
+                label_visibility="collapsed",
+                help="Patient self-intake (conversational) vs Practitioner-led (rapid clinical entry)",
+            )
+            if selected_style:
+                dm.intake_mode = selected_style.lower()
         with c_copy:
             with st.popover("Copy Chat", width="stretch", help="Copy complete conversation history and extracted symptom dimensions for debugging/analysis"):
                 st.markdown("##### Consultation Transcript")
