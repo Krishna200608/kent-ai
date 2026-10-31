@@ -200,10 +200,10 @@ def generate_dynamic_suggestions(
                 "Mental / Restless anxiety",
             ]
         return [
-            "Headache / Forehead / Temples",
-            "Chest pain / Respiration",
-            "Stomach pain / Digestion",
-            "Joint pain / Musculoskeletal",
+            "Severe throbbing headache",
+            "Stomach pain & acid reflux",
+            "Aching joints & stiffness",
+            "Anxiety & trouble sleeping",
         ]
 
     # Concomitants
@@ -250,9 +250,9 @@ def generate_dynamic_suggestions(
                 "Dull ache / Heavy pressure",
             ]
         return [
-            "Sharp, electric stabs",
+            "Sharp, stabbing pain",
             "Dull, heavy pressure",
-            "Vibrating, humming noise",
+            "Burning heat and soreness",
             "Pulsating, throbbing rhythm",
         ]
 

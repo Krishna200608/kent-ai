@@ -374,7 +374,7 @@ def test_intake_mode_toggle_and_practitioner_features(mock_dialogue_manager):
     # 1. Start fresh greeting in default patient mode
     greeting = dm.get_greeting()
     assert "Hello, I am Kent-AI, your clinical homeopathic intake assistant" in greeting
-    assert "Headache / Forehead / Temples" in dm.current_suggestions
+    assert "Severe throbbing headache" in dm.current_suggestions
 
     # 2. Toggle to practitioner mode on fresh session
     dm.set_intake_mode("practitioner")
@@ -386,7 +386,7 @@ def test_intake_mode_toggle_and_practitioner_features(mock_dialogue_manager):
     dm.set_intake_mode("patient")
     assert dm.intake_mode == "patient"
     assert dm.history[0]["content"].startswith("Hello, I am Kent-AI")
-    assert "Headache / Forehead / Temples" in dm.current_suggestions
+    assert "Severe throbbing headache" in dm.current_suggestions
 
     # 4. Once a consultation turn occurs, toggling mode does NOT overwrite past messages
     dm.history.append({"role": "user", "content": "Patient reports severe temple headache"})
