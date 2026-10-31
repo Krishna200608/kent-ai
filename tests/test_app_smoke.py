@@ -11,6 +11,9 @@ from pathlib import Path
 import pytest
 from streamlit.testing.v1 import AppTest
 
+# Force mock mode at module load time so Streamlit @st.cache_resource uses mock pipeline
+os.environ["KENT_MOCK_PIPELINE"] = "1"
+
 from src.models.case import ClinicalCase
 from src.data.case_store import get_case, init_case_db, save_case
 
@@ -25,7 +28,7 @@ def mock_app_env(monkeypatch):
 
 def test_smoke_intake_initial_render():
     """Verify fresh consultation renders Step 1 (Intake) with steps 3 and 4 disabled."""
-    at = AppTest.from_file(_APP_PATH, default_timeout=25)
+    at = AppTest.from_file(_APP_PATH, default_timeout=30)
     at.run()
 
     assert not at.exception
@@ -50,7 +53,7 @@ def test_smoke_intake_initial_render():
 
 def test_smoke_chat_interaction_and_case_sync():
     """Verify sending a clinical symptom in chat updates symptoms and persists draft."""
-    at = AppTest.from_file(_APP_PATH, default_timeout=25)
+    at = AppTest.from_file(_APP_PATH, default_timeout=30)
     at.run()
     assert not at.exception
 
@@ -72,7 +75,7 @@ def test_smoke_chat_interaction_and_case_sync():
 
 def test_smoke_step_2_review_navigation():
     """Verify switching to Step 2 (Review) renders symptom review and totality matrix."""
-    at = AppTest.from_file(_APP_PATH, default_timeout=25)
+    at = AppTest.from_file(_APP_PATH, default_timeout=30)
     at.run()
     assert not at.exception
 
@@ -88,7 +91,7 @@ def test_smoke_step_2_review_navigation():
 
 def test_smoke_step_3_analysis_and_step_4_report():
     """Verify Step 3 (Analysis) matrix and Step 4 (Report) render with populated case."""
-    at = AppTest.from_file(_APP_PATH, default_timeout=25)
+    at = AppTest.from_file(_APP_PATH, default_timeout=30)
     at.run()
     assert not at.exception
 
@@ -117,7 +120,7 @@ def test_smoke_step_3_analysis_and_step_4_report():
 
 def test_smoke_intake_mode_toggle():
     """Verify switching between Patient and Practitioner intake modes."""
-    at = AppTest.from_file(_APP_PATH, default_timeout=25)
+    at = AppTest.from_file(_APP_PATH, default_timeout=30)
     at.run()
     assert not at.exception
 

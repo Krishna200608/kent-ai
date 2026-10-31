@@ -132,6 +132,20 @@ class KentDB:
 
     def __init__(self, db_path: Optional[Union[str, Path]] = None) -> None:
         self.db_path = get_db_path(db_path)
+        self._ensure_indexes()
+
+    def _ensure_indexes(self) -> None:
+        """Ensure critical performance indexes exist on repertory tables."""
+        if not self.db_path.exists():
+            return
+        try:
+            with sqlite3.connect(self.db_path, timeout=10.0) as conn:
+                conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_rubric_remedies_remedy_id ON rubric_remedies(remedy_id)"
+                )
+                conn.commit()
+        except sqlite3.OperationalError:
+            pass  # Read-only filesystem or locked db
 
     def connect(self) -> Generator[sqlite3.Connection, None, None]:
         """Open a context-managed read-only connection."""

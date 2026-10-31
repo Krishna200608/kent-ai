@@ -185,9 +185,10 @@ def render_classical_totality_matrix(
         '<td></td>',
     ]
 
+    active_count = len(rubrics) - len(muted_set)
     for rem in remedies:
         score_tds.append(f'<td style="text-align: center; font-weight: 800; color: #10B981; font-size: 13px;">{rem.get("score", 0):.2f}</td>')
-        count_tds.append(f'<td style="text-align: center; font-weight: 700; color: #F3F4F6; font-size: 12px;">{rem.get("rubric_count", 0)}/{len(rubrics)}</td>')
+        count_tds.append(f'<td style="text-align: center; font-weight: 700; color: #F3F4F6; font-size: 12px;">{rem.get("rubric_count", 0)}/{active_count}</td>')
 
     tfoot_html = f"""
     <tfoot>

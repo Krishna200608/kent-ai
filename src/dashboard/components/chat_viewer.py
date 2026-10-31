@@ -15,7 +15,7 @@ logger = logging.getLogger("chat_viewer")
 from src.chatbot.dialogue_manager import DialogueManager
 from src.data.case_store import save_case
 from src.dashboard.components.icons import get_icon
-from src.dashboard.utils import esc
+from src.dashboard.utils import esc, safe_rerun_fragment
 from src.dashboard.dimensions import (
     DIMENSION_MAP,
     KENT_DIMENSIONS_ORDERED,
@@ -249,10 +249,7 @@ def render_chat_interface(dm: DialogueManager) -> None:
                                 if active_case:
                                     dm.sync_to_case(active_case)
                                     save_case(active_case)
-                                try:
-                                    st.rerun(scope="fragment")
-                                except Exception:
-                                    st.rerun()
+                                safe_rerun_fragment()
 
     # Console Subheader with live LLM engine status indicator
     is_llm_online = check_ollama_online(getattr(dm, "api_base", "http://127.0.0.1:11434"))
@@ -328,10 +325,7 @@ def render_chat_interface(dm: DialogueManager) -> None:
             if st.button("Retry", key="btn_retry_llm_conn"):
                 dm.last_call_failed = False
                 check_ollama_online.clear()
-                try:
-                    st.rerun(scope="fragment")
-                except Exception:
-                    st.rerun()
+                safe_rerun_fragment()
 
     # Chat panel with internal scroll area and pinned chat input
     with st.container(border=True):
@@ -416,9 +410,6 @@ def render_chat_interface(dm: DialogueManager) -> None:
             dm.sync_to_case(active_case)
             save_case(active_case)
 
-        try:
-            st.rerun(scope="fragment")
-        except Exception:
-            st.rerun()
+        safe_rerun_fragment()
 
 

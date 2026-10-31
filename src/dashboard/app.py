@@ -40,13 +40,13 @@ from src.models.case import ClinicalCase
 from src.models.symptom_ner import SymptomNER
 from src.models.ensemble import EnsembleNER
 from src.models.hybrid_pipeline import HybridPipelineOrchestrator
-from src.pipeline.orchestrator import PatientReport, PipelineOrchestrator
+from src.pipeline.orchestrator import PatientReport, PipelineOrchestrator, rescore_report
 from src.search.embedder import RubricEmbedder
 from src.search.ranker import RemedyRanker
 from src.search.vector_store import RubricVectorStore
 
 from src.dashboard.styles import inject_custom_css
-from src.dashboard.utils import esc
+from src.dashboard.utils import esc, safe_rerun_fragment
 from src.dashboard.components.icons import get_icon
 from src.dashboard.components.chat_viewer import (
     check_ollama_online,
@@ -103,6 +103,8 @@ def get_pipeline(engine_name: str = "BioLinkBERT Fast Mode (~18ms)"):
     root = get_project_root()
 
     if mock_mode:
+        if "Two-Stage Hybrid" in engine_name:
+            return HybridPipelineOrchestrator(vector_store=vector_store, ranker=ranker, mock_mode=True)
         ner = SymptomNER(mock_mode=True)
         return PipelineOrchestrator(ner=ner, vector_store=vector_store, ranker=ranker, mock_mode=True)
 
@@ -383,15 +385,22 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
                 st.markdown(f"**Patient**: {case.patient_name} ({case.demographics_string}) &nbsp;&middot;&nbsp; **Chief Complaint**: {case.chief_complaint or 'Clinical Consultation'}")
         with col_rep_dl:
             if case:
-                pdf_bytes = generate_case_pdf(case)
-                st.download_button(
-                    "Export PDF Report",
-                    data=pdf_bytes,
-                    file_name=f"{case.case_id}_clinical_report.pdf",
-                    mime="application/pdf",
-                    width="stretch",
-                    key="btn_rep_dl_pdf",
-                )
+                pdf_key = f"rep_pdf_{case.case_id}_{case.updated_at}"
+                pdf_bytes = st.session_state.get(pdf_key)
+                if not pdf_bytes:
+                    if st.button("Prepare PDF Export", key="btn_prep_rep_pdf", width="stretch"):
+                        with st.spinner("Compiling PDF report..."):
+                            st.session_state[pdf_key] = generate_case_pdf(case)
+                            st.rerun()
+                else:
+                    st.download_button(
+                        "Download PDF Report",
+                        data=pdf_bytes,
+                        file_name=f"{case.case_id}_clinical_report.pdf",
+                        mime="application/pdf",
+                        width="stretch",
+                        key="btn_rep_dl_pdf",
+                    )
             st.download_button(
                 "Export Markdown",
                 data=report.to_markdown(),
@@ -754,24 +763,15 @@ def render_bedside_dialogue_panel(dm: DialogueManager, current_case: ClinicalCas
                         st.session_state.current_report = None
                         st.session_state.confirm_intake_reset = False
                         st.toast("Consultation reset.")
-                        try:
-                            st.rerun(scope="fragment")
-                        except Exception:
-                            st.rerun()
+                        safe_rerun_fragment()
                 with col_cf2:
                     if st.button("Cancel", width="stretch", key="confirm_reset_no"):
                         st.session_state.confirm_intake_reset = False
-                        try:
-                            st.rerun(scope="fragment")
-                        except Exception:
-                            st.rerun()
+                        safe_rerun_fragment()
             else:
                 if st.button("Reset Consultation", type="secondary", width="stretch", key="btn_reset_consult"):
                     st.session_state.confirm_intake_reset = True
-                    try:
-                        st.rerun(scope="fragment")
-                    except Exception:
-                        st.rerun()
+                    safe_rerun_fragment()
 
     with col_chat:
         render_chat_interface(dm)
@@ -977,9 +977,14 @@ def main():
                 with col_s3_recomp:
                     if st.button("Recompute Totality Scores", type="secondary", width="stretch"):
                         with st.spinner("Re-ranking remedies with active rubric filters..."):
-                            report = pipeline.repertorize_case(current_case)
-                            st.session_state.current_report = report
-                            current_case.report_data = report.to_dict()
+                            if report and hasattr(pipeline, "ranker"):
+                                rescored = rescore_report(pipeline.ranker, report, current_case)
+                                st.session_state.current_report = rescored
+                                current_case.report_data = rescored.to_dict()
+                            else:
+                                report = pipeline.repertorize_case(current_case)
+                                st.session_state.current_report = report
+                                current_case.report_data = report.to_dict()
                             save_case(current_case)
                             st.toast("Totality scores recomputed.")
                             st.rerun()
