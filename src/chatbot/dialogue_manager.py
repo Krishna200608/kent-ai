@@ -138,7 +138,8 @@ class DialogueManager:
                 if turn.get("role") == "user":
                     c.chief_complaint = str(turn.get("content", ""))[:120]
                     break
-        c.transcript = self.get_full_transcript()
+        has_user_turns = any(turn.get("role") == "user" for turn in self.history)
+        c.transcript = self.get_full_transcript() if has_user_turns else ""
         if not hasattr(c, "extraction_meta") or not isinstance(c.extraction_meta, dict):
             c.extraction_meta = {}
         c.extraction_meta["intake_mode"] = getattr(self, "intake_mode", "patient")

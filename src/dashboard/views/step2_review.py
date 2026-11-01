@@ -83,7 +83,7 @@ def render_step2_review(current_case: ClinicalCase, pipeline: Any) -> None:
                 if st.button("Save Edited Summary", key="btn_save_sum_step2"):
                     current_case.clinical_summary = edited_sum.strip()
                     save_case(current_case)
-                    st.toast("Clinical summary saved.", icon="✅")
+                    st.toast("Clinical summary saved.")
                     st.rerun()
 
     # 4 Columns of Cards

@@ -143,7 +143,8 @@ class ClinicalCase:
         """True when no dimensions are filled, no chief complaint, no transcript, and patient_name is 'Anonymous Patient'."""
         has_dims = any(bool(v) for v in self.dimensions.values())
         has_complaint = bool(self.chief_complaint and self.chief_complaint.strip())
-        has_transcript = bool(self.transcript and self.transcript.strip())
+        has_user_turns = any(t.get("role") == "user" for t in self.dialogue_history)
+        has_transcript = bool(self.transcript and self.transcript.strip() and (has_user_turns or not self.dialogue_history))
         is_default_name = (self.patient_name or "").strip() == "Anonymous Patient"
         return not has_dims and not has_complaint and not has_transcript and is_default_name
 
