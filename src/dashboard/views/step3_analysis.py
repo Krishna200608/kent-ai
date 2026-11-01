@@ -152,33 +152,34 @@ def render_step3_analysis(
                         )
 
     st.markdown("---")
-    # 3. Step Navigation Action Bar
-    col_s3_back, col_s3_recomp, col_s3_next = st.columns([1, 1.5, 1.5])
-    with col_s3_back:
-        if st.button("← Back to Review", width="stretch"):
-            st.session_state.workspace_step = 2
-            st.rerun()
-    with col_s3_recomp:
-        slot_recomp = st.empty()
-        if slot_recomp.button("Recompute Totality Scores", type="secondary", width="stretch", key="btn_recompute_scores"):
-            with busy_slot(slot_recomp, "Recomputing...", key="btn_recompute_scores", type="secondary"):
-                with st.spinner("Re-ranking remedies with active rubric filters...", show_time=True):
-                    skel = st.empty()
-                    with skel.container():
-                        st.skeleton(height=180, width="stretch")
-                    if report and hasattr(pipeline, "ranker"):
-                        rescored = rescore_report(pipeline.ranker, report, current_case)
-                        st.session_state.current_report = rescored
-                        current_case.report_data = rescored.to_dict()
-                    else:
-                        report = pipeline.repertorize_case(current_case)
-                        st.session_state.current_report = report
-                        current_case.report_data = report.to_dict()
-                    skel.empty()
-                    save_case(current_case)
-                    st.toast("Totality scores recomputed.")
-                    st.rerun()
-    with col_s3_next:
-        if st.button("View Clinical Report →", type="primary", width="stretch"):
-            st.session_state.workspace_step = 4
-            st.rerun()
+    # 3. Step Navigation Action Bar (Sticky Bottom Nav)
+    with st.container(key="sticky_bottom_nav"):
+        col_s3_back, col_s3_recomp, col_s3_next = st.columns([1, 1.5, 1.5], vertical_alignment="center")
+        with col_s3_back:
+            if st.button("← Back to Review", width="stretch"):
+                st.session_state.workspace_step = 2
+                st.rerun()
+        with col_s3_recomp:
+            slot_recomp = st.empty()
+            if slot_recomp.button("Recompute Totality Scores", type="secondary", width="stretch", key="btn_recompute_scores"):
+                with busy_slot(slot_recomp, "Recomputing...", key="btn_recompute_scores", type="secondary"):
+                    with st.spinner("Re-ranking remedies with active rubric filters...", show_time=True):
+                        skel = st.empty()
+                        with skel.container():
+                            st.skeleton(height=180, width="stretch")
+                        if report and hasattr(pipeline, "ranker"):
+                            rescored = rescore_report(pipeline.ranker, report, current_case)
+                            st.session_state.current_report = rescored
+                            current_case.report_data = rescored.to_dict()
+                        else:
+                            report = pipeline.repertorize_case(current_case)
+                            st.session_state.current_report = report
+                            current_case.report_data = report.to_dict()
+                        skel.empty()
+                        save_case(current_case)
+                        st.toast("Totality scores recomputed.")
+                        st.rerun()
+        with col_s3_next:
+            if st.button("View Clinical Report →", type="primary", width="stretch"):
+                st.session_state.workspace_step = 4
+                st.rerun()

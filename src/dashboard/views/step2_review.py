@@ -206,36 +206,37 @@ def render_step2_review(current_case: ClinicalCase, pipeline: Any) -> None:
                         st.rerun()
 
     st.markdown("---")
-    # 4. Step Navigation Action Bar
-    col_back, col_fwd = st.columns([1, 2])
-    with col_back:
-        if st.button("← Back to Intake", width="stretch"):
-            st.session_state.workspace_step = 1
-            st.rerun()
-    with col_fwd:
-        can_repertorize = current_case.is_ready_for_repertorization
-        slot_rep = st.empty()
-        if slot_rep.button(
-            "Run Repertorization Analysis →",
-            key="btn_run_rep",
-            type="primary",
-            disabled=not can_repertorize,
-            width="stretch",
-            help="Search Kent's Repertory and compute classical totality ranking",
-        ):
-            with busy_slot(slot_rep, "Analyzing rubrics...", key="btn_run_rep", type="primary"):
-                with st.spinner("Searching Kent's Repertory and computing totality scores...", show_time=True):
-                    skel = st.empty()
-                    with skel.container():
-                        st.skeleton(height=35, width="stretch")
-                        st.skeleton(height=180, width="stretch")
-                        st.skeleton(height=100, width="stretch")
-                    report = pipeline.repertorize_case(current_case)
-                    skel.empty()
-                    st.session_state.current_report = report
-                    current_case.report_data = report.to_dict()
-                    save_case(current_case)
-                    st.session_state.workspace_step = 3
-                    st.rerun()
-        if not can_repertorize:
-            st.caption("Add at least one symptom dimension above to enable analysis.")
+    # 4. Step Navigation Action Bar (Sticky Bottom Nav)
+    with st.container(key="sticky_bottom_nav"):
+        col_back, col_fwd = st.columns([1, 2], vertical_alignment="center")
+        with col_back:
+            if st.button("← Back to Intake", width="stretch"):
+                st.session_state.workspace_step = 1
+                st.rerun()
+        with col_fwd:
+            can_repertorize = current_case.is_ready_for_repertorization
+            slot_rep = st.empty()
+            if slot_rep.button(
+                "Run Repertorization Analysis →",
+                key="btn_run_rep",
+                type="primary",
+                disabled=not can_repertorize,
+                width="stretch",
+                help="Search Kent's Repertory and compute classical totality ranking",
+            ):
+                with busy_slot(slot_rep, "Analyzing rubrics...", key="btn_run_rep", type="primary"):
+                    with st.spinner("Searching Kent's Repertory and computing totality scores...", show_time=True):
+                        skel = st.empty()
+                        with skel.container():
+                            st.skeleton(height=35, width="stretch")
+                            st.skeleton(height=180, width="stretch")
+                            st.skeleton(height=100, width="stretch")
+                        report = pipeline.repertorize_case(current_case)
+                        skel.empty()
+                        st.session_state.current_report = report
+                        current_case.report_data = report.to_dict()
+                        save_case(current_case)
+                        st.session_state.workspace_step = 3
+                        st.rerun()
+            if not can_repertorize:
+                st.caption("Add at least one symptom dimension above to enable analysis.")
