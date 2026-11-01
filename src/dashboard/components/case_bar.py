@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 import streamlit as st
 
+from src.dashboard.components.busy import busy_slot
 from src.dashboard.components.case_dialogs import show_patient_info_dialog
 from src.dashboard.components.icons import get_icon
 from src.dashboard.components.totality_ring import totality_ring
@@ -76,12 +77,17 @@ def render_case_bar(case: ClinicalCase) -> None:
                 show_patient_info_dialog(case)
 
         with c_save:
-            if st.button("Save", type="secondary", width="stretch", help=f"Save case {case.case_id} to local SQLite database", key="case_bar_save_btn"):
-                save_case(case)
-                now_str = datetime.now().strftime("%H:%M")
-                st.session_state[f"last_saved_time_{case.case_id}"] = now_str
-                st.toast("Saved")
-                st.rerun()
+            slot_save = st.empty()
+            if slot_save.button("Save", type="secondary", width="stretch", help=f"Save case {case.case_id} to local SQLite database", key="case_bar_save_btn"):
+                with busy_slot(slot_save, "Saving...", key="case_bar_save_btn", type="secondary"):
+                    save_case(case)
+                    now_str = datetime.now().strftime("%H:%M")
+                    st.session_state[f"last_saved_time_{case.case_id}"] = now_str
+                    st.session_state[f"case_bar_saved_flash_{case.case_id}"] = True
+                    st.toast("Saved")
+                    st.rerun()
+            if st.session_state.pop(f"case_bar_saved_flash_{case.case_id}", False):
+                st.caption("✓ Saved")
 
     # Row 2: Unified Interactive Stepper (4 steps with titles, sublabels, and gating)
     STEPS = [

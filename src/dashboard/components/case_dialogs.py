@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from src.dashboard.components.busy import busy_slot
 from src.dashboard.components.icons import get_icon
 from src.dashboard.utils import esc
 from src.data.case_store import save_case, set_app_setting
@@ -58,14 +59,16 @@ def show_patient_info_dialog(case: ClinicalCase) -> None:
 
     c_save, c_cancel = st.columns([1.2, 1])
     with c_save:
-        if st.button("Save Demographics", type="primary", width="stretch", key="dlg_btn_save"):
-            case.patient_name = new_name.strip() or "Anonymous Patient"
-            case.patient_age = int(new_age) if new_age else None
-            case.patient_sex = new_sex if new_sex != "Unspecified" else None
-            case.chief_complaint = new_chief.strip()
-            save_case(case)
-            st.toast("Patient demographics updated.")
-            st.rerun()
+        slot_save = st.empty()
+        if slot_save.button("Save Demographics", type="primary", width="stretch", key="dlg_btn_save"):
+            with busy_slot(slot_save, "Saving...", key="dlg_btn_save", type="primary"):
+                case.patient_name = new_name.strip() or "Anonymous Patient"
+                case.patient_age = int(new_age) if new_age else None
+                case.patient_sex = new_sex if new_sex != "Unspecified" else None
+                case.chief_complaint = new_chief.strip()
+                save_case(case)
+                st.toast("Patient demographics updated.")
+                st.rerun()
     with c_cancel:
         if st.button("Cancel", width="stretch", key="dlg_btn_cancel"):
             st.rerun()

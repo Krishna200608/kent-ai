@@ -12,6 +12,7 @@ import streamlit as st
 
 from src.dashboard.components.icons import get_icon
 from src.dashboard.utils import esc
+from src.dashboard.components.busy import busy_slot
 from src.data.case_store import save_case
 from src.models.case import ClinicalCase
 
@@ -48,18 +49,23 @@ def render_step_action_bar(
         with col_save:
             saved_time = st.session_state.get(f"last_saved_time_{case.case_id}")
             save_help = f"Last saved at {saved_time}" if saved_time else "Save draft to local SQLite"
-            if st.button(
+            slot_save = st.empty()
+            if slot_save.button(
                 "Save draft",
                 type="secondary",
                 key=f"act_bar_save_{current_step}",
                 width="stretch",
                 help=save_help,
             ):
-                save_case(case)
-                now_str = datetime.now().strftime("%H:%M")
-                st.session_state[f"last_saved_time_{case.case_id}"] = now_str
-                st.toast(f"Draft saved at {now_str}")
-                st.rerun()
+                with busy_slot(slot_save, "Saving...", key=f"act_bar_save_{current_step}", type="secondary"):
+                    save_case(case)
+                    now_str = datetime.now().strftime("%H:%M")
+                    st.session_state[f"last_saved_time_{case.case_id}"] = now_str
+                    st.session_state[f"act_bar_saved_flash_{current_step}"] = True
+                    st.toast(f"Draft saved at {now_str}")
+                    st.rerun()
+            if st.session_state.pop(f"act_bar_saved_flash_{current_step}", False):
+                st.caption("✓ Saved")
 
         # 3. Continue to Next Step Action
         with col_next:

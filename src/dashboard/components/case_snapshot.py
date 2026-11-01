@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 import streamlit as st
 
+from src.dashboard.components.busy import busy_slot
 from src.dashboard.components.icons import get_icon
 from src.dashboard.constants import (
     CANONICAL_DIMENSIONS_ORDERED,
@@ -112,19 +113,24 @@ def render_case_snapshot(
                         value=val_text,
                         key=f"snap_edit_input_{dim.key}",
                     )
-                    if st.button("Save Edit", key=f"snap_save_btn_{dim.key}", type="primary", width="stretch"):
-                        new_items = [s.strip() for s in edit_val.split(",") if s.strip()]
-                        case.dimensions[dim.internal_key] = new_items
-                        if dm:
-                            dm.extracted_slots[dim.internal_key] = new_items
-                        if "edited" not in extraction_meta:
-                            extraction_meta["edited"] = []
-                        if dim.internal_key not in extraction_meta["edited"]:
-                            extraction_meta["edited"].append(dim.internal_key)
-                        case.extraction_meta = extraction_meta
-                        save_case(case)
-                        st.toast(f"Updated {dim.label}.")
-                        st.rerun()
+                    slot_edit = st.empty()
+                    if slot_edit.button("Save Edit", key=f"snap_save_btn_{dim.key}", type="primary", width="stretch"):
+                        with busy_slot(slot_edit, "Saving...", key=f"snap_save_btn_{dim.key}", type="primary"):
+                            new_items = [s.strip() for s in edit_val.split(",") if s.strip()]
+                            case.dimensions[dim.internal_key] = new_items
+                            if dm:
+                                dm.extracted_slots[dim.internal_key] = new_items
+                            if "edited" not in extraction_meta:
+                                extraction_meta["edited"] = []
+                            if dim.internal_key not in extraction_meta["edited"]:
+                                extraction_meta["edited"].append(dim.internal_key)
+                            case.extraction_meta = extraction_meta
+                            save_case(case)
+                            st.session_state[f"snap_saved_flash_{dim.key}"] = True
+                            st.toast(f"Updated {dim.label}.")
+                            st.rerun()
+                    if st.session_state.pop(f"snap_saved_flash_{dim.key}", False):
+                        st.caption("✓ Saved")
 
         else:
             st.html(
