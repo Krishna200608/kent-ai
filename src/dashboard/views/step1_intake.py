@@ -1,9 +1,8 @@
-"""Step 1 Patient Clinical Intake view (Chatbot bedside dialogue and narrative text intake)."""
+"""Step 1 Patient Clinical Intake view (router for Guided conversation, Paste notes, and Manual entry)."""
 
 from __future__ import annotations
 
 from typing import Any
-
 import streamlit as st
 
 from src.chatbot.dialogue_manager import DialogueManager, get_min_dimensions_to_unlock
@@ -11,6 +10,7 @@ from src.dashboard.components.chat_viewer import format_chat_transcript, render_
 from src.dashboard.components.icons import get_icon
 from src.dashboard.dimensions import KENT_DIMENSIONS_ORDERED
 from src.dashboard.utils import safe_rerun_fragment
+from src.dashboard.views.step1_paste import render_step1_paste_view
 from src.data.case_store import save_case
 from src.models.case import ClinicalCase
 
@@ -103,54 +103,46 @@ def render_bedside_dialogue_panel(dm: DialogueManager, current_case: ClinicalCas
 
 
 def render_step1_intake(dm: DialogueManager, current_case: ClinicalCase, pipeline: Any) -> None:
-    """Render Step 1: Patient Clinical Intake (bedside chat or narrative paste)."""
+    """Render Step 1: Patient Clinical Intake (router for Guided conversation, Paste notes, and Manual entry)."""
     st.markdown("#### Step 1: Patient Clinical Intake")
-    intake_mode = st.radio(
-        "Intake Modality:",
-        ["Bedside Dialogue (Chatbot)", "Paste Clinical Narrative (Text)"],
-        horizontal=True,
+
+    # Options and one-line captions
+    mode_options = ["Guided conversation", "Paste notes", "Enter manually"]
+    mode_captions = {
+        "Guided conversation": "patient present, about 5-8 min",
+        "Paste notes": "from existing notes, about 30 s",
+        "Enter manually": "jumps to Step 2 to enter rubrics directly",
+    }
+
+    # Normalize existing session state if transitioning from legacy radio values
+    curr_selection = st.session_state.get("intake_mode_select")
+    if curr_selection not in mode_options:
+        if curr_selection == "Paste Clinical Narrative (Text)":
+            curr_selection = "Paste notes"
+        else:
+            curr_selection = "Guided conversation"
+        st.session_state.intake_mode_select = curr_selection
+
+    selected_mode = st.segmented_control(
+        "Select clinical intake workflow:",
+        mode_options,
+        default=curr_selection,
         key="intake_mode_select",
+        label_visibility="collapsed",
     )
 
-    if intake_mode == "Bedside Dialogue (Chatbot)":
-        render_bedside_dialogue_panel(dm, current_case)
+    if not selected_mode:
+        selected_mode = "Guided conversation"
+
+    caption_text = mode_captions.get(selected_mode, "")
+    st.caption(f"Workflow: {selected_mode} — {caption_text}")
+    st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
+
+    if selected_mode == "Enter manually":
+        # Jump directly to Step 2 (Review) without requiring a pre-saved case
+        st.session_state.workspace_step = 2
+        st.rerun(scope="app")
+    elif selected_mode == "Paste notes":
+        render_step1_paste_view(current_case, dm, pipeline)
     else:
-        # Paste Clinical Narrative mode
-        with st.container(border=True):
-            example_cases = {
-                "Select a clinical vignette (or enter free text below)...": "",
-                "Case 1: Severe anxiety in morning, worse alone (MIND)": "Doctor, I feel terribly anxious and depressed every morning, worse when alone. My thoughts race with fear and dread. I have no fever and no nausea.",
-                "Case 2: Absent-minded & forgetful on waking (MIND)": "Patient complains of extreme absent-mindedness and difficulty concentrating, especially in the morning after waking up, with trembling hands and restless pacing.",
-                "Case 3: Fear of dark & crowds with weeping (MIND)": "Patient reports overwhelming fear in the dark and in crowded places. Weeps easily upon any emotional upset, feels completely forsaken and abandoned, relieved by fresh open air.",
-                "Case 4: Extreme irritability & impatience with anger (MIND)": "Patient is exceedingly irritable, cannot bear contradiction or noise, full of wrath and quick to anger over trifles, intensely restless at night.",
-            }
-
-            selected_example = st.selectbox("Pre-load Clinical Vignette:", list(example_cases.keys()))
-            default_text = example_cases.get(selected_example, "")
-
-            user_case_text = st.text_area(
-                "Patient Clinical Narrative:",
-                value=default_text,
-                placeholder="Describe patient symptoms in free text...",
-                height=140,
-            )
-
-            col_p_run, col_p_info = st.columns([2, 4], vertical_alignment="center")
-            with col_p_run:
-                if st.button("Extract Symptoms & Proceed →", type="primary", disabled=not bool(user_case_text.strip()), width="stretch"):
-                    with st.spinner("Extracting 7 clinical dimensions..."):
-                        raw_rep = pipeline.process_transcript(transcript=user_case_text, section_id=1 if "MIND" in current_case.scope_chapter else None)
-                        # Load extracted dimensions into current_case directly
-                        for dkey, vals in raw_rep.dimensions.items():
-                            norm_key = dkey.lower()
-                            if norm_key in current_case.dimensions:
-                                for v in vals:
-                                    current_case.add_symptom(norm_key, v)
-                        current_case.chief_complaint = user_case_text[:120] + ("..." if len(user_case_text) > 120 else "")
-                        save_case(current_case)
-                        dm.load_from_case(current_case)
-                        st.session_state.workspace_step = 2
-                        st.rerun()
-
-            with col_p_info:
-                st.caption("Extracts Location, Sensation, Modalities, Concomitants, Temporal, and Mental generals directly into Clinical Review.")
+        render_bedside_dialogue_panel(dm, current_case)

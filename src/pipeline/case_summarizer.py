@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from typing import Any, Dict, List, Optional
 import urllib.request
@@ -48,7 +49,7 @@ class CaseSummarizer:
         if not case.is_ready_for_repertorization and not case.transcript and not case.chief_complaint:
             return "Patient consultation initiated. No clinical symptoms recorded yet."
 
-        if use_llm:
+        if use_llm and os.getenv("KENT_MOCK_PIPELINE") != "1":
             try:
                 llm_summary = self._call_llm_summary(case)
                 if llm_summary and len(llm_summary.strip()) > 30:

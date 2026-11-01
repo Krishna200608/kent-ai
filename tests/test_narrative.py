@@ -72,3 +72,53 @@ def test_missing_recommended_dimensions():
     # Fill temporal
     case.add_symptom("temporal", "worse at 3 AM")
     assert missing_recommended_dimensions(case) == []
+
+
+def test_highlight_builder_escapes_html():
+    """Verify HTML tags in narrative stay inert and are strictly escaped."""
+    from src.dashboard.components.extraction_preview import build_highlighted_narrative_html
+
+    narrative = "<script>alert('xss')</script> and <b>bold text</b>"
+    spans = [{"start": 0, "end": 29, "code": "MENT"}]
+    html = build_highlighted_narrative_html(narrative, spans)
+    assert "<script>" not in html
+    assert "&lt;script&gt;" in html
+    assert "<b>" not in html
+    assert "&lt;b&gt;" in html
+
+
+def test_highlight_builder_resolves_overlapping_spans():
+    """Verify overlapping spans are resolved deterministically without malformed nesting."""
+    from src.dashboard.components.extraction_preview import build_highlighted_narrative_html
+
+    narrative = "Patient reports severe anxiety in morning"
+    spans = [
+        {"start": 16, "end": 30, "code": "MENT"},  # "severe anxiety"
+        {"start": 23, "end": 41, "code": "TEMP"},  # "anxiety in morning" (overlaps)
+    ]
+    html = build_highlighted_narrative_html(narrative, spans)
+    # First span wins, second overlapping span is omitted
+    assert "mark-ment" in html
+    assert "mark-temp" not in html
+
+
+def test_highlight_builder_handles_out_of_range_offsets():
+    """Verify out-of-range offsets are clamped safely to text length."""
+    from src.dashboard.components.extraction_preview import build_highlighted_narrative_html
+
+    narrative = "Short text."
+    spans = [{"start": -10, "end": 500, "code": "LOC"}]
+    html = build_highlighted_narrative_html(narrative, spans)
+    assert "mark-loc" in html
+    assert "Short text." in html
+
+
+def test_highlight_builder_none_offsets_renders_plain_text():
+    """Verify None or missing offsets render plain escaped text."""
+    from src.dashboard.components.extraction_preview import build_highlighted_narrative_html
+
+    narrative = "Patient with headache <tag>."
+    spans = [{"start": None, "end": None, "code": "LOC"}]
+    html = build_highlighted_narrative_html(narrative, spans)
+    assert "&lt;tag&gt;" in html
+    assert "<mark" not in html

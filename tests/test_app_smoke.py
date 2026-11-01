@@ -133,3 +133,67 @@ def test_smoke_intake_mode_toggle():
         ctrl.set_value("Practitioner").run()
         assert not at.exception
         assert dm.intake_mode == "practitioner"
+
+
+def test_smoke_paste_mode_and_preview_flow():
+    """Verify Paste Clinical Narrative flow: text entry -> extraction -> preview -> review navigation."""
+    at = AppTest.from_file(_APP_PATH, default_timeout=30)
+    at.run()
+    assert not at.exception
+
+    # 1. Switch to "Paste notes" mode
+    ctrl = at.segmented_control(key="intake_mode_select")
+    assert ctrl is not None
+    ctrl.set_value("Paste notes").run()
+    assert not at.exception
+
+    # 2. Populate narrative text area
+    sample_notes = (
+        "Doctor, I feel terribly anxious and depressed every morning, worse when alone. "
+        "My thoughts race with fear. I have no fever and no nausea."
+    )
+    ta = at.text_area(key="paste_text")
+    assert ta is not None
+    ta.set_value(sample_notes).run()
+    assert not at.exception
+
+    # 3. Submit form
+    extract_btn = next((b for b in at.button if "Extract" in b.label), None)
+    assert extract_btn is not None
+    extract_btn.click().run()
+    assert not at.exception
+
+    # Assert workspace step remains 1, preview active, case populated
+    assert at.session_state["workspace_step"] == 1
+    assert at.session_state.get("paste_preview") is True
+    case: ClinicalCase = at.session_state["current_case"]
+    assert not case.is_blank
+    assert case.transcript == sample_notes
+    assert len(case.extraction_meta.get("items", {})) > 0
+
+    # 4. Click Continue to Review
+    cont_btn = next(
+        (b for b in at.button if "Continue to Review" in b.label or "Continue anyway" in b.label),
+        None,
+    )
+    assert cont_btn is not None
+    cont_btn.click().run()
+    assert not at.exception
+    assert at.session_state["workspace_step"] == 2
+
+
+def test_smoke_enter_manually_jumps_to_step_2_with_blank_case():
+    """Verify 'Enter manually' immediately transitions to Step 2 with an unsaved blank case."""
+    at = AppTest.from_file(_APP_PATH, default_timeout=30)
+    at.run()
+    assert not at.exception
+
+    case: ClinicalCase = at.session_state["current_case"]
+    assert case.is_blank
+
+    ctrl = at.segmented_control(key="intake_mode_select")
+    assert ctrl is not None
+    ctrl.set_value("Enter manually").run()
+    assert not at.exception
+
+    assert at.session_state["workspace_step"] == 2
