@@ -249,6 +249,36 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
             margin = top_rem.get("score", 0.0) - remedies[1].get("score", 0.0)
             margin_html = f"<span style='color: #9CA3AF; font-size: 13px; margin-left: 8px;'>Score advantage: <b>+{margin:.2f}</b> over candidate #2 ({remedies[1].get('abbreviation')})</span>"
 
+        # Explainability for why Rank #1 leads
+        g3_count = sum(1 for cov in top_rem.get("rubrics_covered", []) if cov.get("grade") == 3)
+        g2_count = sum(1 for cov in top_rem.get("rubrics_covered", []) if cov.get("grade") == 2)
+        g3_items = [esc((cov.get("path") or "").split(" › ")[-1]) for cov in top_rem.get("rubrics_covered", []) if cov.get("grade") == 3 and cov.get("path")]
+        
+        why_items = []
+        if g3_count > 0:
+            preview_str = ", ".join(f"<i>'{name}'</i>" for name in g3_items[:2])
+            why_items.append(f"<b>Keynote Affinity:</b> High-grade match in {g3_count} keynote rubrics (including {preview_str})")
+        if len(remedies) > 1:
+            margin_val = top_rem.get("score", 0.0) - remedies[1].get("score", 0.0)
+            if margin_val > 0:
+                why_items.append(f"<b>Totality Margin:</b> Holds a +{margin_val:.2f} score advantage over candidate #2 ({esc(remedies[1].get('abbreviation'))})")
+        cov_pct_num = top_rem.get('coverage_ratio', 0) * 100
+        why_items.append(f"<b>Broad Symptom Coverage:</b> Spans {top_rem.get('rubric_count')} of {len(active_rubrics)} patient totality rubrics ({cov_pct_num:.0f}%)")
+
+        why_html = ""
+        if why_items:
+            bullets = "".join(f"<li style='margin-bottom: 3px;'>{item}</li>" for item in why_items)
+            why_html = f"""
+            <div class="hero-why-box" style="margin-top: 12px; padding: 10px 14px; background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10B981; border-radius: 4px;">
+                <div style="font-size: 11.5px; font-weight: 700; color: #34D399; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px;">
+                    Why This Remedy Leads the Totality:
+                </div>
+                <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #E5E7EB; line-height: 1.5;">
+                    {bullets}
+                </ul>
+            </div>
+            """
+
         st.html(
             f"""
             <div class="hero-simillimum">
@@ -263,7 +293,8 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
                     Covers <b>{top_rem.get('rubric_count')} of {len(active_rubrics)}</b> symptom rubrics ({top_rem.get('coverage_ratio', 0)*100:.0f}% coverage) with a weighted totality score of <b>{top_rem.get('score')}</b>.
                     {margin_html}
                 </div>
-                <div style="font-size: 11.5px; color: #9CA3AF; margin-top: 6px; font-style: italic;">
+                {why_html}
+                <div style="font-size: 11.5px; color: #9CA3AF; margin-top: 8px; font-style: italic;">
                     Clinical decision-support indication based on Dr. Kent's Repertory; verify keynotes and constitutional picture before prescription.
                 </div>
             </div>

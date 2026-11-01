@@ -123,6 +123,18 @@ def render_step3_analysis(
                     if st.button("Inspect Materia Medica", key=f"btn_mm_diag_{abbr}_{rank_idx}", width="stretch"):
                         show_remedy_dialog(rem_id or abbr, db)
 
+                # Explainability callout for Rank #1 leading candidate
+                if rank_idx == 1 and len(remedies) > 1:
+                    margin_v = score - remedies[1].get("score", 0.0)
+                    g3_c = sum(1 for c in covered_list if c.get("grade") == 3)
+                    st.html(
+                        f"""
+                        <div style="margin-bottom: 12px; padding: 8px 12px; background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10B981; border-radius: 4px; font-size: 12px; color: var(--text, #E8EDF3);">
+                            <b style="color: #34D399;">Leading Simillimum Indication:</b> Holds a <b>+{margin_v:.2f}</b> score lead over candidate #2 ({esc(remedies[1].get('abbreviation'))}) with <b>{g3_c}</b> Grade 3 keynote rubrics covered.
+                        </div>
+                        """
+                    )
+
                 # "Why this remedy" list of covered rubrics
                 st.markdown("**Matched Repertory Rubrics & Grade Contributions:**")
                 if not covered_list:
