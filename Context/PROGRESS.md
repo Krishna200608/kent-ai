@@ -1,7 +1,7 @@
 # Kent-AI — Progress Tracker
 
 > Last updated: 2026-11-01 by Antigravity
-> Phase: Complete through Phase 15 (Comprehensive Clinician UI/UX Overhaul, Phases 1–10; 168 Unit & Smoke Tests Passing, 0 Errors)
+> Phase: Complete through Phase 16 (Loading Feedback, Performance Optimization & UX Polish, Phases 1–4; 175 Unit & Smoke Tests Passing, 0 Errors)
 
 ---
 
@@ -517,10 +517,33 @@ pytest tests/ -v
 
 ---
 
+
+## Phase 16 — Loading Feedback, Performance Optimization & UX Polish (Phases 1–4) ✅
+
+**Status**: Complete (Phases 1–4: Button Busy Feedback, Lazy Tab Optimization, UX Micro-States, Skeleton Loaders, Shortcuts & Deletion Undo; 175/175 Tests Passing) 🎯  
+**Date**: 2026-11-01  
+**Agent**: Antigravity  
+
+### Deliverables:
+- **Phase 1 — Button Loading & Busy Feedback**: Built `src/dashboard/assets/busy.js` client runtime with user-gesture gating (`lastInput` within 1500ms), 120ms spin delay, 450ms minimum visibility, 3000ms slow model warning, polite `aria-live` region, and orphan tooltip sweeper. Appended CSS spinner animations (`@keyframes kent-spin`) and `busy_slot` context manager in `src/dashboard/components/busy.py`. Fixed button selectors from `button[kind=` to `button[data-testid^="stBaseButton-"]`.
+- **Phase 2 — Performance & Lazy Rendering Optimization**: Upgraded Streamlit dependency to `streamlit>=1.64.0` in `pyproject.toml`. Refactored all 6 dashboard views to use lazy tabs (`st.tabs(..., key="main_tabs", on_change="rerun")`) with `.open` container guards, cutting test suite runtime ~3x from 118s to 41s. Eliminated dead `active_nav_tab` and moved inter-tab navigation into widget `on_click` callbacks. Implemented search-on-submit with session state result caching in Rubric Explorer, lazy expanders in Materia Medica, and on-demand bulk exports with `download_button(on_click="ignore")`.
+- **Phase 3 — Bugs & Polish**: Removed `help=` from icon-only popover triggers to eliminate orphan floating tooltips. Replaced emojis in alerts with Material Symbols (`:material/info:`, `:material/warning:`). Enhanced Settings with on-demand backup buffer, case status breakdown (`active · archived · empty draft`), import preview, and typed purge confirmation. Deduplicated CSS rules in `styles.css`.
+- **Phase 4 — UX Improvements & Accessible Workflows**:
+  - **4.a Success Micro-States**: Integrated inline `✓ Saved` micro-captions for Save, Save Demographics, Save Edited Summary, and Save Draft.
+  - **4.b Skeleton Loaders**: Added `st.skeleton()` loading placeholders for repertorization totality matrix, candidate re-ranking, and rubric searches.
+  - **4.c Warm Models & Startup Header Pill**: Initialized model warmup on startup and added dynamic "Models ready" status pill in the top header.
+  - **4.d Sticky Navigation Bar**: Enclosed consultation step navigation in sticky bottom container (`.sticky-bottom-nav`) with blur backdrop.
+  - **4.e Keyboard Shortcuts**: Assigned `shortcut="Ctrl+Enter"` for primary step actions, `shortcut="Ctrl+S"` for Case Bar save, and `shortcut="Alt+N"` for new case creation.
+  - **4.f Totality Matrix Heatmap**: Added "Top 5" candidate toggle, enhanced Kentian grade heatmap fills (Grade 3 keynote glow, Grade 2 characteristic tint), and interactive cell/row hover states.
+  - **4.g Simillimum Explainability**: Wired multi-factor explainability callouts (keynote affinity, score margin over #2, totality coverage %) on the hero simillimum card and Rank #1 candidate.
+  - **4.h Safe Deletion & Undo**: Replaced plain deletion with modal `st.dialog` confirmation and active 30-second single-case Undo banner restoring consultations atomically from memory.
+
+---
 ## Changelog
 
 | Date | Phase | Agent | Change |
 |---|---|---|---|
+| 2026-11-01 | 16 / UX-Perf | Antigravity | Loading Feedback, Performance Optimization & UX Polish (Phases 1-4): busy.js runtime, busy_slot twin buttons, lazy tabs (.open), on_click main_tabs navigation, search-on-submit Explorer, on-demand exports (on_click='ignore'), save micro-states, skeleton loaders, warm model startup pill, sticky bottom nav bar, keyboard shortcuts (Ctrl+Enter, Ctrl+S, Alt+N), totality matrix heatmap & Top 5 toggle, hero simillimum explainability, st.dialog deletion with 30s undo, and 175/175 tests passing. |
 | 2026-11-01 | 15 / UI-UX | Antigravity | Clinician UI/UX Overhaul (Phases 1-10): full design token palette in styles.css, single source of truth in constants.py, 7-segment SVG totality ring, compact top bar, slim sidebar with tray persistence, 7:3 Case Workspace with sticky Case Snapshot rail, neutral chat suggestions, Case Library table & cards views with pagination, Rubric Explorer hybrid search and Materia Medica modal dialog, split Methodology & Settings tabs, printable report styles, demo case mode, and verified 168/168 tests passing. |
 | 2026-11-01 | 14 / Bulk | Antigravity | Patient Case Library Bulk Selection & Multi-Action Suite: implemented "Select All" / "Deselect All" toolbar and per-card checkboxes in case_library.py; created src/dashboard/components/case_bulk_actions.py for atomic bulk deletion (with active case reset guard), multi-case JSON bundle export, CSV summary roster export, Markdown clinical digest export, and bulk status updates; added delete_cases, get_cases, and update_cases_status to case_store.py; migrated fitz to pymupdf eliminating all PyMuPDF deprecation warnings; verified 151/151 unit and smoke tests passing with 0 warnings. |
 | 2026-11-01 | 14 / Badge | Antigravity | Real-time dynamic polling for Ollama online/offline status badge: implemented isolated 2-second fragment polling via @st.fragment(run_every="2s") (render_chat_llm_badge in chat_header.py and render_header in header.py), reduced check_ollama_online cache TTL from 10s to 2s in dedicated ollama_status.py component, auto-clears dm.last_call_failed upon daemon recovery, eliminated IPv6 localhost latency with direct 127.0.0.1 and 0.4s timeout, unified amber "Offline Fallback (ollama serve)" across all views, and added dynamic test suite (148/148 tests passing). |
