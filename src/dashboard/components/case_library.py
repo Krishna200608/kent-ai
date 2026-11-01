@@ -89,7 +89,7 @@ def render_case_library(current_case: ClinicalCase) -> None:
             st.session_state.current_case = fresh_case
             dm = st.session_state.dialogue_manager
             dm.reset()
-            dm.load_from_case(fresh_case)
+            dm.resume_from_case(fresh_case)
             st.session_state.current_report = None
             st.session_state.workspace_step = 1
             st.session_state.active_nav_tab = "Case Workspace"
@@ -193,7 +193,7 @@ def render_case_library(current_case: ClinicalCase) -> None:
                             st.session_state.current_case = loaded_case
                             dm = st.session_state.dialogue_manager
                             dm.reset()
-                            dm.load_from_case(loaded_case)
+                            dm.resume_from_case(loaded_case)
                             st.session_state.current_report = None
                             if loaded_case.report_data:
                                 try:

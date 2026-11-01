@@ -169,6 +169,10 @@ class ClinicalCase:
             ]
             self.updated_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
+    def get_dimension_values(self, dimension: str) -> List[str]:
+        """Return symptom strings captured for a dimension."""
+        return list(self.dimensions.get(dimension.lower().strip(), []))
+
     def set_dimension_values(self, dimension: str, values: List[str]) -> None:
         """Overwrite the list of symptoms for a given dimension."""
         dim_key = dimension.lower().strip()

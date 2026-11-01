@@ -57,6 +57,7 @@ class ConversationStateMachine:
         self.turn_count = 0
         self.filled_slots: Set[str] = set()
         self.visited_slots: Set[IntakeState] = set()
+        self.denied_slots: Set[str] = set()
 
     def update_slots(self, extracted_slots: Dict[str, Any]) -> None:
         """Register newly identified clinical dimensions."""
@@ -119,6 +120,21 @@ class ConversationStateMachine:
             if not self._is_slot_filled(state) and state not in self.visited_slots:
                 return state
         return None
+
+    def advance_to_next_gap(self) -> IntakeState:
+        """Advance to the first unfilled symptom dimension, or REVIEW if all are captured."""
+        next_slot = self._get_next_unfilled_slot()
+        if next_slot is not None:
+            self.current_state = next_slot
+        else:
+            self.current_state = IntakeState.REVIEW
+        return self.current_state
+
+    def skip_current_slot(self) -> IntakeState:
+        """Mark the active slot as visited without recording negation, advancing to the next gap."""
+        if self.current_state in self.SLOT_ORDER:
+            self.visited_slots.add(self.current_state)
+        return self.advance_to_next_gap()
 
     def _is_confirmation(self, text: str) -> bool:
         """Detect patient confirmation in review state."""

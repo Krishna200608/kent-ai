@@ -2,8 +2,9 @@
 
 import pytest
 
-from src.chatbot.dialogue_manager import DialogueManager
+from src.chatbot.dialogue_manager import DialogueManager, SAFETY_RESPONSE_TEXT
 from src.chatbot.state_machine import ConversationStateMachine, IntakeState
+from src.models.case import ClinicalCase
 from src.models.resolver import SymptomResolver
 from src.pipeline.orchestrator import PipelineOrchestrator
 from src.search.embedder import RubricEmbedder
@@ -336,7 +337,8 @@ def test_done_transition_instant_response(mock_dialogue_manager):
     assert dm.state_machine.current_state == IntakeState.DONE
     assert "repertorization" in reply.lower() or "framework" in reply.lower() or "ready" in reply.lower()
     assert dm.get_patient_report() is not None
-    assert any("remed" in s.lower() or "consultation" in s.lower() for s in dm.current_suggestions)
+    assert any(act["id"] == "start_new" for act in dm.get_action_options())
+    assert all("proceed" not in s.lower() and "consultation" not in s.lower() for s in dm.current_suggestions)
 
 
 def test_dialogue_manager_streaming_and_visible_only(mock_dialogue_manager):
@@ -419,6 +421,130 @@ def test_intake_mode_toggle_and_practitioner_features(mock_dialogue_manager):
     _, parsed_chips = dm._parse_and_strip_quick_replies(raw_replies)
     assert "Makes me feel helpless" not in parsed_chips
     assert "Knees and ankles" in parsed_chips
+
+
+def test_resume_from_case_moves_fsm_to_first_gap_and_seeds_opener(mock_dialogue_manager):
+    """Resume hydrates slots, moves FSM to the first gap, and seeds deterministic opener."""
+    c = ClinicalCase(case_id="CASE-RESUME-1")
+    c.set_dimension_values("location", ["forehead", "temples"])
+    c.set_dimension_values("sensation", ["throbbing"])
+    c.extraction_meta = {"intake_mode": "practitioner"}
+
+    dm = mock_dialogue_manager
+    dm.resume_from_case(c)
+
+    assert dm.intake_mode == "practitioner"
+    assert dm.state_machine.current_state == IntakeState.MODALITY
+    assert len(dm.history) == 1
+    assert dm.history[0]["role"] == "assistant"
+    assert dm.history[0]["origin"] == "scripted"
+    assert "Location - forehead, temples" in dm.history[0]["content"]
+    assert "Sensation - throbbing" in dm.history[0]["content"]
+
+
+def test_resume_from_case_idempotent(mock_dialogue_manager):
+    """Calling resume_from_case repeatedly does not duplicate the seeded opener."""
+    c = ClinicalCase(case_id="CASE-RESUME-2")
+    c.set_dimension_values("location", ["stomach"])
+
+    dm = mock_dialogue_manager
+    dm.resume_from_case(c)
+    first_hist_len = len(dm.history)
+
+    # Call again with same case
+    dm.resume_from_case(c)
+    assert len(dm.history) == first_hist_len
+
+
+def test_per_turn_capture_metadata_and_undo(mock_dialogue_manager):
+    """prepare_turn records per-turn captured metadata, and undo_capture removes it correctly."""
+    c = ClinicalCase(case_id="CASE-CAPTURE-1")
+    dm = mock_dialogue_manager
+    dm.case = c
+
+    # Turn with symptom extraction
+    dm.prepare_turn("I have burning heat in my stomach")
+    user_turn = next(t for t in dm.history if t.get("role") == "user")
+    assert "turn_id" in user_turn
+    assert "captured" in user_turn
+    assert "burning" in dm.extracted_slots.get("sensation", [])
+
+    # Undo capture for 'burning'
+    turn_id = user_turn["turn_id"]
+    dm.undo_capture(turn_id, "sensation", "burning")
+    assert "burning" not in dm.extracted_slots.get("sensation", [])
+    assert "burning" not in user_turn["captured"].get("sensation", [])
+    assert "burning" not in c.get_dimension_values("sensation")
+
+
+def test_undo_last_turn_pops_and_reverts(mock_dialogue_manager):
+    """undo_last_turn pops user and assistant pair and reverts extracted slots."""
+    c = ClinicalCase(case_id="CASE-UNDO-LAST")
+    dm = mock_dialogue_manager
+    dm.case = c
+
+    dm.get_greeting()
+    dm.process_turn("Severe throbbing headache in temples")
+    assert "throbbing" in dm.extracted_slots.get("sensation", [])
+    assert len(dm.history) >= 3
+
+    dm.undo_last_turn()
+    assert "throbbing" not in dm.extracted_slots.get("sensation", [])
+    assert "throbbing" not in c.get_dimension_values("sensation")
+
+
+def test_get_action_options_in_done_state_no_reply_leak(mock_dialogue_manager):
+    """In DONE state, action options are typed buttons, separate from reply suggestions."""
+    dm = mock_dialogue_manager
+    dm.state_machine.current_state = IntakeState.DONE
+
+    actions = dm.get_action_options()
+    action_ids = [a["id"] for a in actions]
+    assert "continue_review" in action_ids
+    assert "add_detail" in action_ids
+    assert "start_new" in action_ids
+
+    # Finalize turn in DONE should produce genuine replies, not action labels
+    reply = dm.finalize_turn("")
+    assert all("proceed" not in s.lower() and "consultation" not in s.lower() for s in dm.current_suggestions)
+
+
+def test_done_branch_never_calls_process_transcript(mock_dialogue_manager):
+    """finalize_turn in DONE state does not synchronously execute process_transcript."""
+    from unittest.mock import MagicMock
+    dm = mock_dialogue_manager
+    mock_orch = MagicMock()
+    dm.orchestrator = mock_orch
+    dm.state_machine.current_state = IntakeState.DONE
+
+    dm.finalize_turn("")
+    mock_orch.process_transcript.assert_not_called()
+
+    # But lazy compute should invoke it on demand
+    report = dm.get_patient_report()
+    mock_orch.process_transcript.assert_called_once()
+
+
+def test_red_flag_appends_safety_message_and_negation_does_not(mock_dialogue_manager):
+    """Acute red flag triggers safety response, while negation does not."""
+    c = ClinicalCase(case_id="CASE-SAFETY-1")
+    dm = mock_dialogue_manager
+    dm.case = c
+
+    # Utterance with acute red flag
+    dm.prepare_turn("I am having crushing chest pain and shortness of breath")
+    safety_turn = next((t for t in dm.history if t.get("origin") == "safety"), None)
+    assert safety_turn is not None
+    assert SAFETY_RESPONSE_TEXT in safety_turn["content"]
+    assert len(c.extraction_meta.get("red_flags", [])) > 0
+
+    # Utterance with negation does not trigger safety response
+    dm.history = []
+    c.extraction_meta["red_flags"] = []
+    dm.prepare_turn("I have mild nausea but no chest pain and no shortness of breath")
+    safety_neg = next((t for t in dm.history if t.get("origin") == "safety"), None)
+    assert safety_neg is None
+
 
 
 

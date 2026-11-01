@@ -1,13 +1,13 @@
 """Multi-turn dialogue manager orchestrating context history and slot filling (Phase 6).
 
 Coordinates clinical intake across conversation turns, delegating extraction to
-slot_extractor, HTTP calls to ollama_client, and suggestions to suggestions.
+slot_extractor, HTTP calls to ollama_client, suggestions to suggestions,
+and offline templates to fallbacks.
 """
 
 from __future__ import annotations
 
 import logging
-import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.chatbot.prompts import (
@@ -19,6 +19,7 @@ from src.chatbot.prompts import (
 from src.chatbot.state_machine import ConversationStateMachine, IntakeState
 from src.models.case import ClinicalCase
 from src.pipeline.orchestrator import PatientReport, PipelineOrchestrator
+from src.pipeline.safety import screen_red_flags
 
 from src.config import get_chatbot_config
 
@@ -46,6 +47,17 @@ from src.chatbot.suggestions import (
     generate_dynamic_suggestions,
     get_state_fallback,
 )
+from src.chatbot.fallbacks import (
+    PATIENT_GREETING,
+    PRACTITIONER_GREETING,
+    get_mock_response_for_state,
+)
+from src.chatbot.turn_history import (
+    apply_undo_capture,
+    apply_undo_last_turn,
+    build_turn_prompt,
+    seed_opener_for_case,
+)
 
 logger = logging.getLogger("dialogue_manager")
 
@@ -60,27 +72,22 @@ __all__ = [
     "sanitize_extracted_slots",
     "is_ollama_online",
     "visible_only",
+    "SAFETY_RESPONSE_TEXT",
 ]
 
-
-PATIENT_GREETING = (
-    "Hello, I am Kent-AI, your clinical homeopathic intake assistant. "
-    "I'm here to understand what is troubling you today. "
-    "Please describe what primary symptoms or discomfort brought you in."
-)
-
-PRACTITIONER_GREETING = (
-    "Kent-AI Practitioner Mode active. Ready for clinical intake — "
-    "enter patient chief complaint, observations, or presenting symptoms."
+# PENDING CLINICAL REVIEW BY SUPERVISOR
+SAFETY_RESPONSE_TEXT = (
+    "Thank you for telling me. Kent-AI is not an emergency or diagnostic service. "
+    "If you or someone else may be in danger, please contact local emergency services "
+    "or a trusted person right now. You can continue the intake afterwards."
 )
 
 
 class DialogueManager:
     """Orchestrates intake conversation turns, slot filling, and termination.
 
-    Slot extraction uses a 3-tier pipeline (see module docstring). The tiers
-    are independent — failure in any tier is silently logged and the next tier
-    continues, ensuring robustness regardless of model availability.
+    Slot extraction uses a 3-tier pipeline. The tiers are independent — failure
+    in any tier is silently logged and the next tier continues, ensuring robustness.
     """
 
     def __init__(
@@ -101,7 +108,7 @@ class DialogueManager:
         self.mock_mode = mock_mode
         self.case = case
 
-        self.history: List[Dict[str, str]] = []
+        self.history: List[Dict[str, Any]] = []
         self.extracted_slots: Dict[str, List[str]] = {
             "location": [],
             "sensation": [],
@@ -117,7 +124,7 @@ class DialogueManager:
         self.intake_mode: str = "patient"
 
         if case is not None:
-            self.load_from_case(case)
+            self.resume_from_case(case)
 
     def sync_to_case(self, target_case: Optional[ClinicalCase] = None) -> ClinicalCase:
         """Synchronize dialogue manager slots and history into the typed ClinicalCase."""
@@ -129,9 +136,12 @@ class DialogueManager:
         if not c.chief_complaint and self.history:
             for turn in self.history:
                 if turn.get("role") == "user":
-                    c.chief_complaint = turn["content"][:120]
+                    c.chief_complaint = str(turn.get("content", ""))[:120]
                     break
         c.transcript = self.get_full_transcript()
+        if not hasattr(c, "extraction_meta") or not isinstance(c.extraction_meta, dict):
+            c.extraction_meta = {}
+        c.extraction_meta["intake_mode"] = getattr(self, "intake_mode", "patient")
         return c
 
     def load_from_case(self, source_case: ClinicalCase) -> None:
@@ -144,6 +154,38 @@ class DialogueManager:
                     self.state_machine.filled_slots.add(k)
         if source_case.dialogue_history:
             self.history = list(source_case.dialogue_history)
+
+    def resume_from_case(self, case: ClinicalCase) -> None:
+        """Resume or initialize consultation from an existing ClinicalCase.
+
+        Hydrates slots, restores intake_mode, advances the state machine to the
+        first unfilled gap (or REVIEW if complete), and seeds ONE deterministic
+        assistant opener if history is empty (idempotent).
+        """
+        self.load_from_case(case)
+
+        # Restore persisted intake mode
+        if isinstance(case.extraction_meta, dict) and "intake_mode" in case.extraction_meta:
+            self.intake_mode = str(case.extraction_meta["intake_mode"]).lower()
+
+        # Advance state machine to first gap
+        self.state_machine.advance_to_next_gap()
+
+        # If history is empty, seed ONE deterministic assistant opener (no LLM call)
+        if not self.history:
+            opener, origin = seed_opener_for_case(
+                case=case,
+                intake_mode=self.intake_mode,
+                mock_response_fn=self._mock_response_for_state,
+            )
+            self.history.append({"role": "assistant", "content": opener, "origin": origin})
+            self.current_suggestions = self.generate_dynamic_suggestions(opener)
+
+        # Persist mode into extraction_meta and sync
+        if not hasattr(case, "extraction_meta") or not isinstance(case.extraction_meta, dict):
+            case.extraction_meta = {}
+        case.extraction_meta["intake_mode"] = self.intake_mode
+        self.sync_to_case(case)
 
     @property
     def detected_dimensions(self) -> Dict[str, bool]:
@@ -163,7 +205,7 @@ class DialogueManager:
         is_practitioner = getattr(self, "intake_mode", "patient") == "practitioner"
         greeting = PRACTITIONER_GREETING if is_practitioner else PATIENT_GREETING
         if not self.history:
-            self.history.append({"role": "assistant", "content": greeting})
+            self.history.append({"role": "assistant", "content": greeting, "origin": "scripted"})
             self.current_suggestions = self.generate_dynamic_suggestions(greeting)
         return greeting
 
@@ -173,12 +215,15 @@ class DialogueManager:
         old_mode = getattr(self, "intake_mode", "patient")
         self.intake_mode = new_mode
 
-        # If fresh session (only the initial greeting is present), update the greeting text
-        if len(self.history) == 1 and self.history[0]["role"] == "assistant":
-            if self.history[0]["content"] in (PATIENT_GREETING, PRACTITIONER_GREETING) or old_mode != new_mode:
+        if len(self.history) == 1 and self.history[0].get("role") == "assistant":
+            if self.history[0].get("content") in (PATIENT_GREETING, PRACTITIONER_GREETING) or old_mode != new_mode:
                 new_greeting = PRACTITIONER_GREETING if new_mode == "practitioner" else PATIENT_GREETING
                 self.history[0]["content"] = new_greeting
+                self.history[0]["origin"] = "scripted"
                 self.current_suggestions = self.generate_dynamic_suggestions(new_greeting)
+
+        if self.case is not None and isinstance(self.case.extraction_meta, dict):
+            self.case.extraction_meta["intake_mode"] = self.intake_mode
 
     # Delegated Slot Extraction Helpers
     def _extract_slots_heuristic(self, text: str) -> Dict[str, List[str]]:
@@ -262,92 +307,13 @@ class DialogueManager:
     def is_ollama_online(self) -> bool:
         return is_ollama_online(self.api_base)
 
-    # Deterministic Mock Fallback per State
     def _mock_response_for_state(self) -> str:
         """Deterministic, clinically focused offline fallback responses per state."""
-        state = self.state_machine.current_state
-        is_practitioner = getattr(self, "intake_mode", "patient") == "practitioner"
-
-        if is_practitioner:
-            if state == IntakeState.REVIEW:
-                summary_lines = []
-                for k, v in self.extracted_slots.items():
-                    if v:
-                        dim_title = k.replace("_", " ").title()
-                        summary_lines.append(f"• **{dim_title}**: {', '.join(v)}")
-                summary_block = "\n".join(summary_lines) if summary_lines else "• Primary complaint noted."
-                return (
-                    "Clinical Totality Review:\n\n"
-                    f"{summary_block}\n\n"
-                    "Verify recorded totality or enter additional clinical findings."
-                )
-            if state == IntakeState.CLARIFICATION:
-                return "Enter the specific clinical finding or modality to add."
-            practitioner_templates = {
-                IntakeState.GREETING: PRACTITIONER_GREETING,
-                IntakeState.CHIEF_COMPLAINT: "Chief complaint noted. Specify primary anatomical location or affected organ system.",
-                IntakeState.LOCATION: "Location recorded. Describe sensation quality (e.g., throbbing, stitching, burning, dull heaviness).",
-                IntakeState.SENSATION: "Sensation recorded. Specify modalities: what aggravates (MOD_AGG) or ameliorates (MOD_AMEL) this condition?",
-                IntakeState.MODALITY: "Modalities recorded. Are there any concomitant symptoms occurring simultaneously (e.g., nausea, vertigo, chills)?",
-                IntakeState.CONCOMITANT: "Concomitants recorded. Note temporal periodicity or specific diurnal aggravation hours (e.g., 3 AM, morning, evening).",
-                IntakeState.TEMPORAL: "Temporal pattern recorded. Note mental/emotional generals (e.g., anxiety, restlessness, irritability, depression).",
-                IntakeState.MENTAL: "Mental generals recorded. Clinical intake totality complete.",
-                IntakeState.DONE: (
-                    "Clinical totality recorded. Click **Proceed to Review →** above to inspect 7-dimension cards and compute repertorization ranking."
-                ),
-            }
-            return practitioner_templates.get(state, "Enter additional clinical observation.")
-
-        if state == IntakeState.REVIEW:
-            summary_lines = []
-            for k, v in self.extracted_slots.items():
-                if v:
-                    dim_title = k.replace("_", " ").title()
-                    summary_lines.append(f"• **{dim_title}**: {', '.join(v)}")
-            summary_block = "\n".join(summary_lines) if summary_lines else "• Primary complaint noted."
-            return (
-                "Thank you for sharing all of this with me. Let me confirm what we've captured:\n\n"
-                f"{summary_block}\n\n"
-                "Does this accurately reflect your symptoms, or would you like to add or correct any detail?"
-            )
-
-        if state == IntakeState.CLARIFICATION:
-            return "Please describe the additional symptom or detail you'd like to add."
-
-        templates = {
-            IntakeState.CHIEF_COMPLAINT: (
-                "I understand — thank you for sharing that. "
-                "Could you tell me a bit more about what you've been experiencing?"
-            ),
-            IntakeState.LOCATION: (
-                "Noted. Where in your body do you feel this most intensely?"
-            ),
-            IntakeState.SENSATION: (
-                "Thank you. How would you describe the sensation — "
-                "is it throbbing, burning, heavy, tight, or something else?"
-            ),
-            IntakeState.MODALITY: (
-                "That helps. Has anything made this worse — such as movement, cold, heat, or noise? "
-                "And what brings you any relief?"
-            ),
-            IntakeState.CONCOMITANT: (
-                "Noted. Does anything else occur alongside this — "
-                "such as nausea, dizziness, chills, or sweating?"
-            ),
-            IntakeState.TEMPORAL: (
-                "Thank you. Have you noticed any specific time of day or night when this is worse or better — "
-                "such as in the morning on waking, afternoon, late evening, or waking up around 2-3 AM?"
-            ),
-            IntakeState.MENTAL: (
-                "I appreciate you sharing that. How has this been affecting your mood "
-                "or emotional state — any anxiety, irritability, or low energy?"
-            ),
-            IntakeState.DONE: (
-                "Thank you — I have gathered and structured all your clinical symptoms into the Kentian totality framework. "
-                "You can now click on **Proceed to Review →** above to inspect your captured dimensions, validate the doctor's case summary, and run repertorization analysis."
-            ),
-        }
-        return templates.get(state, "Please tell me more about that.")
+        return get_mock_response_for_state(
+            state=self.state_machine.current_state,
+            intake_mode=getattr(self, "intake_mode", "patient"),
+            extracted_slots=self.extracted_slots,
+        )
 
     # Sanitization & Parsing Methods
     @staticmethod
@@ -370,9 +336,9 @@ class DialogueManager:
         )
 
     def get_current_suggestions(self) -> List[str]:
-        """Return the current dynamic instant-reply suggestions for the patient."""
+        """Return the current dynamic instant-reply suggestions for the active question."""
         if not self.current_suggestions and self.history:
-            last_bot_msg = self.history[-1]["content"] if self.history[-1]["role"] == "assistant" else ""
+            last_bot_msg = self.history[-1]["content"] if self.history[-1].get("role") == "assistant" else ""
             if last_bot_msg:
                 self.current_suggestions = self.generate_dynamic_suggestions(last_bot_msg)
         return self.current_suggestions or self.generate_dynamic_suggestions(
@@ -381,66 +347,124 @@ class DialogueManager:
 
     # Core Turn Processing
     def prepare_turn(self, user_utterance: str) -> str:
-        """Run FSM transitions, history recording, and slot extraction.
+        """Run FSM transitions, history recording, and slot extraction with diff tracking.
 
         Returns the formatted turn prompt for LLM generation (or empty string if mock/done).
         """
-        self.history.append({"role": "user", "content": user_utterance})
-        new_slots = self._extract_all_slots(user_utterance)
+        turn_id = f"turn_{len(self.history) + 1}"
 
-        # Merge new slots into session-accumulated slots
+        # 1. Non-blocking safety screening
+        flags = screen_red_flags(user_utterance)
+        if flags:
+            self.history.append({
+                "role": "assistant",
+                "content": SAFETY_RESPONSE_TEXT,
+                "origin": "safety",
+            })
+            if self.case is not None and isinstance(self.case.extraction_meta, dict):
+                rf_list = self.case.extraction_meta.setdefault("red_flags", [])
+                for fl in flags:
+                    rf_list.append({"category": fl.category, "snippet": fl.snippet})
+
+        # 2. Handle 'Skip'
+        cleaned_input = user_utterance.strip().lower()
+        if cleaned_input == "skip":
+            self.state_machine.skip_current_slot()
+            self.history.append({
+                "role": "user",
+                "content": "Skip",
+                "turn_id": turn_id,
+                "captured": {},
+            })
+            self.sync_to_case()
+            return ""
+
+        # 3. Handle 'None of these' / denial
+        if cleaned_input in ("none of these", "none"):
+            curr_state = self.state_machine.current_state
+            dim_map = {
+                IntakeState.LOCATION: "location",
+                IntakeState.SENSATION: "sensation",
+                IntakeState.MODALITY: "modality_agg",
+                IntakeState.CONCOMITANT: "concomitant",
+                IntakeState.TEMPORAL: "temporal",
+                IntakeState.MENTAL: "mental",
+            }
+            dim_key = dim_map.get(curr_state)
+            if dim_key:
+                self.state_machine.denied_slots.add(dim_key)
+                if self.case is not None and isinstance(self.case.extraction_meta, dict):
+                    negated = self.case.extraction_meta.setdefault("negated", [])
+                    if dim_key not in negated:
+                        negated.append(dim_key)
+
+            self.state_machine.skip_current_slot()
+            self.history.append({
+                "role": "user",
+                "content": "None of these",
+                "turn_id": turn_id,
+                "captured": {},
+            })
+            self.sync_to_case()
+            return ""
+
+        # 4. Standard turn: extract slots and compute diff
+        new_slots = self._extract_all_slots(user_utterance)
+        captured_diff: Dict[str, List[str]] = {}
         for k, v in new_slots.items():
+            new_items = []
             for item in v:
                 if item not in self.extracted_slots.setdefault(k, []):
                     self.extracted_slots[k].append(item)
+                    new_items.append(item)
+            if new_items:
+                captured_diff[k] = new_items
+
+        self.history.append({
+            "role": "user",
+            "content": user_utterance,
+            "turn_id": turn_id,
+            "captured": captured_diff,
+        })
+
+        if self.case is not None and captured_diff and isinstance(self.case.extraction_meta, dict):
+            meta_items = self.case.extraction_meta.setdefault("items", {})
+            for dim_k, items_list in captured_diff.items():
+                dim_meta = meta_items.setdefault(dim_k, [])
+                for it in items_list:
+                    dim_meta.append({
+                        "text": it,
+                        "confidence": 1.0,
+                        "start": None,
+                        "end": None,
+                        "origin": "chat",
+                    })
 
         # Advance state machine
         self.state_machine.next_state(user_utterance, extracted_slots=new_slots)
+        self.sync_to_case()
 
         current_state = self.state_machine.current_state
         if self.mock_mode or current_state == IntakeState.DONE:
             return ""
 
         # Build turn prompt for LLaMA 3
-        current_goal = self.state_machine.get_current_goal_description()
-        slots_lines = []
-        for k, v in self.extracted_slots.items():
-            if v:
-                slots_lines.append(f"  {k}: {', '.join(v)}")
-        slots_summary = "\n".join(slots_lines) if slots_lines else "  None yet"
-
-        is_practitioner = getattr(self, "intake_mode", "patient") == "practitioner"
-        hist_lines = []
-        for turn in self.history[-4:]:
-            if turn["role"] == "assistant":
-                role_label = "Kent-AI"
-            else:
-                role_label = "Practitioner" if is_practitioner else "Patient"
-            hist_lines.append(f"{role_label}: {turn['content']}")
-        hist_text = "\n".join(hist_lines)
-
-        template = CHATBOT_PRACTITIONER_TURN_PROMPT if is_practitioner else CHATBOT_TURN_PROMPT
-        turn_prompt = template.format(
-            current_goal=current_goal,
-            slots_summary=slots_summary,
-            history=hist_text,
+        return build_turn_prompt(
+            state_machine=self.state_machine,
+            extracted_slots=self.extracted_slots,
+            history=self.history,
             user_utterance=user_utterance,
+            intake_mode=getattr(self, "intake_mode", "patient"),
         )
-        return turn_prompt
 
     def finalize_turn(self, raw_reply: str) -> str:
-        """Sanitize raw LLaMA reply, extract inline metadata, and update suggestions."""
+        """Sanitize reply, record provenance, update suggestions, and omit heavy processing."""
         current_state = self.state_machine.current_state
 
         if current_state == IntakeState.DONE:
             clean_reply = self._mock_response_for_state()
-            self.history.append({"role": "assistant", "content": clean_reply})
-            self.current_suggestions = ["Proceed to Review →", "Check Captured Symptoms", "Add Another Detail", "Start New Consultation"]
-            if self.orchestrator:
-                self.patient_report = self.orchestrator.process_transcript(
-                    self.get_full_transcript(),
-                    patient_id="PT-INTAKE",
-                )
+            self.history.append({"role": "assistant", "content": clean_reply, "origin": "scripted"})
+            self.current_suggestions = ["Everything looks accurate", "I'd like to check my answers", "No other symptoms"]
             return clean_reply
 
         clean_text, direct_options = self._parse_and_strip_quick_replies(raw_reply)
@@ -454,10 +478,12 @@ class DialogueManager:
             self.state_machine.update_slots(bot_extracted)
 
         clean_text = self.clean_message_text(clean_text)
-        if not clean_text:
+        origin = "llm"
+        if not clean_text or self.mock_mode or getattr(self, "last_call_failed", False):
             clean_text = self._mock_response_for_state()
+            origin = "scripted"
 
-        self.history.append({"role": "assistant", "content": clean_text})
+        self.history.append({"role": "assistant", "content": clean_text, "origin": origin})
 
         if direct_options and len(direct_options) >= 2:
             self.current_suggestions = direct_options[:4]
@@ -476,15 +502,56 @@ class DialogueManager:
 
         return self.finalize_turn(raw_reply)
 
+    def undo_capture(self, turn_id: str, dim_key: str, item: str) -> None:
+        """Remove a specific extracted symptom token from turn history, slot registry, and case."""
+        apply_undo_capture(
+            history=self.history,
+            extracted_slots=self.extracted_slots,
+            filled_slots=self.state_machine.filled_slots,
+            case=self.case,
+            turn_id=turn_id,
+            dim_key=dim_key,
+            item=item,
+        )
+        self.sync_to_case()
+
+    def undo_last_turn(self) -> None:
+        """Pop the last assistant + user turn pair and revert all tokens captured in that turn."""
+        apply_undo_last_turn(
+            history=self.history,
+            extracted_slots=self.extracted_slots,
+            filled_slots=self.state_machine.filled_slots,
+            case=self.case,
+        )
+        self.state_machine.advance_to_next_gap()
+        self.sync_to_case()
+        if self.history:
+            last_bot = next((t["content"] for t in reversed(self.history) if t.get("role") == "assistant"), "")
+            self.current_suggestions = self.generate_dynamic_suggestions(last_bot)
+
+    def get_action_options(self) -> List[Dict[str, str]]:
+        """Return typed terminal action options for the DONE state."""
+        return [
+            {"id": "continue_review", "label": "Continue to Review →", "type": "primary"},
+            {"id": "add_detail", "label": "Add Another Detail", "type": "secondary"},
+            {"id": "start_new", "label": "Start New Consultation", "type": "secondary"},
+        ]
+
     def get_full_transcript(self) -> str:
         """Return human-readable conversation transcript."""
         transcript_lines = []
         for turn in self.history:
-            role = "Kent-AI" if turn["role"] == "assistant" else "Patient"
-            transcript_lines.append(f"{role}: {turn['content']}")
+            role = "Kent-AI" if turn.get("role") == "assistant" else "Patient"
+            transcript_lines.append(f"{role}: {turn.get('content', '')}")
         return "\n".join(transcript_lines)
 
     def get_patient_report(self) -> Optional[PatientReport]:
+        """Lazily compute patient report if requested and orchestrator is present."""
+        if self.patient_report is None and self.orchestrator is not None:
+            self.patient_report = self.orchestrator.process_transcript(
+                self.get_full_transcript(),
+                patient_id="PT-INTAKE",
+            )
         return self.patient_report
 
     def reset(self) -> None:

@@ -195,12 +195,11 @@ def render_extraction_preview(case: ClinicalCase, dm: DialogueManager) -> None:
         rec_str = ", ".join(missing_rec)
         st.warning(
             f"Not yet captured: **{rec_str}**. These strongly shape the homeopathic repertorization.",
-            icon="⚠️",
         )
         col_m1, col_m2 = st.columns([1, 1])
         with col_m1:
             if st.button("Fill gaps with dialogue", type="secondary", width="stretch", key="btn_fill_gaps_dialogue"):
-                dm.load_from_case(case)
+                dm.resume_from_case(case)
                 st.session_state.intake_mode_select = "Guided conversation"
                 st.session_state.paste_preview = None
                 st.rerun(scope="app")
@@ -219,3 +218,4 @@ def render_extraction_preview(case: ClinicalCase, dm: DialogueManager) -> None:
             if st.button("Continue to Review →", type="primary", width="stretch", key="btn_continue_to_review"):
                 st.session_state.workspace_step = 2
                 st.rerun(scope="app")
+

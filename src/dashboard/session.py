@@ -98,7 +98,7 @@ def initialize_session():
             model_name="llama3:8b",
             mock_mode=mock_dm,
         )
-        dm.load_from_case(case)
+        dm.resume_from_case(case)
         st.session_state.dialogue_manager = dm
     else:
         dm = st.session_state.dialogue_manager
