@@ -672,5 +672,31 @@ def test_case_bulk_actions_export_serializers():
     assert "Severe migraine on right side" in md_str
 
 
+def test_app_settings_persistence(tmp_path):
+    """Verify key-value app settings persistence in SQLite."""
+    from src.data.case_store import get_app_setting, set_app_setting
+
+    db_file = tmp_path / "settings_test.sqlite"
+
+    # Default value returned when key is missing or file does not exist
+    assert get_app_setting("non_existent_key", default=False, db_path=db_file) is False
+    assert get_app_setting("has_acknowledged_disclaimer", default=None, db_path=db_file) is None
+
+    # Persist boolean
+    set_app_setting("has_acknowledged_disclaimer", True, db_path=db_file)
+    assert get_app_setting("has_acknowledged_disclaimer", db_path=db_file) is True
+
+    # Persist complex dictionary
+    prefs = {"theme": "dark", "density": "Compact", "scopes": ["MIND"]}
+    set_app_setting("user_preferences", prefs, db_path=db_file)
+    retrieved_prefs = get_app_setting("user_preferences", db_path=db_file)
+    assert retrieved_prefs == prefs
+
+    # Overwrite setting
+    set_app_setting("has_acknowledged_disclaimer", False, db_path=db_file)
+    assert get_app_setting("has_acknowledged_disclaimer", db_path=db_file) is False
+
+
+
 
 

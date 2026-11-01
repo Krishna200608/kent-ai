@@ -13,7 +13,7 @@ from src.config import get_project_root
 from src.chatbot.dialogue_manager import DialogueManager
 from src.data.kent_db import KentDB
 from src.dashboard.constants import MODEL_DISPLAY_NAME
-from src.data.case_store import generate_case_id
+from src.data.case_store import generate_case_id, get_app_setting
 from src.models.case import ClinicalCase
 from src.models.symptom_ner import SymptomNER
 from src.models.ensemble import EnsembleNER
@@ -148,3 +148,7 @@ def initialize_session():
         st.session_state.show_dev_details = False
     if "ranking_sort_mode" not in st.session_state:
         st.session_state.ranking_sort_mode = "totality"
+    if "has_acknowledged_disclaimer" not in st.session_state:
+        st.session_state.has_acknowledged_disclaimer = bool(
+            get_app_setting("has_acknowledged_disclaimer", False)
+        )

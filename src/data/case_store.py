@@ -68,7 +68,87 @@ def init_case_db(db_path: Optional[Union[str, Path]] = None) -> None:
             cur.execute("ALTER TABLE clinical_cases ADD COLUMN extraction_meta_json TEXT")
 
         cur.execute("CREATE INDEX IF NOT EXISTS idx_cases_updated_at ON clinical_cases(updated_at DESC)")
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS app_settings (
+                key TEXT PRIMARY KEY,
+                value_json TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
         conn.commit()
+
+
+def get_app_setting(
+    key: str,
+    default: Any = None,
+    db_path: Optional[Union[str, Path]] = None,
+) -> Any:
+    """Retrieve an application setting from persistent SQLite storage.
+
+    Args:
+        key: Setting identifier.
+        default: Fallback value if setting not found.
+        db_path: Optional path to SQLite database.
+
+    Returns:
+        Deserialized setting value or default.
+    """
+    target_path = get_case_db_path(db_path)
+    if not target_path.exists():
+        return default
+    try:
+        with sqlite3.connect(target_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS app_settings (
+                    key TEXT PRIMARY KEY,
+                    value_json TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """
+            )
+            cur.execute("SELECT value_json FROM app_settings WHERE key = ?", (key,))
+            row = cur.fetchone()
+            if row is not None:
+                return json.loads(row["value_json"])
+    except Exception as e:
+        logger.warning("Failed to read setting %s: %s", key, e)
+    return default
+
+
+def set_app_setting(
+    key: str,
+    value: Any,
+    db_path: Optional[Union[str, Path]] = None,
+) -> None:
+    """Store or update an application setting in persistent SQLite storage.
+
+    Args:
+        key: Setting identifier.
+        value: JSON-serializable value.
+        db_path: Optional path to SQLite database.
+    """
+    init_case_db(db_path)
+    target_path = get_case_db_path(db_path)
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    try:
+        with sqlite3.connect(target_path) as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                INSERT OR REPLACE INTO app_settings (key, value_json, updated_at)
+                VALUES (?, ?, ?)
+                """,
+                (key, json.dumps(value), now),
+            )
+            conn.commit()
+    except Exception as e:
+        logger.warning("Failed to save setting %s: %s", key, e)
 
 
 def save_case(case: ClinicalCase, db_path: Optional[Union[str, Path]] = None) -> str:

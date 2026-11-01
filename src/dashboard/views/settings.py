@@ -26,9 +26,11 @@ from src.dashboard.constants import (
 from src.dashboard.components.ollama_status import check_ollama_online, get_ollama_latency
 from src.data.case_store import (
     delete_case,
+    get_app_setting,
     get_case,
     list_cases,
     save_case,
+    set_app_setting,
 )
 from src.models.case import ClinicalCase
 
@@ -162,6 +164,25 @@ def render_settings_view() -> None:
                 help="Display step-aware quick reply chips in Patient speaking mode",
             )
             st.session_state["show_suggested_replies"] = show_suggestions
+
+            # Clinical Decision Support Notice Preference
+            st.divider()
+            ack_status = st.session_state.get("has_acknowledged_disclaimer", False)
+            c_ack_label, c_ack_btn = st.columns(2)
+            with c_ack_label:
+                st.caption(
+                    "Clinical Notice: **Acknowledged** (hidden on reload)"
+                    if ack_status
+                    else "Clinical Notice: **Pending Acknowledgement**"
+                )
+            with c_ack_btn:
+                if ack_status:
+                    if st.button("Reset Notice", key="btn_reset_disclaimer", width="stretch"):
+                        st.session_state["has_acknowledged_disclaimer"] = False
+                        st.session_state["disclaimer_dialog_shown"] = False
+                        set_app_setting("has_acknowledged_disclaimer", False)
+                        st.toast("Notice reset - will show on reload.")
+                        st.rerun()
 
     # 3. Data Management & Backups
     with c_right:

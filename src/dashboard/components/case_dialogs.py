@@ -11,7 +11,7 @@ import streamlit as st
 
 from src.dashboard.components.icons import get_icon
 from src.dashboard.utils import esc
-from src.data.case_store import save_case
+from src.data.case_store import save_case, set_app_setting
 from src.models.case import ClinicalCase
 
 
@@ -95,10 +95,21 @@ def show_first_run_disclaimer_dialog() -> None:
         unsafe_allow_html=True,
     )
 
-    if st.button("I Acknowledge & Understand", type="primary", width="stretch", key="dlg_ack_disclaimer"):
-        st.session_state["has_acknowledged_disclaimer"] = True
-        st.toast("Acknowledgement recorded.")
-        st.rerun()
+    dont_show = st.checkbox("Remember my acknowledgement on this machine", value=True, key="chk_persist_disclaimer")
+    c_ack, c_dismiss = st.columns([1.5, 1])
+    with c_ack:
+        if st.button("I Acknowledge & Understand", type="primary", width="stretch", key="dlg_ack_disclaimer"):
+            st.session_state["has_acknowledged_disclaimer"] = True
+            if dont_show:
+                set_app_setting("has_acknowledged_disclaimer", True)
+            st.toast("Acknowledgement recorded.")
+            st.rerun()
+    with c_dismiss:
+        if st.button("Dismiss", width="stretch", key="dlg_dismiss_disclaimer"):
+            st.session_state["has_acknowledged_disclaimer"] = True
+            if dont_show:
+                set_app_setting("has_acknowledged_disclaimer", True)
+            st.rerun()
 
 
 @st.dialog("Materia Medica — Remedy Keynotes", width="large")
