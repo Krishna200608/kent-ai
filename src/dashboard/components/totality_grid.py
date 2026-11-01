@@ -43,7 +43,7 @@ def render_classical_totality_matrix(
 
     # Column count selector for matrix table
     total_candidates = len(report.ranked_remedies)
-    col_options = [8, 12]
+    col_options = [5, 8, 12]
     if total_candidates > 12:
         col_options.append(min(16, total_candidates))
     if total_candidates > 16:
