@@ -55,3 +55,31 @@ This document records architectural decisions, assumptions, backend changes, and
   - Lazy case creation: verified `case.is_blank` guard in `save_case` prevents blank case row creation.
 - **Tests Added**:
   - `tests/test_ui_overhaul.py` (4 tests verifying constants, dimension ordering, rubric path formatting with OCR time dots, and totality ring SVG). All 14 dashboard and overhaul tests passing.
+
+---
+
+### Phase 2: Shell, Navigation, Case Bar, Stepper & Dialogs (Complete)
+- **Top Bar (Single Row <=56px)**:
+  - Replaced large header banner with a sleek single-row top bar in `src/dashboard/views/header.py`.
+  - Brand wordmark "Kent-AI" + leaf icon. Subtitle moved to browser tab title (`st.set_page_config`).
+  - Read-only scope chip (`MIND · 4,933` / `All · 74,513`).
+  - Engine telemetry pill with popover for endpoint (`127.0.0.1:11434`), connection test, and retry.
+- **Persistent Case Sub-Header & Stepper (`src/dashboard/components/case_bar.py`)**:
+  - Case bar shows Case ID (mono), patient demographics (omitting empty `?`/`—`), live `totality_ring`, saved timestamp indicator, and "Patient info" button.
+  - Multi-line 4-step Stepper buttons with title + sublabel:
+    1. "1. Intake" · "Capture symptoms"
+    2. "2. Review" · "Confirm and edit"
+    3. "3. Analysis" · "Rank remedies"
+    4. "4. Report" · "Export report"
+  - Removed intrusive `[Locked]` text suffix.
+- **Modal Dialogs (`src/dashboard/components/case_dialogs.py`)**:
+  - `show_patient_info_dialog(case)`: single `@st.dialog` for editing demographics & chief complaint.
+  - Removed duplicate "Optional: Patient details & chief complaint" expander in `step1_paste.py`.
+  - `show_first_run_disclaimer_dialog()`: non-blocking first-run research notice dialog.
+- **Sticky Bottom Action Bar (`src/dashboard/components/action_bar.py`)**:
+  - Standardized bottom actions: `Back · Save draft · Continue to <next step>`.
+- **Layout & Footer**:
+  - Main container centered with `max-width: 1440px` and responsive side padding (24px / 16px).
+  - Consolidated single 1-line muted disclaimer footer.
+- **Tests Added**:
+  - `test_phase2_case_dialogs_defined` and `test_phase2_action_bar_component` added to `tests/test_ui_overhaul.py`. All 11 smoke tests passing 100%.

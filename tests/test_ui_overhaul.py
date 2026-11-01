@@ -101,3 +101,16 @@ def test_totality_ring_svg_rendering():
     assert 'aria-label="2 of 7 totality dimensions captured"' in svg_case
     assert svg_case.count('stroke="var(--accent, #10B981)"') == 2
     assert '>2</text>' in svg_case
+
+
+def test_phase2_case_dialogs_defined():
+    """Verify Patient Info and Disclaimer dialogs are defined and callable."""
+    from src.dashboard.components.case_dialogs import show_patient_info_dialog, show_first_run_disclaimer_dialog
+    assert callable(show_patient_info_dialog)
+    assert callable(show_first_run_disclaimer_dialog)
+
+
+def test_phase2_action_bar_component():
+    """Verify sticky action bar component is defined and callable."""
+    from src.dashboard.components.action_bar import render_step_action_bar
+    assert callable(render_step_action_bar)

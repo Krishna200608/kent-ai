@@ -84,44 +84,6 @@ def render_step1_paste_view(current_case: ClinicalCase, dm: DialogueManager, pip
                 label_visibility="collapsed",
             )
 
-            # Optional Patient Demographics & Chief Complaint Expander
-            with st.expander("Optional: Patient details & chief complaint", expanded=False):
-                c_p1, c_p2, c_p3 = st.columns([2, 1, 1])
-                with c_p1:
-                    p_name = st.text_input(
-                        "Patient Name / Initials",
-                        value=current_case.patient_name if current_case.patient_name != "Anonymous Patient" else "",
-                        placeholder="e.g. Jane Doe or J.D.",
-                        key="paste_p_name",
-                    )
-                with c_p2:
-                    p_age = st.number_input(
-                        "Age",
-                        min_value=0,
-                        max_value=120,
-                        value=current_case.patient_age or 0,
-                        step=1,
-                        key="paste_p_age",
-                    )
-                with c_p3:
-                    sex_options = ["Unspecified", "Female", "Male", "Other"]
-                    default_sex_idx = 0
-                    if current_case.patient_sex in sex_options:
-                        default_sex_idx = sex_options.index(current_case.patient_sex)
-                    p_sex = st.selectbox(
-                        "Sex",
-                        sex_options,
-                        index=default_sex_idx,
-                        key="paste_p_sex",
-                    )
-
-                p_cc = st.text_input(
-                    "Chief Complaint",
-                    value=current_case.chief_complaint,
-                    placeholder="Auto-derived or enter manually...",
-                    key="paste_p_cc",
-                )
-
             submit_extract = st.form_submit_button(
                 "Extract & review",
                 type="primary",
@@ -200,18 +162,9 @@ def render_step1_paste_view(current_case: ClinicalCase, dm: DialogueManager, pip
                             red_flags=[rf.to_dict() for rf in red_flags],
                         )
 
-                        # Set chief complaint and demographics
-                        if p_cc and p_cc.strip():
-                            current_case.chief_complaint = p_cc.strip()
-                        else:
+                        # Set chief complaint if not already specified
+                        if not current_case.chief_complaint:
                             current_case.chief_complaint = derive_chief_complaint(clean_text, profile.chief_complaint)
-
-                        if p_name and p_name.strip():
-                            current_case.patient_name = p_name.strip()
-                        if p_age > 0:
-                            current_case.patient_age = int(p_age)
-                        if p_sex and p_sex != "Unspecified":
-                            current_case.patient_sex = p_sex
 
                         save_case(current_case)
                         saved_time = datetime.datetime.now().strftime("%H:%M")

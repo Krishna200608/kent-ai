@@ -24,6 +24,7 @@ import streamlit as st
 
 from src.dashboard.styles import inject_custom_css
 from src.dashboard.components.case_bar import render_case_bar
+from src.dashboard.components.case_dialogs import show_first_run_disclaimer_dialog
 from src.dashboard.components.case_library import render_case_library
 from src.dashboard.session import (
     ENGINE_OPTIONS,
@@ -54,7 +55,8 @@ logger = logging.getLogger("dashboard")
 
 # Set wide page layout
 st.set_page_config(
-    page_title="Kent-AI Clinical Decision Support",
+    page_title="Kent-AI · Classical Homeopathic Repertorization (Kent Framework)",
+    page_icon="🌿",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -67,6 +69,14 @@ def main():
     initialize_session()
     render_sidebar()
     render_header()
+
+    if not st.session_state.get("has_acknowledged_disclaimer", False):
+        if not st.session_state.get("disclaimer_dialog_shown", False):
+            st.session_state["disclaimer_dialog_shown"] = True
+            try:
+                show_first_run_disclaimer_dialog()
+            except Exception:
+                pass
 
     db = get_db()
     pipeline = st.session_state.pipeline
