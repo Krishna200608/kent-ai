@@ -197,3 +197,28 @@ def test_smoke_enter_manually_jumps_to_step_2_with_blank_case():
     assert not at.exception
 
     assert at.session_state["workspace_step"] == 2
+
+
+def test_smoke_paste_example_pill_populates_textarea():
+    """Verify selecting an example pill in paste mode populates the paste_text textarea."""
+    at = AppTest.from_file(_APP_PATH, default_timeout=30)
+    at.run()
+    assert not at.exception
+
+    # Switch to Paste notes mode
+    ctrl = at.segmented_control(key="intake_mode_select")
+    assert ctrl is not None
+    ctrl.set_value("Paste notes").run()
+    assert not at.exception
+
+    # Select an example pill
+    pills = at.pills(key="example_pill_select")
+    assert pills is not None
+    first_title = pills.options[0]
+    pills.set_value(first_title).run()
+    assert not at.exception
+
+    # Verify textarea was populated via callback
+    paste_ta = at.text_area(key="paste_text")
+    assert paste_ta is not None
+    assert len(paste_ta.value.strip()) > 30

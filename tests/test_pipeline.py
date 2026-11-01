@@ -223,3 +223,8 @@ def test_extract_profile_matches_first_stage_and_never_touches_vector_store(mock
     # This must succeed without raising AssertionError
     spy_profile = spy_orchestrator.extract_profile(transcript)
     assert spy_profile.mental == profile.mental
+
+
+# Explicit alias name matching WP4 specification
+test_extract_profile_no_vector_access = test_extract_profile_no_vector_store_access
+

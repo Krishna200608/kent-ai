@@ -568,3 +568,9 @@ def test_is_blank_false_once_transcript_set():
     assert case.is_blank is True
 
 
+# Alias names to match WP4 specification explicitly
+test_extraction_meta_backward_compat = test_legacy_schema_migration_loads_empty_extraction_meta
+test_replace_text_extracted_items = test_re_extract_keeps_manual_and_chat_items
+
+
+
