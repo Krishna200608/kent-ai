@@ -242,6 +242,39 @@ This document records architectural decisions, assumptions, backend changes, and
   - `test_phase7_split_methodology_and_settings` in `tests/test_ui_overhaul.py`.
   - Full smoke test suite (`test_app_smoke.py`), overhaul suite (15 tests), and dashboard suite (10 tests) all passing 100%.
 
+---
+
+### Phase 8: Review, Analysis, Report Refinements & Materia Medica Polish (Complete)
+- **Step 2 Review (`src/dashboard/views/step2_review.py`)**:
+  - Organized symptom cards dynamically via `get_canonical_dimensions(scope)` (Mental & Emotional Generals paramount in MIND scope).
+  - Accessible symptom removal buttons (`Remove` button per symptom replacing bare buttons).
+  - Clean inline symptom addition inputs per dimension.
+  - Retained Physician Brief / Clinical Summary with local LLM regeneration and manual edit modal expander.
+- **Step 3 Analysis (`src/dashboard/views/step3_analysis.py`)**:
+  - Classical Repertorization Matrix with interactive mute and eliminatory toggles.
+  - Comparative Candidate Remedy Ranking Table: score breakdown (weighted score, rubric coverage ratio, grade contributions).
+  - Expandable "Why this remedy" list detailing every covered rubric, Kentian grade (③ Bold, ② Italic, ① Roman), semantic similarity, and exact point contribution.
+  - Comparative clinical note explicitly advising against single-candidate automated prescriptions.
+  - One-click Materia Medica modal dialog inspection button (`show_remedy_dialog`) for every candidate remedy.
+- **Step 4 Report (`src/dashboard/views/step4_report.py`)**:
+  - Paper-style printable report layout with `@media print` styling in `src/dashboard/styles.css`.
+  - Header case metadata: sanitized demographics (omitting empty `?`/`—`), Scope, model name (`MODEL_DISPLAY_NAME`), and version `v{APP_VERSION}`.
+  - Section 1: Validated 7-Dimension Clinical Totality findings.
+  - Section 2: Comparative Candidate Analysis (top candidates with score advantage margin over runner-up).
+  - Section 3: Remedy Totality Ranking Chart and breakdown table.
+  - Section 4: Classical Repertorization Matrix.
+  - Section 5: Matched Repertory Rubrics with full expanders.
+  - Section 6: Full Investigational Clinical Decision-Support Notice.
+  - Multi-format exports: on-demand compiled PDF, Markdown, and print layout.
+- **Materia Medica View (`src/dashboard/views/materia_medica.py`)**:
+  - Remedy cards styled with design tokens, abbreviation badges, cataloged count, and MIND count.
+  - Keynotes rendered in `--font-rubric` with `format_rubric_path` and Grade 3 badges.
+  - "Inspect Details" button opening the Materia Medica modal dialog.
+- **Tests Added**:
+  - `test_phase8_step_views_and_materia_medica_exports` in `tests/test_ui_overhaul.py`.
+  - Full smoke test suite (`test_app_smoke.py`), overhaul suite (16 tests), and dashboard suite (10 tests) all passing 100%.
+
+
 
 
 

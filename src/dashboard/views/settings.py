@@ -81,9 +81,9 @@ def render_settings_view() -> None:
                 if st.button("Test Connection", key="btn_test_ollama_settings", width="stretch"):
                     is_online, latency_ms = get_ollama_latency()
                     if is_online:
-                        st.toast(f"Ollama Online · {latency_ms:.0f}ms round-trip")
+                        st.toast(f"Ollama Online - {latency_ms:.0f}ms round-trip")
                     else:
-                        st.toast("Ollama Offline · Ensure 'ollama serve' is running")
+                        st.toast("Ollama Offline - Ensure 'ollama serve' is running")
                     st.rerun()
 
             with c_status:

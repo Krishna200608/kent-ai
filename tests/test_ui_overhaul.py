@@ -291,6 +291,21 @@ def test_phase7_split_methodology_and_settings():
         assert len(info["plain_explanation"]) > 10
 
 
+def test_phase8_step_views_and_materia_medica_exports():
+    """Verify Step 2 Review, Step 3 Analysis, Step 4 Report, and Materia Medica view callables."""
+    from src.dashboard.views.step2_review import render_step2_review
+    from src.dashboard.views.step3_analysis import render_step3_analysis
+    from src.dashboard.views.step4_report import render_step4_report, render_report_view
+    from src.dashboard.views.materia_medica import render_materia_medica_view
+
+    assert callable(render_step2_review)
+    assert callable(render_step3_analysis)
+    assert callable(render_step4_report)
+    assert callable(render_report_view)
+    assert callable(render_materia_medica_view)
+
+
+
 
 
 

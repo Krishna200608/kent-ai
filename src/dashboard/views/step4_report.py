@@ -12,6 +12,7 @@ import streamlit as st
 from src.dashboard.components.icons import get_icon
 from src.dashboard.components.rubric_tree import render_rubric_card
 from src.dashboard.components.totality_grid import render_classical_totality_matrix
+from src.dashboard.constants import APP_VERSION, GIT_SHA, MODEL_DISPLAY_NAME, format_rubric_path
 from src.dashboard.dimensions import DIMENSION_MAP, pluralize
 from src.dashboard.pdf_exporter import generate_case_pdf
 from src.dashboard.utils import esc
@@ -167,7 +168,8 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
                 """
             )
             if case:
-                st.markdown(f"**Patient**: {case.patient_name} ({case.demographics_string}) &nbsp;&middot;&nbsp; **Chief Complaint**: {case.chief_complaint or 'Clinical Consultation'}")
+                demo_info = f" ({case.demographics_string})" if (case.demographics_string and case.demographics_string != "Unspecified") else ""
+                st.markdown(f"**Patient**: {case.patient_name}{demo_info} &nbsp;&middot;&nbsp; **Chief Complaint**: {case.chief_complaint or 'Clinical Consultation'} &nbsp;&middot;&nbsp; **Engine**: {MODEL_DISPLAY_NAME} (v{APP_VERSION})")
         with col_rep_dl:
             if case:
                 pdf_key = f"rep_pdf_{case.case_id}_{case.updated_at}"
@@ -310,6 +312,14 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
     )
     for r in active_rubrics:
         render_rubric_card(r, db)
+
+    st.html(
+        """
+        <div class="report-paper-disclaimer" style="margin-top: 24px; padding: 12px 16px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-left: 4px solid var(--accent, #10B981); border-radius: 6px; font-size: 12.5px; color: var(--text-muted, #A3B0C2); line-height: 1.55;">
+            <b>Clinical Decision-Support Notice:</b> Kent-AI is an investigational software platform for classical homeopathic repertorization. It does not provide medical diagnoses, treatment directives, or autonomous prescriptions. All repertory indications, totality scores, and remedy differentials must be clinically evaluated by a qualified practitioner alongside primary literature and clinical judgment.
+        </div>
+        """
+    )
 
 
 def render_step4_report(current_case: ClinicalCase, db: KentDB) -> None:
