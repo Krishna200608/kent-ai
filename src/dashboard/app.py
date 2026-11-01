@@ -23,6 +23,7 @@ if str(_REPO_ROOT) not in sys.path:
 import streamlit as st
 
 from src.dashboard.styles import inject_custom_css
+from src.dashboard.components.busy import inject_busy_runtime
 from src.dashboard.components.case_bar import render_case_bar
 from src.dashboard.components.case_dialogs import show_first_run_disclaimer_dialog
 from src.dashboard.components.case_library import render_case_library
@@ -136,6 +137,9 @@ def main():
 
     with tab_settings:
         render_settings_view()
+
+    # Inject busy/loading feedback runtime (must be at end of main)
+    inject_busy_runtime()
 
     # Footer Disclaimer
     st.html(

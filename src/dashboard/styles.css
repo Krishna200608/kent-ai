@@ -1150,7 +1150,8 @@ section[data-testid="stSidebar"][aria-expanded="false"] {
 }
 
 /* Make buttons look sleek instead of generic Streamlit ones */
-button[kind="primary"] {
+/* NOTE: Streamlit 1.64 uses data-testid^="stBaseButton-" not kind= attr. */
+button[data-testid^="stBaseButton-primary"] {
     background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
     color: #0A0F1D !important;
     border: none !important;
@@ -1160,20 +1161,20 @@ button[kind="primary"] {
     transition: transform 0.2s ease, box-shadow 0.2s ease !important;
 }
 
-button[kind="primary"]:hover {
+button[data-testid^="stBaseButton-primary"]:hover {
     transform: translateY(-1px) !important;
     box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
     color: #0A0F1D !important;
 }
 
-button[kind="secondary"] {
+button[data-testid^="stBaseButton-secondary"] {
     background: rgba(255, 255, 255, 0.05) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     color: #F9FAFB !important;
     transition: all 0.2s ease !important;
 }
 
-button[kind="secondary"]:hover {
+button[data-testid^="stBaseButton-secondary"]:hover {
     background: rgba(255, 255, 255, 0.1) !important;
     border-color: rgba(255, 255, 255, 0.2) !important;
 }
@@ -1698,7 +1699,7 @@ div[data-testid="stPills"] button,
 }
 
 /* Primary Buttons (Phase 1 Tokens & Discipline) */
-.stButton > button[kind="primary"],
+.stButton > button[data-testid^="stBaseButton-primary"],
 button[data-testid="baseButton-primary"] {
     background-color: var(--accent) !important;
     color: var(--accent-ink) !important;
@@ -1708,20 +1709,20 @@ button[data-testid="baseButton-primary"] {
     transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease !important;
 }
 
-.stButton > button[kind="primary"]:hover:not(:disabled),
+.stButton > button[data-testid^="stBaseButton-primary"]:hover:not(:disabled),
 button[data-testid="baseButton-primary"]:hover:not(:disabled) {
     background-color: var(--accent-hover) !important;
     border-color: var(--accent-hover) !important;
     color: var(--accent-ink) !important;
 }
 
-.stButton > button[kind="primary"]:active:not(:disabled),
+.stButton > button[data-testid^="stBaseButton-primary"]:active:not(:disabled),
 button[data-testid="baseButton-primary"]:active:not(:disabled) {
     background-color: var(--accent) !important;
     transform: translateY(1px);
 }
 
-.stButton > button[kind="primary"]:disabled,
+.stButton > button[data-testid^="stBaseButton-primary"]:disabled,
 button[data-testid="baseButton-primary"]:disabled {
     background-color: var(--surface-2) !important;
     border-color: var(--line) !important;
@@ -2176,3 +2177,134 @@ mark.query-match {
 
 
 
+
+/* =============================================================================
+   BUSY / LOADING FEEDBACK  (Phase 16 – busy.js contract)
+   GOTCHAS §8.20-8.23 – do NOT key on data-test-script-state alone.
+   All selectors use stable data-testid hooks; no hashed class names.
+   ============================================================================= */
+
+/* Spin keyframe */
+@keyframes kent-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Appear fade-in for the progress bar */
+@keyframes kent-appear {
+    from { opacity: 0; transform: scaleX(0.3); }
+    to   { opacity: 1; transform: scaleX(1);   }
+}
+
+/* Slide-in for slow-op overlay */
+@keyframes kent-slide {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* ── Individual button busy state ─────────────────────────────────────────── */
+button[data-kent-busy="true"] {
+    position: relative !important;
+    pointer-events: none !important;
+    opacity: 0.78 !important;
+    cursor: wait !important;
+}
+
+/* Spinner pseudo-element on individually-marked buttons */
+button[data-kent-busy="true"]::before {
+    content: "" !important;
+    display: inline-block !important;
+    width: 13px !important;
+    height: 13px !important;
+    border: 2px solid rgba(255,255,255,0.3) !important;
+    border-top-color: var(--accent, #10B981) !important;
+    border-radius: 50% !important;
+    animation: kent-spin 0.7s linear infinite !important;
+    vertical-align: middle !important;
+    margin-right: 6px !important;
+}
+
+/* ── Disabled twin button (busy_slot context manager) ─────────────────────── */
+/* The twin key ends with __busy; its container has class st-key-<key>__busy */
+[class*="__busy"] button:disabled {
+    position: relative !important;
+    opacity: 0.72 !important;
+    cursor: wait !important;
+}
+
+[class*="__busy"] button:disabled::before {
+    content: "" !important;
+    display: inline-block !important;
+    width: 12px !important;
+    height: 12px !important;
+    border: 2px solid rgba(255,255,255,0.25) !important;
+    border-top-color: var(--accent, #10B981) !important;
+    border-radius: 50% !important;
+    animation: kent-spin 0.7s linear infinite !important;
+    vertical-align: middle !important;
+    margin-right: 6px !important;
+}
+
+/* ── Global progress bar (top of page when html[data-kent-busy]) ──────────── */
+html[data-kent-busy="true"]::before {
+    content: "" !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 3px !important;
+    background: linear-gradient(
+        90deg,
+        var(--accent, #10B981) 0%,
+        var(--accent-hover, #34D399) 50%,
+        var(--accent, #10B981) 100%
+    ) !important;
+    background-size: 200% 100% !important;
+    animation: kent-appear 0.3s ease forwards, kent-spin 1.8s linear infinite !important;
+    z-index: 9999 !important;
+    pointer-events: none !important;
+}
+
+/* ── Slow-operation overlay (appears after SLOW_THRESHOLD ms) ─────────────── */
+html[data-kent-slow="true"] body::after {
+    content: "Processing\2026" !important;   /* "Processing…" without emoji */
+    position: fixed !important;
+    bottom: 20px !important;
+    right: 20px !important;
+    background: var(--surface-2, #182330) !important;
+    border: 1px solid var(--line, #243243) !important;
+    border-left: 3px solid var(--accent, #10B981) !important;
+    border-radius: var(--radius-md, 10px) !important;
+    padding: 10px 16px !important;
+    font-size: 13px !important;
+    color: var(--text-muted, #A3B0C2) !important;
+    font-family: var(--font-ui, "IBM Plex Sans", system-ui, sans-serif) !important;
+    animation: kent-slide 0.25s ease forwards !important;
+    z-index: 9998 !important;
+    pointer-events: none !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+}
+
+/* ── Orphan tooltip hide ──────────────────────────────────────────────────── */
+[data-kent-orphan="true"] {
+    display: none !important;
+}
+
+/* ── Prevent layout gap from injected script tags ─────────────────────────── */
+/* When st.html injects a bare <script>, Streamlit may add an empty iframe wrapper */
+iframe:has(script):not([src]) {
+    display: none !important;
+    height: 0 !important;
+}
+
+/* ── Reduced-motion overrides ─────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    button[data-kent-busy="true"]::before,
+    [class*="__busy"] button:disabled::before,
+    html[data-kent-busy="true"]::before {
+        animation: none !important;
+    }
+    html[data-kent-slow="true"] body::after {
+        animation: none !important;
+    }
+}
+/* ============================================================================= */
