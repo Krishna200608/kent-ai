@@ -236,15 +236,89 @@ def list_cases(limit: int = 50, db_path: Optional[Union[str, Path]] = None) -> L
         return summaries
 
 
-def delete_case(case_id: str, db_path: Optional[Union[str, Path]] = None) -> bool:
-    """Delete a case by ID."""
+def delete_cases(case_ids: List[str], db_path: Optional[Union[str, Path]] = None) -> int:
+    """Delete multiple cases by ID in a single atomic transaction."""
+    if not case_ids:
+        return 0
     init_case_db(db_path)
     target_path = get_case_db_path(db_path)
     with sqlite3.connect(target_path) as conn:
         cur = conn.cursor()
-        cur.execute("DELETE FROM clinical_cases WHERE case_id = ?", (case_id,))
+        placeholders = ",".join("?" for _ in case_ids)
+        cur.execute(f"DELETE FROM clinical_cases WHERE case_id IN ({placeholders})", tuple(case_ids))
         conn.commit()
-        return cur.rowcount > 0
+        return cur.rowcount
+
+
+def delete_case(case_id: str, db_path: Optional[Union[str, Path]] = None) -> bool:
+    """Delete a single case by ID."""
+    return delete_cases([case_id], db_path=db_path) > 0
+
+
+def get_cases(case_ids: List[str], db_path: Optional[Union[str, Path]] = None) -> List[ClinicalCase]:
+    """Fetch multiple ClinicalCase instances by ID in a single query."""
+    if not case_ids:
+        return []
+    init_case_db(db_path)
+    target_path = get_case_db_path(db_path)
+    with sqlite3.connect(target_path) as conn:
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        placeholders = ",".join("?" for _ in case_ids)
+        cur.execute(f"SELECT * FROM clinical_cases WHERE case_id IN ({placeholders})", tuple(case_ids))
+        rows = cur.fetchall()
+
+        cases: List[ClinicalCase] = []
+        for row in rows:
+            cases.append(
+                ClinicalCase(
+                    case_id=row["case_id"],
+                    patient_name=row["patient_name"],
+                    patient_age=row["patient_age"],
+                    patient_sex=row["patient_sex"],
+                    chief_complaint=row["chief_complaint"] or "",
+                    status=row["status"],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"],
+                    scope_chapter=row["scope_chapter"],
+                    ranking_mode=row["ranking_mode"] or "totality",
+                    dimensions=json.loads(row["dimensions_json"]) if row["dimensions_json"] else {},
+                    transcript=row["transcript"] or "",
+                    dialogue_history=json.loads(row["history_json"]) if row["history_json"] else [],
+                    selected_rubric_ids=json.loads(row["selected_rubrics_json"]) if row["selected_rubrics_json"] else [],
+                    muted_rubric_ids=json.loads(row["muted_rubrics_json"]) if row["muted_rubrics_json"] else [],
+                    eliminatory_rubric_ids=json.loads(row["eliminatory_rubrics_json"]) if row["eliminatory_rubrics_json"] else [],
+                    report_data=json.loads(row["report_json"]) if row["report_json"] else None,
+                    clinical_notes=row["clinical_notes"] or "",
+                    clinical_summary=(
+                        row["clinical_summary"]
+                        if "clinical_summary" in row.keys() and row["clinical_summary"]
+                        else ((json.loads(row["report_json"]).get("clinical_summary", "")) if row["report_json"] else "")
+                    ),
+                    extraction_meta=(
+                        json.loads(row["extraction_meta_json"])
+                        if "extraction_meta_json" in row.keys() and row["extraction_meta_json"]
+                        else {}
+                    ),
+                )
+            )
+        return cases
+
+
+def update_cases_status(case_ids: List[str], new_status: str, db_path: Optional[Union[str, Path]] = None) -> int:
+    """Update clinical status (e.g. 'draft', 'in_review', 'analyzed', 'archived') for multiple cases."""
+    if not case_ids or not new_status:
+        return 0
+    init_case_db(db_path)
+    target_path = get_case_db_path(db_path)
+    updated_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    with sqlite3.connect(target_path) as conn:
+        cur = conn.cursor()
+        placeholders = ",".join("?" for _ in case_ids)
+        params = [new_status, updated_at] + list(case_ids)
+        cur.execute(f"UPDATE clinical_cases SET status = ?, updated_at = ? WHERE case_id IN ({placeholders})", tuple(params))
+        conn.commit()
+        return cur.rowcount
 
 
 def generate_case_id(db_path: Optional[Union[str, Path]] = None) -> str:

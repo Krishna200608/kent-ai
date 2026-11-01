@@ -1,7 +1,7 @@
 # Kent-AI — Progress Tracker
 
 > Last updated: 2026-11-01 by Antigravity
-> Phase: Complete through Phase 14 (Step 1 Guided Conversation Chat Redesign & Dynamic Ollama Health Polling; 148 Unit & Smoke Tests Passing, 0 Errors)
+> Phase: Complete through Phase 14 (Case Library Bulk Selection & Multi-Action Suite, 0 Warnings PyMuPDF Migration; 151 Unit & Smoke Tests Passing, 0 Errors)
 
 ---
 
@@ -502,6 +502,7 @@ pytest tests/ -v
 
 | Date | Phase | Agent | Change |
 |---|---|---|---|
+| 2026-11-01 | 14 / Bulk | Antigravity | Patient Case Library Bulk Selection & Multi-Action Suite: implemented "Select All" / "Deselect All" toolbar and per-card checkboxes in case_library.py; created src/dashboard/components/case_bulk_actions.py for atomic bulk deletion (with active case reset guard), multi-case JSON bundle export, CSV summary roster export, Markdown clinical digest export, and bulk status updates; added delete_cases, get_cases, and update_cases_status to case_store.py; migrated fitz to pymupdf eliminating all PyMuPDF deprecation warnings; verified 151/151 unit and smoke tests passing with 0 warnings. |
 | 2026-11-01 | 14 / Badge | Antigravity | Real-time dynamic polling for Ollama online/offline status badge: implemented isolated 2-second fragment polling via @st.fragment(run_every="2s") (render_chat_llm_badge in chat_header.py and render_header in header.py), reduced check_ollama_online cache TTL from 10s to 2s in dedicated ollama_status.py component, auto-clears dm.last_call_failed upon daemon recovery, eliminated IPv6 localhost latency with direct 127.0.0.1 and 0.4s timeout, unified amber "Offline Fallback (ollama serve)" across all views, and added dynamic test suite (148/148 tests passing). |
 | 2026-11-01 | 14 / Chat | Antigravity | Guided conversation chat redesign: implemented resume_from_case(), deterministic gap-aware openers, per-turn capture diffs, undo_capture/undo_last_turn, get_action_options() typed buttons, lazy get_patient_report(), non-blocking safety notices; modularized chat_viewer.py into chat_header, chat_messages, chat_actions; removed col_ctrl right rail for full-width layout; touch-friendly 40px pills; 145/145 tests passing. |
 | 2026-09-26 | 0 | Antigravity | Initial scaffolding complete. All directories, kent_db, configs, tests, stubs, EDA notebook, git init. |

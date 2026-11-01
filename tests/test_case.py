@@ -14,6 +14,9 @@ from src.data.case_store import (
     get_case,
     init_case_db,
     list_cases,
+    delete_cases,
+    get_cases,
+    update_cases_status,
     purge_blank_cases,
     save_case,
 )
@@ -410,7 +413,10 @@ def test_case_summarizer(tmp_path: Path):
     pdf_bytes = generate_case_pdf(case)
     assert len(pdf_bytes) > 2000
     try:
-        import fitz
+        try:
+            import pymupdf as fitz
+        except ImportError:
+            import fitz
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         assert "CLINICAL CASE SUMMARY" in doc[0].get_text()
     except ImportError:
@@ -571,6 +577,100 @@ def test_is_blank_false_once_transcript_set():
 # Alias names to match WP4 specification explicitly
 test_extraction_meta_backward_compat = test_legacy_schema_migration_loads_empty_extraction_meta
 test_replace_text_extracted_items = test_re_extract_keeps_manual_and_chat_items
+
+
+def test_case_store_bulk_operations(tmp_path):
+    """Verify atomic bulk deletion, retrieval, and status updates in SQLite."""
+    db_file = tmp_path / "test_bulk_cases.sqlite"
+    init_case_db(db_file)
+
+    c1 = ClinicalCase(case_id="BULK-001", patient_name="Patient One")
+    c1.add_symptom("location", "head")
+    c2 = ClinicalCase(case_id="BULK-002", patient_name="Patient Two")
+    c2.add_symptom("sensation", "burning")
+    c3 = ClinicalCase(case_id="BULK-003", patient_name="Patient Three")
+    c3.add_symptom("modality_agg", "cold")
+
+    save_case(c1, db_path=db_file)
+    save_case(c2, db_path=db_file)
+    save_case(c3, db_path=db_file)
+
+    # 1. Bulk get_cases
+    fetched = get_cases(["BULK-001", "BULK-002"], db_path=db_file)
+    assert len(fetched) == 2
+    fetched_ids = {c.case_id for c in fetched}
+    assert fetched_ids == {"BULK-001", "BULK-002"}
+
+    # Empty list guard
+    assert get_cases([], db_path=db_file) == []
+
+    # 2. Bulk update_cases_status
+    updated = update_cases_status(["BULK-001", "BULK-003"], "analyzed", db_path=db_file)
+    assert updated == 2
+    c1_loaded = get_case("BULK-001", db_path=db_file)
+    c3_loaded = get_case("BULK-003", db_path=db_file)
+    assert c1_loaded.status == "analyzed"
+    assert c3_loaded.status == "analyzed"
+
+    # 3. Bulk delete_cases
+    deleted = delete_cases(["BULK-001", "BULK-002"], db_path=db_file)
+    assert deleted == 2
+    assert get_case("BULK-001", db_path=db_file) is None
+    assert get_case("BULK-002", db_path=db_file) is None
+    assert get_case("BULK-003", db_path=db_file) is not None
+
+    # Empty list delete guard
+    assert delete_cases([], db_path=db_file) == 0
+
+
+def test_case_bulk_actions_export_serializers():
+    """Verify JSON bundle, CSV summary, and Markdown digest serialization for multiple cases."""
+    import json
+    from src.dashboard.components.case_bulk_actions import (
+        export_cases_to_json,
+        export_cases_to_csv,
+        export_cases_to_markdown,
+    )
+
+    c1 = ClinicalCase(case_id="CASE-X", patient_name="Alice Smith", patient_age=45, patient_sex="Female")
+    c1.chief_complaint = "Severe migraine on right side"
+    c1.add_symptom("location", "right temple")
+    c1.add_symptom("sensation", "throbbing")
+    c1.report_data = {
+        "ranked_remedies": [{"abbreviation": "Bell", "score": 0.89}],
+    }
+
+    c2 = ClinicalCase(case_id="CASE-Y", patient_name="Bob Jones", patient_age=60, patient_sex="Male")
+    c2.chief_complaint = "Stomach pain worse from cold drinks"
+    c2.add_symptom("location", "stomach")
+
+    cases = [c1, c2]
+
+    # 1. JSON Bundle Export
+    json_str = export_cases_to_json(cases)
+    bundle = json.loads(json_str)
+    assert bundle["export_metadata"]["case_count"] == 2
+    assert len(bundle["cases"]) == 2
+    assert bundle["cases"][0]["case_id"] == "CASE-X"
+    assert bundle["cases"][1]["case_id"] == "CASE-Y"
+
+    # 2. CSV Summary Export
+    csv_str = export_cases_to_csv(cases)
+    lines = csv_str.strip().split("\r\n") if "\r\n" in csv_str else csv_str.strip().split("\n")
+    assert len(lines) == 3  # header + 2 rows
+    assert "Case ID,Patient Name,Age,Sex,Status" in lines[0]
+    assert "CASE-X,Alice Smith,45,Female" in lines[1]
+    assert "Bell (0.89)" in lines[1]
+    assert "CASE-Y,Bob Jones,60,Male" in lines[2]
+
+    # 3. Markdown Digest Export
+    md_str = export_cases_to_markdown(cases)
+    assert "# Kent-AI Clinical Consultations Digest" in md_str
+    assert "| `CASE-X` | Alice Smith | 45F |" in md_str
+    assert "| `CASE-Y` | Bob Jones | 60M |" in md_str
+    assert "### 1. Case `CASE-X` — Alice Smith" in md_str
+    assert "Severe migraine on right side" in md_str
+
 
 
 

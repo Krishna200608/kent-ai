@@ -251,6 +251,26 @@ def test_smoke_chat_saved_case_single_continue_button_and_live_labels():
     assert continue_buttons[0].disabled is False
 
 
+def test_smoke_case_library_bulk_selection():
+    """Verify Case Library renders Select All button and enables bulk selection actions."""
+    at = AppTest.from_file(_APP_PATH, default_timeout=30)
+    at.run()
+    assert not at.exception
+
+    # Find 'Select All' button in Case Library
+    sel_all_btn = next((b for b in at.button if "Select All" in b.label), None)
+    assert sel_all_btn is not None
+
+    # Click Select All and verify rerun
+    sel_all_btn.click().run()
+    assert not at.exception
+
+    # Verify Deselect All button is now enabled
+    desel_btn = next((b for b in at.button if "Deselect All" in b.label), None)
+    assert desel_btn is not None
+    assert desel_btn.disabled is False
+
+
 def test_source_guards_no_emoji_in_toasts_and_no_x_buttons():
     """Source guard verifying no emoji toasts and no button named 'x' in src/dashboard."""
     import re

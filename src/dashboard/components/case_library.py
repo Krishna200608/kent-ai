@@ -9,6 +9,7 @@ from datetime import datetime
 import logging
 import streamlit as st
 
+from src.dashboard.components.case_bulk_actions import render_bulk_action_bar
 from src.dashboard.components.icons import get_icon
 from src.dashboard.pdf_exporter import generate_case_pdf
 from src.dashboard.utils import esc
@@ -133,7 +134,75 @@ def render_case_library(current_case: ClinicalCase) -> None:
         st.info("No saved cases found. Click '+ New Case' to start a consultation.")
         return
 
-    st.markdown(f"Showing **{len(cases)}** saved consultation(s):")
+    # Collect currently selected case IDs from session state
+    visible_cids = [c["case_id"] for c in cases]
+    selected_ids = [cid for cid in visible_cids if st.session_state.get(f"case_select_{cid}", False)]
+    selected_count = len(selected_ids)
+
+    # Selection Controls & Counter Toolbar
+    col_sel_summary, col_sel_all, col_desel_all, col_sel_smart = st.columns(
+        [3, 1.2, 1.2, 1.4],
+        vertical_alignment="center",
+    )
+
+    with col_sel_summary:
+        if selected_count > 0:
+            st.markdown(
+                f"Showing **{len(cases)}** saved consultation(s) &middot; "
+                f"<span style='color: #10B981; font-weight: 700; background: rgba(16, 185, 129, 0.12); padding: 2px 8px; border-radius: 4px;'>"
+                f"{selected_count} selected</span>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(f"Showing **{len(cases)}** saved consultation(s):")
+
+    with col_sel_all:
+        if st.button(
+            f"Select All ({len(cases)})",
+            key="btn_select_all_cases",
+            width="stretch",
+            help="Select all currently visible/filtered cases at once",
+        ):
+            for c in cases:
+                st.session_state[f"case_select_{c['case_id']}"] = True
+            st.rerun()
+
+    with col_desel_all:
+        if st.button(
+            "Deselect All",
+            key="btn_deselect_all_cases",
+            disabled=(selected_count == 0),
+            width="stretch",
+            help="Clear selection for all cases",
+        ):
+            for c in cases:
+                st.session_state[f"case_select_{c['case_id']}"] = False
+            st.rerun()
+
+    with col_sel_smart:
+        with st.popover("Quick Select", width="stretch", help="Smart selection presets"):
+            st.markdown("##### Quick Selection Presets")
+            if st.button("Select Analyzed", width="stretch", key="btn_sel_analyzed"):
+                for c in cases:
+                    has_rep = bool(c.get("top_remedy") and c["top_remedy"] != "—")
+                    st.session_state[f"case_select_{c['case_id']}"] = has_rep
+                st.rerun()
+            if st.button("Select In Review", width="stretch", key="btn_sel_in_review"):
+                for c in cases:
+                    has_rep = bool(c.get("top_remedy") and c["top_remedy"] != "—")
+                    dims = c.get("dimensions_captured", 0)
+                    st.session_state[f"case_select_{c['case_id']}"] = (not has_rep and dims >= 2)
+                st.rerun()
+            if st.button("Select Drafts", width="stretch", key="btn_sel_drafts"):
+                for c in cases:
+                    has_rep = bool(c.get("top_remedy") and c["top_remedy"] != "—")
+                    dims = c.get("dimensions_captured", 0)
+                    st.session_state[f"case_select_{c['case_id']}"] = (not has_rep and dims < 2)
+                st.rerun()
+
+    # If 1 or more cases are selected, render the bulk operations toolbar
+    if selected_count > 0:
+        render_bulk_action_bar(selected_ids, current_case)
 
     for c_info in cases:
         cid = c_info["case_id"]
@@ -158,7 +227,15 @@ def render_case_library(current_case: ClinicalCase) -> None:
         rel_time = format_relative_time(c_info["updated_at"])
 
         with st.container(border=True):
-            col_info, col_actions = st.columns([5, 2], vertical_alignment="center")
+            col_chk, col_info, col_actions = st.columns([0.35, 5, 2], vertical_alignment="center")
+
+            with col_chk:
+                st.checkbox(
+                    "Select",
+                    key=f"case_select_{cid}",
+                    label_visibility="collapsed",
+                    help=f"Select case {cid} for bulk actions",
+                )
 
             with col_info:
                 st.html(

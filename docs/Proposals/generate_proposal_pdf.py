@@ -3,7 +3,10 @@ import re
 import base64
 import subprocess
 import pypandoc
-import fitz
+try:
+    import pymupdf as fitz
+except ImportError:
+    import fitz
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MD_FILE = os.path.join(BASE_DIR, "Project_Proposal.md")
