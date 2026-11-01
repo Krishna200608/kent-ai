@@ -1,7 +1,7 @@
 # Kent-AI — Progress Tracker
 
 > Last updated: 2026-11-01 by Antigravity
-> Phase: Complete through Phase 14 (Case Library Bulk Selection & Multi-Action Suite, 0 Warnings PyMuPDF Migration; 151 Unit & Smoke Tests Passing, 0 Errors)
+> Phase: Complete through Phase 15 (Comprehensive Clinician UI/UX Overhaul, Phases 1–10; 168 Unit & Smoke Tests Passing, 0 Errors)
 
 ---
 
@@ -498,10 +498,30 @@ pytest tests/ -v
 
 ---
 
+## Phase 15 — Clinician UI/UX Overhaul & Ground-Truth Design System (Phases 1–10) ✅
+
+**Status**: Complete (10-Phase End-to-End Overhaul, Single Source of Truth, Token-Based Design System, 168/168 Tests Passing) 🎯  
+**Date**: 2026-11-01  
+**Agent**: Antigravity (Gemini 3.8 Flash)  
+
+### Deliverables:
+- **Phase 0 & 1 — Design Tokens, Totality Ring & Foundations**: Built single source of truth in `src/dashboard/constants.py` (`get_canonical_dimensions`, `GRADE_WEIGHTS`, `format_rubric_path`, `EVALUATION_METRICS`, `MODEL_DISPLAY_NAME`). Implemented 7-segment SVG `totality_ring` in `totality_ring.py`. Injected full token palette (`--bg`, `--surface`, `--surface-2`, `--line`, `--text`, `--accent`) into `styles.css`. Eliminated leaked `?` and bare `—`.
+- **Phase 2 — Shell, Header & Navigation**: Redesigned top bar into compact single row (`header.py`, <=56px) with leaf wordmark, read-only scope chip, and engine pill. Multi-line Stepper buttons (`case_bar.py`). Streamlit `@st.dialog` patient info & disclaimer modals (`case_dialogs.py`). Reusable bottom action bar (`action_bar.py`).
+- **Phase 3 — Slim Sidebar & Tray Persistence**: Clamped sidebar width `clamp(280px, 20vw, 320px)` with Active Case Card and copyable ID. Synchronized `case_tray` with `case.selected_rubric_ids` across sessions. Real-time ping latency (`get_ollama_latency()`). Clean sticky footer.
+- **Phase 4 — Case Workspace, Snapshot Rail & Bedside Chat**: 7:3 two-column layout (`step1_intake.py`). Sticky 30% `case_snapshot.py` rail with interactive popovers, confidence %, and single primary CTA. Transcript scroll clamp `clamp(420px, 60vh, 640px)`, 28px avatars, collapsing welcome blurb, and state-aware neutral suggestion chips (`chat_chips.py`).
+- **Phase 5 — Case Library Dual View, Pagination & Bulk Actions**: Dual view modes (Cards View: 12/page; Table View: 25/page) with full pagination (`case_library.py`). Filter by status, search, empty draft hiding. Multi-case selection, batch deletion, JSON bundle export, CSV summary roster, and Markdown digest (`case_bulk_actions.py`).
+- **Phase 6 — Rubric Explorer & Materia Medica Dialog**: Single-row form search with mode selector (Meaning/Exact/Hybrid). Hybrid ranking engine blending vector search (0.65) with FTS5 token overlap (0.35). Hierarchical breadcrumbs (`format_rubric_path`), query keyword `<mark>` highlighting, specificity badges (`Specific`, `Moderate`, `Broad`), and one-click Materia Medica modal inspection dialog (`show_remedy_dialog`).
+- **Phase 7 — Dedicated Methodology & Settings Views**: Split combined tab into `methodology.py` (Kent's Totality Principles, 7 dimensions, BioLinkBERT/PubMedBERT ensemble architecture, verified evaluation metrics) and `settings.py` (live inference latency, defaults, JSON database export/import, safe database reset).
+- **Phase 8 — Review, Analysis & Printable Report Polish**: Dynamic symptom organization in Step 2 Review (`step2_review.py`). Analysis candidate remedy ranking with score breakdowns, grade badges, and Materia Medica modal triggers (`step3_analysis.py`). Step 4 paper-style printable report with `@media print` layout (`step4_report.py`).
+- **Phase 9 & 10 — Demonstration Case Mode & Quality Assurance**: Created `create_demo_case()` in `demo_case.py` (`DEMO-MIND-001`) with 6/7 dimensions for immediate instant testing. Full test suite expanded to **168 passing tests** with 0 warnings and zero non-ASCII characters in toasts.
+
+---
+
 ## Changelog
 
 | Date | Phase | Agent | Change |
 |---|---|---|---|
+| 2026-11-01 | 15 / UI-UX | Antigravity | Clinician UI/UX Overhaul (Phases 1-10): full design token palette in styles.css, single source of truth in constants.py, 7-segment SVG totality ring, compact top bar, slim sidebar with tray persistence, 7:3 Case Workspace with sticky Case Snapshot rail, neutral chat suggestions, Case Library table & cards views with pagination, Rubric Explorer hybrid search and Materia Medica modal dialog, split Methodology & Settings tabs, printable report styles, demo case mode, and verified 168/168 tests passing. |
 | 2026-11-01 | 14 / Bulk | Antigravity | Patient Case Library Bulk Selection & Multi-Action Suite: implemented "Select All" / "Deselect All" toolbar and per-card checkboxes in case_library.py; created src/dashboard/components/case_bulk_actions.py for atomic bulk deletion (with active case reset guard), multi-case JSON bundle export, CSV summary roster export, Markdown clinical digest export, and bulk status updates; added delete_cases, get_cases, and update_cases_status to case_store.py; migrated fitz to pymupdf eliminating all PyMuPDF deprecation warnings; verified 151/151 unit and smoke tests passing with 0 warnings. |
 | 2026-11-01 | 14 / Badge | Antigravity | Real-time dynamic polling for Ollama online/offline status badge: implemented isolated 2-second fragment polling via @st.fragment(run_every="2s") (render_chat_llm_badge in chat_header.py and render_header in header.py), reduced check_ollama_online cache TTL from 10s to 2s in dedicated ollama_status.py component, auto-clears dm.last_call_failed upon daemon recovery, eliminated IPv6 localhost latency with direct 127.0.0.1 and 0.4s timeout, unified amber "Offline Fallback (ollama serve)" across all views, and added dynamic test suite (148/148 tests passing). |
 | 2026-11-01 | 14 / Chat | Antigravity | Guided conversation chat redesign: implemented resume_from_case(), deterministic gap-aware openers, per-turn capture diffs, undo_capture/undo_last_turn, get_action_options() typed buttons, lazy get_patient_report(), non-blocking safety notices; modularized chat_viewer.py into chat_header, chat_messages, chat_actions; removed col_ctrl right rail for full-width layout; touch-friendly 40px pills; 145/145 tests passing. |
