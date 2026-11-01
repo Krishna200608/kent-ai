@@ -91,6 +91,14 @@ def initialize_session():
 
     if "pipeline" not in st.session_state:
         st.session_state.pipeline = get_pipeline(active_engine)
+        if not st.session_state.get("_models_warmed", False):
+            try:
+                pipe = st.session_state.pipeline
+                if hasattr(pipe, "ner") and hasattr(pipe.ner, "extract_entities"):
+                    pipe.ner.extract_entities("mild headache")
+                st.session_state["_models_warmed"] = True
+            except Exception as e:
+                logger.debug("Model warmup soft-failed: %s", e)
 
     if "dialogue_manager" not in st.session_state or not hasattr(st.session_state.dialogue_manager, "is_ollama_online"):
         mock_dm = os.environ.get("KENT_MOCK_PIPELINE", "0") == "1"

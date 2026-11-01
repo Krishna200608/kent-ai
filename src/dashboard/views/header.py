@@ -36,6 +36,18 @@ def render_header() -> None:
         "Kent Knowledge Base: 74,513 rubrics across 37 chapters"
     )
 
+    models_pill = ""
+    if st.session_state.get("pipeline") is not None:
+        models_pill = f"""
+        <div class="session-badge-wrapper" tabindex="0" aria-label="Inference models warm and ready" data-tip="Inference Models: Ready (~18ms)" title="Inference models warm and ready">
+            <span class="status-pill session-compact-pill" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.1); font-size: 11px; padding: 2px 8px;">
+                <span class="status-dot" style="background: #10B981;"></span>
+                {get_icon('bolt', size=13, color='#10B981')}
+                <span><b>Models ready</b></span>
+            </span>
+        </div>
+        """
+
     st.html(
         f"""
         <div class="brand-header top-bar-header" style="height: 48px; min-height: 48px; max-height: 56px; padding: 6px 14px; margin-bottom: 8px;">
@@ -56,6 +68,7 @@ def render_header() -> None:
                         <span><b>{short_scope}</b></span>
                     </span>
                 </div>
+                {models_pill}
                 <div class="session-badge-wrapper" tabindex="0" aria-label="{tooltip_text}" data-tip="{tooltip_text}" title="{tooltip_text}">
                     <span class="status-pill session-compact-pill" style="border-color: {border_color}; background: {bg_color}; font-size: 11px; padding: 2px 8px;">
                         <span class="status-dot" style="background: {dot_color};"></span>
