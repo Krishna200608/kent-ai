@@ -48,3 +48,4 @@ def test_safety_no_false_positives_on_standard_vignettes():
     for text in vignettes:
         flags = screen_red_flags(text)
         assert len(flags) == 0, f"False positive flag detected on vignette: {flags}"
+

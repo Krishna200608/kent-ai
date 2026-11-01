@@ -62,3 +62,4 @@ VIGNETTE_MAP: Dict[str, ClinicalVignette] = {v.title: v for v in CLINICAL_VIGNET
 def get_vignette_by_title(title: str) -> Optional[ClinicalVignette]:
     """Retrieve a vignette by its exact display title."""
     return VIGNETTE_MAP.get(title)
+

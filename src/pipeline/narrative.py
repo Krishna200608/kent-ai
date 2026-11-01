@@ -81,3 +81,4 @@ def missing_recommended_dimensions(case: ClinicalCase) -> List[str]:
             if not vals:
                 missing.append(dim.label)
     return missing
+

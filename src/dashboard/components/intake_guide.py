@@ -95,3 +95,4 @@ def render_intake_guide_rail(case: ClinicalCase) -> None:
             "</div>",
             unsafe_allow_html=True,
         )
+

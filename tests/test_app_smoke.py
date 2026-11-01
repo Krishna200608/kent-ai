@@ -222,3 +222,56 @@ def test_smoke_paste_example_pill_populates_textarea():
     paste_ta = at.text_area(key="paste_text")
     assert paste_ta is not None
     assert len(paste_ta.value.strip()) > 30
+
+
+def test_smoke_chat_saved_case_single_continue_button_and_live_labels():
+    """Verify saved case with 4 dimensions displays single docked Continue button and speaker labels."""
+    at = AppTest.from_file(_APP_PATH, default_timeout=30)
+    at.run()
+    assert not at.exception
+
+    # Populate case with 4 dimensions
+    case: ClinicalCase = at.session_state["current_case"]
+    case.set_dimension_values("location", ["forehead", "temples"])
+    case.set_dimension_values("sensation", ["throbbing"])
+    case.set_dimension_values("modality_agg", ["motion"])
+    case.set_dimension_values("temporal", ["morning"])
+    save_case(case)
+
+    dm = at.session_state["dialogue_manager"]
+    dm.resume_from_case(case)
+
+    # Re-run app
+    at.run()
+    assert not at.exception
+
+    # Assert exactly ONE 'Continue to Review' button is mounted in Bedside Dialogue
+    continue_buttons = [b for b in at.button if "Continue to Review" in b.label]
+    assert len(continue_buttons) == 1
+    assert continue_buttons[0].disabled is False
+
+
+def test_source_guards_no_emoji_in_toasts_and_no_x_buttons():
+    """Source guard verifying no emoji toasts and no button named 'x' in src/dashboard."""
+    import re
+    from pathlib import Path
+
+    dashboard_dir = Path(__file__).resolve().parent.parent / "src" / "dashboard"
+    py_files = list(dashboard_dir.rglob("*.py"))
+
+    # 1. Guard against non-ASCII characters in st.toast calls
+    toast_re = re.compile(r"st\.toast\(([^)]+)\)")
+    for p in py_files:
+        content = p.read_text(encoding="utf-8")
+        for match in toast_re.finditer(content):
+            call_text = match.group(1)
+            # Assert only ASCII characters in toast
+            assert call_text.isascii(), f"Non-ASCII/emoji found in st.toast call in {p.name}: {call_text}"
+
+    # 2. Guard against buttons with exact label 'x'
+    btn_re = re.compile(r'st\.button\(\s*["\']x["\']\s*[,)]', re.IGNORECASE)
+    for p in py_files:
+        content = p.read_text(encoding="utf-8")
+        match = btn_re.search(content)
+        assert match is None, f"Prohibited button with label 'x' found in {p.name}"
+

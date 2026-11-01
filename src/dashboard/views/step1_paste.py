@@ -234,3 +234,4 @@ def render_step1_paste_view(current_case: ClinicalCase, dm: DialogueManager, pip
                 icon="⚠️",
             )
         render_extraction_preview(current_case, dm)
+
