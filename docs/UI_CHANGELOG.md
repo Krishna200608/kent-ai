@@ -83,3 +83,39 @@ This document records architectural decisions, assumptions, backend changes, and
   - Consolidated single 1-line muted disclaimer footer.
 - **Tests Added**:
   - `test_phase2_case_dialogs_defined` and `test_phase2_action_bar_component` added to `tests/test_ui_overhaul.py`. All 11 smoke tests passing 100%.
+
+---
+
+### Phase 3: Slim Sidebar and Tray Persistence (Complete)
+- **Sidebar Sizing & Layout (`src/dashboard/styles.css`)**:
+  - Standardized width `clamp(280px, 20vw, 320px)` (~296px).
+  - Enforced left-aligned text throughout (`text-align: left !important`).
+- **Brand Row**:
+  - 28px icon + "Kent-AI" wordmark; removed long title and subtitle.
+- **Active Case Card (`src/dashboard/views/sidebar.py`)**:
+  - Mono copyable Case ID, sanitized patient label (no `?`/`—`), live `totality_ring` SVG, status chip ("Draft", "In review", "Analysed", "Reported"), current step name, and "Go to Step X" button.
+  - Empty state: "No Active Case" + primary "+ New Case" button.
+- **Case Tray & Persistence**:
+  - Heading with count badge (`Case Tray {n}`).
+  - Grouped Rubrics and Remedies lists.
+  - Rubric path in serif (`--font-rubric`) with `format_rubric_path` (` › ` breadcrumbs), full path tooltip, remedy count chip, and `✕` remove button.
+  - Remedies with full name, abbreviation, and `✕` remove button.
+  - Primary action: "Repertorize This Case" (repertorizes selected rubrics into Step 4 Report).
+  - "Clear Tray" action (confirmation popover if >3 items).
+  - Empty state: helpful guidance with "Open Rubric Explorer" button.
+  - **Tray Persistence**: synced `tray["rubrics"]` with `current_case.selected_rubric_ids` across session initialization, library resume, and rubric tree selection.
+- **Repertory Scope Control**:
+  - `st.segmented_control` with "MIND focus" | "All chapters" and caption ("MIND: 4,933 rubrics · All: 74,513 rubrics").
+  - Writes `st.session_state.scope` as single source of truth, syncs `case.scope_chapter`, and flags Explorer results stale on change.
+- **Engine Telemetry Row**:
+  - Status dot + `MODEL_DISPLAY_NAME` + round-trip latency (`{latency}ms` / `Offline`).
+  - Expander with endpoint, model, temperature, "Test Connection", and "Retry Connection" with terminal hint (`ollama serve`).
+- **Sticky Footer**:
+  - Direct links to Methodology and Totality Principles (no duplicated text).
+  - Version `v{APP_VERSION} ({GIT_SHA})`.
+  - One-line disclaimer with "Read full notice" triggering `show_first_run_disclaimer_dialog()`.
+  - Removed duplicated "Dr. Kent's Totality Principles" expander and long justified disclaimer from sidebar.
+- **Tests Added**:
+  - `test_phase3_sidebar_exports_and_components`, `test_phase3_tray_persistence_sync`, `test_phase3_get_ollama_latency` added to `tests/test_ui_overhaul.py`.
+  - All 19 dashboard, smoke, and overhaul tests passing 100%.
+

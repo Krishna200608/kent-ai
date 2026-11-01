@@ -114,3 +114,54 @@ def test_phase2_action_bar_component():
     """Verify sticky action bar component is defined and callable."""
     from src.dashboard.components.action_bar import render_step_action_bar
     assert callable(render_step_action_bar)
+
+
+def test_phase3_sidebar_exports_and_components():
+    """Verify Phase 3 sidebar components and exports are defined."""
+    from src.dashboard.views.sidebar import (
+        render_sidebar,
+        render_sidebar_case_tray,
+        render_sidebar_active_case_card,
+        render_sidebar_scope_control,
+        render_sidebar_engine_row,
+        render_sidebar_footer,
+    )
+    assert callable(render_sidebar)
+    assert callable(render_sidebar_case_tray)
+    assert callable(render_sidebar_active_case_card)
+    assert callable(render_sidebar_scope_control)
+    assert callable(render_sidebar_engine_row)
+    assert callable(render_sidebar_footer)
+
+
+def test_phase3_tray_persistence_sync():
+    """Verify _sync_tray_to_case updates case.selected_rubric_ids from session tray."""
+    import streamlit as st
+    from src.dashboard.views.sidebar import _sync_tray_to_case
+    from src.models.case import ClinicalCase
+
+    case = ClinicalCase(case_id="TEST-TRAY-01", patient_name="Jane Doe")
+    assert case.selected_rubric_ids == []
+
+    st.session_state["case_tray"] = {
+        "rubrics": [
+            {"rubric_id": 101, "path": "MIND > ANXIETY"},
+            {"id": 202, "path": "HEAD > PAIN"},
+        ],
+        "remedies": [],
+    }
+
+    _sync_tray_to_case(case)
+    assert case.selected_rubric_ids == [101, 202]
+
+
+def test_phase3_get_ollama_latency(monkeypatch):
+    """Verify get_ollama_latency returns (bool, int) and respects mock pipeline."""
+    from src.dashboard.components.ollama_status import get_ollama_latency
+
+    # Mock environment returns (False, 0)
+    monkeypatch.setenv("KENT_MOCK_PIPELINE", "1")
+    online, lat = get_ollama_latency()
+    assert online is False
+    assert lat == 0
+

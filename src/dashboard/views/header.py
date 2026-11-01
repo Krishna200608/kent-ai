@@ -14,8 +14,8 @@ from src.models.case import ClinicalCase
 @st.fragment(run_every="2s")
 def render_header() -> None:
     """Render single-row top brand navigation bar (<=56px) with engine telemetry."""
-    active_scope = st.session_state.get("repertory_scope", "MIND Chapter Focus (4,933 rubrics)")
-    is_mind = "MIND" in active_scope
+    active_scope = st.session_state.get("scope", st.session_state.get("repertory_scope", "MIND focus"))
+    is_mind = "MIND" in str(active_scope)
     short_scope = "MIND · 4,933" if is_mind else "All · 74,513"
 
     dm = st.session_state.get("dialogue_manager")

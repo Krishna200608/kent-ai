@@ -124,10 +124,26 @@ def initialize_session():
             except Exception as e:
                 logger.warning(f"Failed to rehydrate report from case: {e}")
 
+    if "scope" not in st.session_state:
+        st.session_state.scope = "MIND focus"
     if "repertory_scope" not in st.session_state:
         st.session_state.repertory_scope = "MIND Chapter Focus (4,933 rubrics)"
     if "case_tray" not in st.session_state:
         st.session_state.case_tray = {"rubrics": [], "remedies": []}
+    if case and getattr(case, "selected_rubric_ids", None) and not st.session_state.case_tray.get("rubrics"):
+        try:
+            from src.data.kent_db import get_rubric_by_id
+            for r_id in case.selected_rubric_ids:
+                r_data = get_rubric_by_id(r_id)
+                if r_data:
+                    st.session_state.case_tray["rubrics"].append({
+                        "rubric_id": r_data.get("id", r_id),
+                        "id": r_data.get("id", r_id),
+                        "path": r_data.get("path", f"Rubric #{r_id}"),
+                        "remedy_count": r_data.get("remedy_count", 0),
+                    })
+        except Exception as err:
+            logger.warning("Failed to hydrate case_tray: %s", err)
     if "show_dev_details" not in st.session_state:
         st.session_state.show_dev_details = False
     if "ranking_sort_mode" not in st.session_state:

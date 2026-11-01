@@ -156,11 +156,21 @@ def render_rubric_card(
                             st.session_state.case_tray = {"rubrics": [], "remedies": []}
                         st.session_state.case_tray["rubrics"].append({
                             "id": r_id,
+                            "rubric_id": r_id,
                             "path": path,
                             "name": leaf,
                             "similarity": sim,
                             "remedy_count": remedy_count,
                         })
+                        cur_c = st.session_state.get("current_case")
+                        if cur_c is not None:
+                            if r_id not in cur_c.selected_rubric_ids:
+                                cur_c.selected_rubric_ids.append(r_id)
+                            try:
+                                from src.data.case_store import save_case
+                                save_case(cur_c)
+                            except Exception:
+                                pass
                         st.toast(f"Added '{leaf}' to case tray.")
                         st.rerun()
 

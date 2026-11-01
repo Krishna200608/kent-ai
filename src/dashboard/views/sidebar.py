@@ -1,80 +1,212 @@
-"""Sidebar telemetry and consultation controls."""
+"""Sidebar telemetry, active case tracking, and consultation tray controls (Phase 3 & UI Overhaul)."""
 
 from __future__ import annotations
 
+from typing import Any, Dict, List, Optional
 import uuid
 import streamlit as st
 
+from src.dashboard.components.case_dialogs import show_first_run_disclaimer_dialog
 from src.dashboard.components.icons import get_icon
-from src.dashboard.constants import format_rubric_path
+from src.dashboard.components.ollama_status import check_ollama_online, get_ollama_latency
+from src.dashboard.components.totality_ring import render_totality_ring
+from src.dashboard.constants import (
+    APP_VERSION,
+    GIT_SHA,
+    MODEL_DISPLAY_NAME,
+    SCOPE_ALL,
+    SCOPE_ALL_COUNT,
+    SCOPE_DEFINITIONS,
+    SCOPE_MIND,
+    SCOPE_MIND_COUNT,
+    format_rubric_path,
+)
 from src.dashboard.dimensions import pluralize
-from src.dashboard.session import ENGINE_OPTIONS, get_pipeline
+from src.dashboard.utils import esc
+from src.data.case_store import save_case
 from src.models.case import ClinicalCase
 from src.pipeline.orchestrator import PatientReport
 
 
-def render_sidebar_case_tray():
-    """Render persistent Current Case tray in sidebar."""
+def _sync_tray_to_case(case: Optional[ClinicalCase]) -> None:
+    """Synchronize current tray rubric IDs to the active ClinicalCase and persist to SQLite."""
+    if not case:
+        return
+    tray = st.session_state.get("case_tray", {"rubrics": [], "remedies": []})
+    rubrics = tray.get("rubrics", [])
+    new_ids: List[int] = []
+    for r in rubrics:
+        rid = r.get("rubric_id") if "rubric_id" in r else r.get("id")
+        if rid is not None:
+            try:
+                int_id = int(rid)
+                if int_id not in new_ids:
+                    new_ids.append(int_id)
+            except (ValueError, TypeError):
+                continue
+    case.selected_rubric_ids = new_ids
+    if not case.is_blank or new_ids:
+        try:
+            save_case(case)
+        except Exception:
+            pass
+
+
+def render_sidebar_active_case_card(case: Optional[ClinicalCase]) -> None:
+    """Render compact active case card with copyable ID, status chip, totality ring, and step jump."""
+    if not case or case.is_blank:
+        st.html(
+            """
+            <div class="sidebar-case-card empty">
+                <div class="sidebar-case-patient" style="color: var(--text-muted, #A3B0C2);">No Active Case</div>
+                <div class="sidebar-case-step">Start a consultation to capture symptoms.</div>
+            </div>
+            """
+        )
+        if st.button("+ New Case", key="sidebar_empty_new_case_btn", type="primary", width="stretch"):
+            fresh_case = ClinicalCase()
+            st.session_state.current_case = fresh_case
+            st.session_state.workspace_step = 1
+            st.session_state.current_report = None
+            st.session_state.case_tray = {"rubrics": [], "remedies": []}
+            if "dialogue_manager" in st.session_state:
+                st.session_state.dialogue_manager.reset()
+            st.rerun()
+        return
+
+    # Derive patient display label
+    p_name = case.patient_name.strip() if case.patient_name else "Anonymous Patient"
+    demo_parts: List[str] = []
+    if case.patient_age:
+        demo_parts.append(f"{case.patient_age}y")
+    if case.patient_sex:
+        demo_parts.append(str(case.patient_sex))
+    p_label = f"{p_name} · {' '.join(demo_parts)}" if demo_parts else p_name
+
+    # Derive consultation step and status
+    curr_step = int(st.session_state.get("workspace_step", 1))
+    step_titles = {1: "Intake", 2: "Review", 3: "Analysis", 4: "Report"}
+    curr_step_name = step_titles.get(curr_step, "Intake")
+
+    if case.report_data:
+        status_text = "Reported" if curr_step == 4 else "Analysed"
+        status_class = "analysed"
+    elif case.filled_dimensions_count >= 1:
+        status_text = "In review"
+        status_class = "in-review"
+    else:
+        status_text = "Draft"
+        status_class = "draft"
+
+    ring_svg = render_totality_ring(case, size=30)
+
+    st.html(
+        f"""
+        <div class="sidebar-case-card">
+            <div class="sidebar-case-header">
+                <span class="sidebar-case-id" title="Clinical Case Identifier">{esc(case.case_id)}</span>
+                <span class="sidebar-status-chip {status_class}">{status_text}</span>
+            </div>
+            <div class="sidebar-case-body">
+                <div class="sidebar-case-info">
+                    <div class="sidebar-case-patient" title="{esc(p_label)}">{esc(p_label)}</div>
+                    <div class="sidebar-case-step">Step {curr_step}: {curr_step_name}</div>
+                </div>
+                <div class="sidebar-case-ring" title="Symptom Totality Coverage">
+                    {ring_svg}
+                </div>
+            </div>
+        </div>
+        """
+    )
+
+    if st.button(
+        f"Go to Step {curr_step}: {curr_step_name}",
+        key="sidebar_goto_step_btn",
+        width="stretch",
+    ):
+        st.session_state.workspace_step = curr_step
+        st.session_state.active_nav_tab = "Case Workspace"
+        st.rerun()
+
+
+def render_sidebar_case_tray() -> None:
+    """Render persistent case tray in sidebar with grouped rubrics and remedies."""
     tray = st.session_state.get("case_tray", {"rubrics": [], "remedies": []})
     rubrics = tray.get("rubrics", [])
     remedies = tray.get("remedies", [])
     total_items = len(rubrics) + len(remedies)
+    current_case: Optional[ClinicalCase] = st.session_state.get("current_case")
 
-    st.markdown("---")
     st.html(
         f"""
-        <div style='display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;'>
-            <div style='display: flex; align-items: center; gap: 6px;'>
-                {get_icon('briefcase', size=16, color='#10B981')}
-                <span style='font-size: 14px; font-weight: 700; color: #F9FAFB;'>Current Case Tray</span>
+        <div class="sidebar-tray-header">
+            <div class="sidebar-tray-title">
+                {get_icon('briefcase', size=16, color='var(--accent, #10B981)')}
+                <span>Case Tray</span>
             </div>
-            <span class='step-counter-badge'>{pluralize(total_items, "item", "items")}</span>
+            <span class="step-counter-badge">{total_items}</span>
         </div>
         """
     )
 
     if total_items == 0:
-        st.markdown(
-            '<div style="font-size: 12px; color: #8492A6; margin-bottom: 8px;">'
-            'No items collected yet. Click <b>+ Add to case</b> on rubrics or remedies in Explorer or Materia Medica.'
-            '</div>',
-            unsafe_allow_html=True,
+        st.html(
+            """
+            <div class="sidebar-tray-empty-text">
+                No items collected yet. Click <b>+ Add to case</b> on rubrics or remedies in Explorer or Materia Medica.
+            </div>
+            """
         )
+        if st.button("Open Rubric Explorer", key="sidebar_tray_open_explorer", width="stretch"):
+            st.session_state.active_nav_tab = "Rubric Explorer"
+            st.toast("Navigate to the Rubric Explorer tab to search rubrics.")
+            st.rerun()
         return
 
-    # List rubrics
+    # Rubrics section
     if rubrics:
-        st.markdown(f"**Selected Rubrics ({pluralize(len(rubrics), 'rubric', 'rubrics')}):**")
+        st.markdown(f"**Selected Rubrics ({len(rubrics)}):**")
         for idx, r in enumerate(rubrics):
-            col_r_txt, col_r_del = st.columns([5, 1])
-            with col_r_txt:
-                raw_name = r.get("path") or r.get("name", "Rubric")
-                r_name = format_rubric_path(raw_name)
-                if len(r_name) > 34:
-                    r_name = "..." + r_name[-31:]
-                st.markdown(f"<span style='font-size: 11.5px; color: #E5E7EB;'>&bull; {r_name}</span>", unsafe_allow_html=True)
-            with col_r_del:
-                if st.button("✕", key=f"del_tray_r_{idx}", help="Remove rubric from case"):
+            raw_path = r.get("path") or r.get("name", "Rubric")
+            formatted_path = format_rubric_path(raw_path)
+            short_path = formatted_path
+            if len(short_path) > 30:
+                short_path = "..." + short_path[-27:]
+
+            rem_count = r.get("remedy_count")
+            rem_badge = f"<span class='tray-remedy-chip'>{rem_count} rem</span>" if rem_count else ""
+
+            col_txt, col_del = st.columns([5, 1])
+            with col_txt:
+                st.html(
+                    f"<div class='tray-rubric-text' title='{esc(formatted_path)}'>&bull; {esc(short_path)} {rem_badge}</div>"
+                )
+            with col_del:
+                if st.button("✕", key=f"del_tray_r_{idx}", help=f"Remove '{esc(formatted_path)}' from tray"):
                     tray["rubrics"].pop(idx)
+                    _sync_tray_to_case(current_case)
                     st.rerun()
 
-    # List remedies
+    # Remedies section
     if remedies:
-        st.markdown(f"**Selected Remedies ({pluralize(len(remedies), 'remedy', 'remedies')}):**")
+        st.markdown(f"**Selected Remedies ({len(remedies)}):**")
         for idx, rem in enumerate(remedies):
+            rem_name = rem.get("full_name") or rem.get("abbreviation", "Remedy")
+            rem_abbr = rem.get("abbreviation") or ""
             col_rem_txt, col_rem_del = st.columns([5, 1])
             with col_rem_txt:
-                rem_name = rem.get('full_name') or rem.get('abbreviation')
-                rem_abbr = rem.get('abbreviation') or ''
-                st.markdown(f"<span style='font-size: 11.5px; color: #34D399;'>&bull; {rem_name} ({rem_abbr})</span>", unsafe_allow_html=True)
+                st.html(
+                    f"<div class='tray-rubric-text' style='color: var(--accent, #10B981);' title='{esc(rem_name)}'>&bull; {esc(rem_name)} ({esc(rem_abbr)})</div>"
+                )
             with col_rem_del:
-                if st.button("✕", key=f"del_tray_rem_{idx}", help="Remove remedy from case"):
+                if st.button("✕", key=f"del_tray_rem_{idx}", help=f"Remove '{esc(rem_name)}' from tray"):
                     tray["remedies"].pop(idx)
                     st.rerun()
 
-    col_btn1, col_btn2 = st.columns([3, 2])
-    with col_btn1:
-        if rubrics and st.button("Repertorize This Case", type="primary", width="stretch", key="tray_repertorize_btn"):
+    # Primary Tray Actions
+    if rubrics:
+        if st.button("Repertorize This Case", type="primary", width="stretch", key="tray_repertorize_btn"):
             pipeline = st.session_state.pipeline
             ranked = pipeline.ranker.rank(rubrics, top_n=10)
             report = PatientReport(
@@ -89,98 +221,163 @@ def render_sidebar_case_tray():
             st.session_state.workspace_step = 4
             st.toast("Case repertorized! Displayed in Step 4 Report.")
             st.rerun()
-    with col_btn2:
-        if st.button("Clear Tray", key="clear_all_tray", width="stretch"):
+
+    # Clear Tray Control
+    if total_items > 3:
+        with st.popover("Clear Tray", help="Remove all items from current case tray"):
+            st.markdown(f"Clear all **{total_items}** items from tray?")
+            if st.button("Confirm Clear", key="confirm_clear_tray_popover", type="primary", width="stretch"):
+                st.session_state.case_tray = {"rubrics": [], "remedies": []}
+                _sync_tray_to_case(current_case)
+                st.rerun()
+    else:
+        if st.button("Clear Tray", key="clear_all_tray_btn", width="stretch"):
             st.session_state.case_tray = {"rubrics": [], "remedies": []}
+            _sync_tray_to_case(current_case)
             st.rerun()
 
 
-def render_sidebar():
-    """Render clinical sidebar telemetry and consultation controls."""
-    with st.sidebar:
-        st.html(
-            f"""
-            <div style='text-align: center; margin-bottom: 16px; padding: 4px 8px;'>
-                <div style='margin-bottom: 8px; display: inline-flex; justify-content: center; align-items: center; width: 50px; height: 50px; border-radius: 14px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3);'>
-                    {get_icon('local_florist', size=28, color='#10B981')}
-                </div>
-                <div style='font-size: 16px; font-weight: 800; color: #10B981; line-height: 1.25;'>Kent-AI Clinical Decision Support</div>
-                <div style='font-size: 11px; color: #9CA3AF; margin-top: 2px;'>Classical Decision Support</div>
-            </div>
-            """
-        )
+def render_sidebar_scope_control(case: Optional[ClinicalCase]) -> None:
+    """Render single source of truth repertory scope segmented control."""
+    st.html(
+        f"""
+        <div class="sidebar-section-header">
+            {get_icon('tune', size=16, color='var(--accent, #10B981)')}
+            <span>Repertory Scope</span>
+        </div>
+        """
+    )
 
-        case: ClinicalCase | None = st.session_state.get("current_case")
+    current_scope = st.session_state.get("scope", SCOPE_MIND)
+    options = [SCOPE_MIND, SCOPE_ALL]
+    default_val = current_scope if current_scope in options else SCOPE_MIND
 
-        st.html(
-            f"""
-            <div style='display: flex; align-items: center; gap: 6px; margin: 10px 0 6px 0;'>
-                {get_icon('tune', size=16, color='#10B981')}
-                <span style='font-size: 13px; font-weight: 700; color: #F9FAFB;'>Repertory Scope Selection</span>
-            </div>
-            """
-        )
-        scope_options = [
-            "MIND Chapter Focus (4,933 rubrics)",
-            "All 37 Chapters (74,513 rubrics)",
-        ]
-        new_scope = st.radio(
-            "Repertory Scope Control",
-            scope_options,
-            key="repertory_scope",
-            label_visibility="collapsed",
-            help="Single source of truth for intake analysis and repertorization across all workspaces.",
-        )
+    scope_selection = st.segmented_control(
+        "Repertory Scope Control",
+        options=options,
+        default=default_val,
+        key="sidebar_repertory_scope_seg",
+        label_visibility="collapsed",
+        help="Single source of truth: MIND chapter focus (4,933) vs All 37 chapters (74,513).",
+    )
 
+    if scope_selection and scope_selection != current_scope:
+        st.session_state.scope = scope_selection
+        st.session_state.repertory_scope = SCOPE_DEFINITIONS.get(scope_selection, {}).get("full_label", scope_selection)
+        st.session_state.explorer_results_stale = True
         if case:
-            case.scope_chapter = "MIND" if "MIND" in new_scope else "ALL"
+            case.scope_chapter = "MIND" if scope_selection == SCOPE_MIND else "ALL"
+            try:
+                save_case(case)
+            except Exception:
+                pass
+        st.rerun()
 
-        with st.expander("Inference Engine & Settings", expanded=False):
-            curr_engine = st.session_state.get("inference_engine", ENGINE_OPTIONS[0])
-            default_eng_idx = 0
-            for i, opt in enumerate(ENGINE_OPTIONS):
-                if opt == curr_engine:
-                    default_eng_idx = i
-                    break
+    st.html(
+        f"""
+        <div class="sidebar-scope-caption">
+            MIND: {SCOPE_MIND_COUNT:,} rubrics &bull; All: {SCOPE_ALL_COUNT:,} rubrics
+        </div>
+        """
+    )
 
-            selected_engine = st.radio(
-                "Inference Engine",
-                ENGINE_OPTIONS,
-                index=default_eng_idx,
-                key="engine_radio_select",
-                label_visibility="collapsed",
-                help="Select underlying NLP architecture for token extraction and symptom classification.",
+
+def render_sidebar_engine_row() -> None:
+    """Render compact engine status indicator with expandable telemetry and diagnostics."""
+    dm = st.session_state.get("dialogue_manager")
+    api_base = getattr(dm, "api_base", "http://127.0.0.1:11434") if dm else "http://127.0.0.1:11434"
+
+    is_online, latency_ms = get_ollama_latency(api_base)
+    if is_online and dm is not None and getattr(dm, "last_call_failed", False):
+        dm.last_call_failed = False
+
+    status_label = f"{latency_ms}ms" if is_online else "Offline"
+    dot_color = "var(--accent, #10B981)" if is_online else "var(--warning, #F59E0B)"
+
+    expander_title = f"{MODEL_DISPLAY_NAME} ({status_label})"
+
+    with st.expander(expander_title, expanded=False):
+        st.markdown(f"**Endpoint:** `{api_base}`")
+        st.markdown(f"**Model:** `{MODEL_DISPLAY_NAME}`")
+        st.markdown("**Temperature:** `0.1`")
+
+        if not is_online:
+            st.html(
+                """
+                <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; padding: 8px; font-size: 11.5px; color: #F59E0B; margin: 8px 0;">
+                    Ollama daemon is offline. Start it in terminal:<br>
+                    <code style="background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 4px; color: #E8EDF3;">ollama serve</code>
+                </div>
+                """
             )
-            if selected_engine != st.session_state.get("inference_engine"):
-                st.session_state.inference_engine = selected_engine
-                st.session_state.pipeline = get_pipeline(selected_engine)
-                if "dialogue_manager" in st.session_state and hasattr(st.session_state.dialogue_manager, "orchestrator"):
-                    st.session_state.dialogue_manager.orchestrator = st.session_state.pipeline
+            if st.button("Retry Connection", key="sidebar_retry_ollama_btn", width="stretch"):
+                check_ollama_online.clear()
+                get_ollama_latency.clear()
+                st.rerun()
+        else:
+            if st.button("Test Connection", key="sidebar_test_ollama_btn", width="stretch"):
+                check_ollama_online.clear()
+                get_ollama_latency.clear()
+                test_online, test_lat = get_ollama_latency(api_base)
+                if test_online:
+                    st.toast(f"Connected to {MODEL_DISPLAY_NAME} ({test_lat}ms)")
+                else:
+                    st.toast("Connection failed.")
                 st.rerun()
 
-            st.toggle(
-                "Developer telemetry",
-                key="show_dev_details",
-                help="Toggle low-level system latency, rubric IDs, and model details.",
-            )
 
-        render_sidebar_case_tray()
+def render_sidebar_footer() -> None:
+    """Render sticky footer with Methodology links, version, and disclaimer trigger."""
+    st.html(
+        f"""
+        <div class="sidebar-sticky-footer">
+            <div class="sidebar-footer-links">
+                <a href="#methodology" class="sidebar-footer-link">Methodology</a>
+                <span class="sidebar-footer-sep">&bull;</span>
+                <a href="#totality-principles" class="sidebar-footer-link">Totality Principles</a>
+                <span class="sidebar-footer-sep">&bull;</span>
+                <span class="sidebar-footer-version">v{APP_VERSION} ({GIT_SHA})</span>
+            </div>
+            <div class="sidebar-footer-disclaimer">
+                Investigational decision-support tool.
+            </div>
+        </div>
+        """
+    )
+    if st.button("Read full notice", key="sidebar_disclaimer_link_btn", width="stretch"):
+        show_first_run_disclaimer_dialog()
 
-        st.markdown("---")
-        with st.expander("Dr. Kent's Totality Principles", expanded=False):
-            st.markdown(
-                '<div style="font-size: 12px; color: #D1D5DB; line-height: 1.5; font-style: italic;">'
-                '“The mental symptoms are the most important, for they express the very man himself. '
-                'Next in importance are the physical generals, especially those related to time, temperature, and weather.”'
-                '<div style="font-weight: 700; color: #10B981; margin-top: 4px; font-style: normal;">— Dr. J. T. Kent</div>'
-                '</div>',
-                unsafe_allow_html=True,
-            )
 
+def render_sidebar() -> None:
+    """Render clinical sidebar telemetry and consultation controls."""
+    with st.sidebar:
+        # Brand row: 28px icon + "Kent-AI" wordmark
         st.html(
-            """
-            <div style='font-size: 11px; color: #8492A6; text-align: justify; margin-top: 14px;'>
-                <b>Investigational Tool:</b> Kent-AI is an academic clinical decision-support and repertorization research system. It does not replace qualified homeopathic or medical evaluation.
+            f"""
+            <div class="sidebar-brand-row">
+                <div class="sidebar-brand-icon">
+                    {get_icon('local_florist', size=22, color='var(--accent, #10B981)')}
+                </div>
+                <span class="sidebar-brand-wordmark">Kent-AI</span>
             </div>
             """
         )
+
+        case: Optional[ClinicalCase] = st.session_state.get("current_case")
+
+        # Active case card
+        render_sidebar_active_case_card(case)
+
+        # Repertory scope single source of truth control
+        render_sidebar_scope_control(case)
+
+        # Engine telemetry and diagnostic row
+        render_sidebar_engine_row()
+
+        st.markdown("---")
+
+        # Persistent case tray
+        render_sidebar_case_tray()
+
+        # Sticky footer with Methodology and disclaimer
+        render_sidebar_footer()

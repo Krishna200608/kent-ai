@@ -886,9 +886,15 @@ header[data-testid="stHeader"],
     display: none !important;
 }
 
-/* Sidebar sizing & padding protection against clipping on narrow/scaled viewports */
+/* Sidebar sizing & layout (Phase 3 & UI Overhaul) */
+section[data-testid="stSidebar"] {
+    text-align: left !important;
+}
+
 section[data-testid="stSidebar"][aria-expanded="true"] {
+    width: clamp(280px, 20vw, 320px) !important;
     min-width: 280px !important;
+    max-width: 320px !important;
 }
 
 section[data-testid="stSidebar"][aria-expanded="false"] {
@@ -899,9 +905,240 @@ section[data-testid="stSidebar"][aria-expanded="false"] {
 }
 
 [data-testid="stSidebarUserContent"] {
-    padding-left: 1.25rem !important;
-    padding-right: 1.25rem !important;
-    padding-top: 1.5rem !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    padding-top: 1rem !important;
+    padding-bottom: 2rem !important;
+    text-align: left !important;
+}
+
+/* Sidebar Brand Row */
+.sidebar-brand-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 2px 0 12px 0;
+    border-bottom: 1px solid var(--line, #243243);
+    margin-bottom: 12px;
+}
+
+.sidebar-brand-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--accent-soft, rgba(16, 185, 129, 0.12));
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.sidebar-brand-wordmark {
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text, #E8EDF3);
+}
+
+/* Sidebar Active Case Card */
+.sidebar-case-card {
+    background: var(--surface, #121A23);
+    border: 1px solid var(--line, #243243);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: left;
+}
+
+.sidebar-case-card.empty {
+    border-style: dashed;
+    padding: 12px;
+}
+
+.sidebar-case-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sidebar-case-id {
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent, #10B981);
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
+.sidebar-status-chip {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--surface-2, #182330);
+    color: var(--text-muted, #A3B0C2);
+    border: 1px solid var(--line, #243243);
+}
+
+.sidebar-status-chip.in-review {
+    color: #60A5FA;
+    border-color: rgba(96, 165, 250, 0.3);
+    background: rgba(96, 165, 250, 0.1);
+}
+
+.sidebar-status-chip.analysed {
+    color: var(--accent, #10B981);
+    border-color: rgba(16, 185, 129, 0.3);
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.sidebar-case-body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.sidebar-case-info {
+    overflow: hidden;
+}
+
+.sidebar-case-patient {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text, #E8EDF3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-case-step {
+    font-size: 11px;
+    color: var(--text-muted, #A3B0C2);
+    margin-top: 1px;
+}
+
+.sidebar-case-ring {
+    flex-shrink: 0;
+}
+
+.sidebar-section-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text, #E8EDF3);
+    margin: 10px 0 6px 0;
+}
+
+.sidebar-scope-caption {
+    font-size: 11px;
+    color: var(--text-faint, #8A98AE);
+    margin-top: 4px;
+    margin-bottom: 8px;
+}
+
+/* Sidebar Tray Styling */
+.sidebar-tray-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.sidebar-tray-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text, #E8EDF3);
+}
+
+.sidebar-tray-empty-text {
+    font-size: 11.5px;
+    color: var(--text-faint, #8A98AE);
+    line-height: 1.45;
+    margin-bottom: 8px;
+}
+
+.tray-rubric-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.tray-rubric-text {
+    font-family: var(--font-rubric, Georgia, serif);
+    font-size: 11.5px;
+    color: var(--text, #E8EDF3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tray-remedy-chip {
+    font-family: var(--font-mono, monospace);
+    font-size: 9.5px;
+    color: var(--text-muted, #A3B0C2);
+    background: var(--surface-2, #182330);
+    padding: 1px 4px;
+    border-radius: 3px;
+    margin-left: 4px;
+}
+
+/* Sidebar Footer */
+.sidebar-sticky-footer {
+    margin-top: 18px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line, #243243);
+    font-size: 11px;
+    color: var(--text-faint, #8A98AE);
+}
+
+.sidebar-footer-links {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+.sidebar-footer-link {
+    color: var(--text-muted, #A3B0C2) !important;
+    text-decoration: none !important;
+    font-weight: 500;
+    transition: color 0.15s ease;
+}
+
+.sidebar-footer-link:hover {
+    color: var(--accent, #10B981) !important;
+}
+
+.sidebar-footer-sep {
+    color: var(--line, #243243);
+}
+
+.sidebar-footer-version {
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+    color: var(--text-faint, #8A98AE);
+}
+
+.sidebar-footer-disclaimer {
+    font-size: 10.5px;
+    color: var(--text-faint, #8A98AE);
+    line-height: 1.35;
 }
 
 /* Adjust main app block top padding so brand-header sits cleanly below the top header */

@@ -143,3 +143,9 @@ def totality_ring(
         f'{center_text}'
         f'</svg>'
     )
+
+
+render_totality_ring = totality_ring
+
+__all__ = ["totality_ring", "render_totality_ring"]
+

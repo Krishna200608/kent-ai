@@ -279,6 +279,18 @@ def render_case_library(current_case: ClinicalCase) -> None:
                         loaded_case = get_case(cid)
                         if loaded_case:
                             st.session_state.current_case = loaded_case
+                            st.session_state.case_tray = {"rubrics": [], "remedies": []}
+                            if loaded_case.selected_rubric_ids:
+                                from src.data.kent_db import get_rubric_by_id
+                                for r_id in loaded_case.selected_rubric_ids:
+                                    r_data = get_rubric_by_id(r_id)
+                                    if r_data:
+                                        st.session_state.case_tray["rubrics"].append({
+                                            "rubric_id": r_data.get("id", r_id),
+                                            "id": r_data.get("id", r_id),
+                                            "path": r_data.get("path", f"Rubric #{r_id}"),
+                                            "remedy_count": r_data.get("remedy_count", 0),
+                                        })
                             dm = st.session_state.dialogue_manager
                             dm.reset()
                             dm.resume_from_case(loaded_case)
