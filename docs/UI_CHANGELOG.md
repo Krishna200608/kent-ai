@@ -153,4 +153,35 @@ This document records architectural decisions, assumptions, backend changes, and
   - `test_phase4_case_snapshot_component` and `test_phase4_step_aware_neutral_suggestions` in `tests/test_ui_overhaul.py`.
   - All 11 smoke tests and 21 unit tests passing 100%.
 
+---
+
+### Phase 5: Case Library, Registry Table, Pagination & Archiving (Complete)
+- **Header & Device Storage**:
+  - Replaced legacy subtitle with clean header: "Case library" and caption "{n} cases · stored on this device".
+- **Toolbar & Search**:
+  - Debounced search filtering across patient name, Case ID, chief complaint, and captured symptoms.
+  - Status filter via `st.segmented_control` (`All`, `Draft`, `In review`, `Analysed`, `Archived`).
+  - Sort selection: Last updated (default), Date created, Totality score (high to low).
+  - View mode toggle: `Cards` vs `Table`.
+  - Primary "+ New Case" button initializing fresh in-memory case and navigating directly to Intake.
+- **Empty Drafts Handling**:
+  - Automatically hides empty drafts (0 dimensions, no complaint) by default behind a collapsible "Show empty drafts (n)" toggle.
+  - "Clean up empty drafts" popover: default action is **Archive** (`update_cases_status(cids, "ARCHIVED")`), preserving clinical data while decluttering views, with a permanent purge option.
+- **Pagination**:
+  - 12 cases per page for Cards, 25 cases per page for Table.
+  - Navigation indicator: "Showing X–Y of Z cases (Page A of B)" with Prev/Next buttons.
+- **Title Fallback Chain**:
+  - Robust title fallback: chief complaint → patient name → "Untitled case".
+  - Metadata row with clean demographics: age/gender omitted when unrecorded (no leaked `?` or `—`), Case ID in mono badge, and relative update time.
+- **Table View (Clinical Registry Grid)**:
+  - Dense tabular view with columns: Selection checkbox, Case ID, Patient / Chief Complaint, Totality Ring & Count, Status chip, Leading Remedy, Updated timestamp, Actions.
+- **Individual & Bulk Case Actions**:
+  - Open / Resume button: restores case, tray rubrics, dialogue state machine, and routes to appropriate step (Report if analyzed, Review if ≥1 dimension, else Intake).
+  - Multi-select checkboxes with sticky bulk action bar (`render_bulk_action_bar`): bulk Export JSON/Markdown, bulk Archive, and bulk Delete.
+  - Overflow ⋯ menu per case: Duplicate Case (creates copy with new ID), Prepare/Download PDF, Download JSON, Archive/Unarchive, and Delete with confirmation guard.
+- **Tests Added**:
+  - `test_phase5_case_library_exports_and_helpers` in `tests/test_ui_overhaul.py`.
+  - Full smoke test suite (`test_app_smoke.py`), overhaul suite, and dashboard suite all passing 100%.
+
+
 

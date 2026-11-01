@@ -207,3 +207,25 @@ def test_phase4_step_aware_neutral_suggestions():
     assert chips is None
 
 
+def test_phase5_case_library_exports_and_helpers():
+    """Verify Case Library exports and relative time formatter."""
+    from datetime import datetime, timedelta
+    from src.dashboard.components.case_library import format_relative_time, render_case_library
+
+    assert callable(render_case_library)
+
+    now = datetime.now()
+    t_just_now = now.isoformat()
+    t_minutes_ago = (now - timedelta(minutes=10)).isoformat()
+    t_hours_ago = (now - timedelta(hours=3)).isoformat()
+    t_yesterday = (now - timedelta(days=1)).isoformat()
+    t_days_ago = (now - timedelta(days=4)).isoformat()
+
+    assert format_relative_time(t_just_now) == "just now"
+    assert "m ago" in format_relative_time(t_minutes_ago)
+    assert "h ago" in format_relative_time(t_hours_ago)
+    assert format_relative_time(t_yesterday) == "yesterday"
+    assert "4d ago" == format_relative_time(t_days_ago)
+
+
+
