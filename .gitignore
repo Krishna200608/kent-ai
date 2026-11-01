@@ -56,16 +56,15 @@ data/raw/kent_public_edition/tree.json
 /kent_public_edition/
 
 
-# Checkpoints, logs, model weights
+# Checkpoints, model weights
 checkpoints/
 /models/
-logs/
-*.log
 *.pt
 *.bin
 *.safetensors
 wandb/
 runs/
+*.pid
 
 # Environment & secrets
 .env
