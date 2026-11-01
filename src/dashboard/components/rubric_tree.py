@@ -142,11 +142,12 @@ def render_rubric_card(
         checked = st.checkbox(
             f"Select {leaf}",
             value=is_selected,
-            key=f"chk_rubric_{r_id}_{abs(hash(str(path))) % 10000}",
+            key=f"chk_rubric_{r_id}",
             label_visibility="collapsed",
         )
 
-    with st.expander(expander_title, expanded=False):
+    exp = st.expander(expander_title, expanded=False)
+    with exp:
         col_hdr, col_act = st.columns(2)
 
         with col_hdr:
@@ -171,7 +172,7 @@ def render_rubric_card(
             if allow_add_to_case and r_id is not None:
                 tray = st.session_state.get("case_tray", {"rubrics": [], "remedies": []}) if hasattr(st, "session_state") else {"rubrics": []}
                 is_in_tray = any(item.get("id") == r_id for item in tray.get("rubrics", []))
-                card_key = f"tray_add_r_{r_id}_{abs(hash(str(path))) % 10000}"
+                card_key = f"tray_add_r_{r_id}"
                 if is_in_tray:
                     st.button("✓ Added", key=card_key, disabled=True, width="stretch")
                 else:
@@ -197,9 +198,9 @@ def render_rubric_card(
                         st.toast(f"Added '{leaf}' to case tray.")
                         st.rerun()
 
-        # Expanded row: remedies only grouped by non-empty grades with ③/②/① badges
+        # Expanded row: remedies only grouped by non-empty grades with ③/②/① badges (lazy: only when .open)
         remedies: List[Dict[str, Any]] = []
-        if r_id is not None and db is not None:
+        if getattr(exp, "open", True) and r_id is not None and db is not None:
             try:
                 remedies = db.get_remedies(r_id)
             except Exception:

@@ -13,6 +13,7 @@ import logging
 from typing import Any, Dict, List
 import streamlit as st
 
+from src.dashboard.components.busy import busy_slot
 from src.dashboard.components.icons import get_icon
 from src.dashboard.constants import (
     CANONICAL_TO_INTERNAL,
@@ -84,13 +85,15 @@ def render_step2_review(current_case: ClinicalCase, pipeline: Any) -> None:
                     """
                 )
             with col_sum_acts:
-                if st.button("↻ Regenerate with AI", key="btn_regen_summary_step2", help="Regenerate clinical brief using local LLM", width="stretch"):
-                    with st.spinner("Synthesizing patient summary..."):
-                        from src.pipeline.case_summarizer import CaseSummarizer
-                        current_case.clinical_summary = CaseSummarizer().generate_summary(current_case, use_llm=True)
-                        save_case(current_case)
-                        st.toast("Regenerated clinical summary.")
-                        st.rerun()
+                slot_regen = st.empty()
+                if slot_regen.button("↻ Regenerate with AI", key="btn_regen_summary_step2", help="Regenerate clinical brief using local LLM", width="stretch"):
+                    with busy_slot(slot_regen, "Synthesizing brief...", key="btn_regen_summary_step2", type="secondary"):
+                        with st.spinner("Synthesizing patient summary...", show_time=True):
+                            from src.pipeline.case_summarizer import CaseSummarizer
+                            current_case.clinical_summary = CaseSummarizer().generate_summary(current_case, use_llm=True)
+                            save_case(current_case)
+                            st.toast("Regenerated clinical summary.")
+                            st.rerun()
 
             st.html(
                 f"""
@@ -106,11 +109,19 @@ def render_step2_review(current_case: ClinicalCase, pipeline: Any) -> None:
                     height=90,
                     key="ta_edit_sum_step2",
                 )
-                if st.button("Save Edited Summary", key="btn_save_sum_step2", type="primary"):
-                    current_case.clinical_summary = edited_sum.strip()
-                    save_case(current_case)
-                    st.toast("Clinical summary saved.")
-                    st.rerun()
+                col_save_btn, col_save_cap = st.columns([1.5, 2], vertical_alignment="center")
+                with col_save_btn:
+                    slot_save_sum = st.empty()
+                    if slot_save_sum.button("Save Edited Summary", key="btn_save_sum_step2", type="primary"):
+                        with busy_slot(slot_save_sum, "Saving...", key="btn_save_sum_step2", type="primary"):
+                            current_case.clinical_summary = edited_sum.strip()
+                            save_case(current_case)
+                            st.session_state["saved_sum_flash"] = True
+                            st.toast("Clinical summary saved.")
+                            st.rerun()
+                with col_save_cap:
+                    if st.session_state.pop("saved_sum_flash", False):
+                        st.caption("✓ Saved")
 
     # 3. Canonical 7-Dimension Grid
     canonical_dims = get_canonical_dimensions(scope=active_scope)
@@ -203,19 +214,22 @@ def render_step2_review(current_case: ClinicalCase, pipeline: Any) -> None:
             st.rerun()
     with col_fwd:
         can_repertorize = current_case.is_ready_for_repertorization
-        if st.button(
+        slot_rep = st.empty()
+        if slot_rep.button(
             "Run Repertorization Analysis →",
+            key="btn_run_rep",
             type="primary",
             disabled=not can_repertorize,
             width="stretch",
             help="Search Kent's Repertory and compute classical totality ranking",
         ):
-            with st.spinner("Searching Kent's Repertory and computing totality scores..."):
-                report = pipeline.repertorize_case(current_case)
-                st.session_state.current_report = report
-                current_case.report_data = report.to_dict()
-                save_case(current_case)
-                st.session_state.workspace_step = 3
-                st.rerun()
+            with busy_slot(slot_rep, "Analyzing rubrics...", key="btn_run_rep", type="primary"):
+                with st.spinner("Searching Kent's Repertory and computing totality scores...", show_time=True):
+                    report = pipeline.repertorize_case(current_case)
+                    st.session_state.current_report = report
+                    current_case.report_data = report.to_dict()
+                    save_case(current_case)
+                    st.session_state.workspace_step = 3
+                    st.rerun()
         if not can_repertorize:
             st.caption("Add at least one symptom dimension above to enable analysis.")

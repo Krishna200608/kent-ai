@@ -38,8 +38,6 @@ def render_materia_medica_view(db: KentDB) -> None:
 
             col_rem_search, col_rem_clear, col_rem_toggle = st.columns([3.5, 0.9, 2.4], vertical_alignment="bottom")
             with col_rem_search:
-                if "rem_filter_text" not in st.session_state:
-                    st.session_state.rem_filter_text = "Lach"
                 rem_search = st.text_input(
                     "Filter Remedy by Name or Abbreviation:",
                     key="rem_filter_text",
@@ -84,7 +82,8 @@ def render_materia_medica_view(db: KentDB) -> None:
                     disp_name = name or abbr
                     card_title = f"{disp_name} ({abbr})  ·  {pluralize(mind_count, 'rubric', 'rubrics')} in MIND  ·  {pluralize(total_count, 'rubric', 'rubrics')} total"
 
-                    with st.expander(card_title, expanded=False):
+                    exp_rem = st.expander(card_title, expanded=False)
+                    with exp_rem:
                         col_reminfo, col_remact = st.columns([4, 2], vertical_alignment="center")
                         with col_reminfo:
                             st.html(

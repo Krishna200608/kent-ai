@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 import streamlit as st
 
 from src.dashboard.components.case_bulk_actions import render_bulk_action_bar
+from src.dashboard.components.busy import busy_slot
 from src.dashboard.components.icons import get_icon
 from src.dashboard.components.totality_ring import totality_ring
 from src.dashboard.pdf_exporter import generate_case_pdf
@@ -104,10 +105,41 @@ def _load_and_resume_case(cid: str) -> None:
         4 if loaded_case.report_data
         else (2 if loaded_case.filled_dimensions_count >= 1 else 1)
     )
-    st.session_state.active_nav_tab = "Case Workspace"
+    st.session_state.main_tabs = "Case Workspace"
     st.toast(f"Resumed consultation: {cid}")
-    st.rerun()
 
+
+
+def _on_click_new_case() -> None:
+    """Callback to create a fresh case and switch to Case Workspace."""
+    new_id = generate_case_id()
+    fresh_case = ClinicalCase(case_id=new_id)
+    save_case(fresh_case)
+    st.session_state.current_case = fresh_case
+    st.session_state.case_tray = {"rubrics": [], "remedies": []}
+    dm = st.session_state.dialogue_manager
+    dm.reset()
+    dm.resume_from_case(fresh_case)
+    st.session_state.current_report = None
+    st.session_state.workspace_step = 1
+    st.session_state.main_tabs = "Case Workspace"
+    st.toast(f"Created new consultation: {new_id}")
+
+
+def _on_click_load_demo() -> None:
+    """Callback to load demonstration case and switch to Case Workspace."""
+    from src.dashboard.components.demo_case import create_demo_case
+    demo_case = create_demo_case()
+    save_case(demo_case)
+    st.session_state.current_case = demo_case
+    st.session_state.case_tray = {"rubrics": [], "remedies": []}
+    dm = st.session_state.dialogue_manager
+    dm.reset()
+    dm.resume_from_case(demo_case)
+    st.session_state.current_report = None
+    st.session_state.workspace_step = 1
+    st.session_state.main_tabs = "Case Workspace"
+    st.toast("Loaded demonstration clinical case.")
 
 def render_case_library(current_case: ClinicalCase) -> None:
     """Render patient cases library with search, filtering, pagination, table view, and bulk actions."""
@@ -147,26 +179,22 @@ def render_case_library(current_case: ClinicalCase) -> None:
             label_visibility="collapsed",
         )
     with col_demo:
-        if st.button("Load Demo Case", width="stretch", help="Load demonstration clinical consultation case"):
-            from src.dashboard.components.demo_case import create_demo_case
-            demo_case = create_demo_case()
-            save_case(demo_case)
-            st.toast("Loaded demonstration clinical case.")
-            st.rerun()
+        st.button(
+            "Load Demo Case",
+            key="btn_lib_load_demo",
+            width="stretch",
+            help="Load demonstration clinical consultation case",
+            on_click=_on_click_load_demo,
+        )
     with col_new:
-        if st.button("+ New Case", type="primary", width="stretch", help="Start a fresh patient intake"):
-            new_id = generate_case_id()
-            fresh_case = ClinicalCase(case_id=new_id)
-            st.session_state.current_case = fresh_case
-            st.session_state.case_tray = {"rubrics": [], "remedies": []}
-            dm = st.session_state.dialogue_manager
-            dm.reset()
-            dm.resume_from_case(fresh_case)
-            st.session_state.current_report = None
-            st.session_state.workspace_step = 1
-            st.session_state.active_nav_tab = "Case Workspace"
-            st.toast(f"Created new consultation: {new_id}")
-            st.rerun()
+        st.button(
+            "+ New Case",
+            key="btn_lib_new_case",
+            type="primary",
+            width="stretch",
+            help="Start a fresh patient intake",
+            on_click=_on_click_new_case,
+        )
 
     # 3. Filter Controls Row: Status, Sort, View, Empty Drafts
     c_status, c_sort, c_view = st.columns([3, 2, 1.5], vertical_alignment="center")
@@ -480,58 +508,66 @@ def render_case_library(current_case: ClinicalCase) -> None:
                     c_resume, c_more = st.columns([3, 1], vertical_alignment="center")
 
                     with c_resume:
-                        if st.button(
+                        st.button(
                             "Resume" if not is_active else "In View",
                             key=f"btn_resume_{cid}",
                             type="primary" if not is_active else "secondary",
                             width="stretch",
-                        ):
-                            _load_and_resume_case(cid)
+                            disabled=is_active,
+                            on_click=_load_and_resume_case,
+                            args=(cid,),
+                        )
 
                     with c_more:
-                        with st.popover("•••", help="Case options, exports, and actions"):
-                            st.markdown(f"##### Case `{esc(cid)}`")
+                        pop = st.popover("•••", key=f"pop_{cid}", on_change="rerun")
+                        with pop:
+                            if pop.open:
+                                st.markdown(f"##### Case `{esc(cid)}`")
 
-                            # Duplicate action
-                            if st.button("Duplicate Case", key=f"btn_dup_{cid}", width="stretch"):
-                                orig = get_case(cid)
-                                if orig:
-                                    fresh_id = generate_case_id()
-                                    dup_case = ClinicalCase.from_dict(orig.to_dict())
-                                    dup_case.case_id = fresh_id
-                                    dup_case.patient_name = f"{orig.patient_name} (Copy)"
-                                    save_case(dup_case)
-                                    st.toast(f"Created duplicate: {fresh_id}")
-                                    st.rerun()
+                                # Duplicate action
+                                if st.button("Duplicate Case", key=f"btn_dup_{cid}", width="stretch"):
+                                    orig = get_case(cid)
+                                    if orig:
+                                        fresh_id = generate_case_id()
+                                        dup_case = ClinicalCase.from_dict(orig.to_dict())
+                                        dup_case.case_id = fresh_id
+                                        dup_case.patient_name = f"{orig.patient_name} (Copy)"
+                                        save_case(dup_case)
+                                        st.toast(f"Created duplicate: {fresh_id}")
+                                        st.rerun()
 
-                            st.markdown("---")
-                            st.markdown("**Exports:**")
-                            # PDF Export
-                            if st.button("Prepare PDF", key=f"btn_prep_pdf_{cid}", width="stretch"):
-                                loaded_for_pdf = get_case(cid)
-                                if loaded_for_pdf:
-                                    st.session_state[f"pdf_bytes_{cid}"] = generate_case_pdf(loaded_for_pdf)
+                                st.markdown("---")
+                                st.markdown("**Exports:**")
+                                # PDF Export
+                                slot_pdf = st.empty()
+                                if slot_pdf.button("Prepare PDF", key=f"btn_prep_pdf_{cid}", width="stretch"):
+                                    with busy_slot(slot_pdf, "Compiling PDF...", key=f"btn_prep_pdf_{cid}", type="secondary"):
+                                        loaded_for_pdf = get_case(cid)
+                                        if loaded_for_pdf:
+                                            st.session_state[f"pdf_bytes_{cid}"] = generate_case_pdf(loaded_for_pdf)
 
-                            if f"pdf_bytes_{cid}" in st.session_state:
-                                st.download_button(
-                                    "Download PDF",
-                                    data=st.session_state[f"pdf_bytes_{cid}"],
-                                    file_name=f"{cid}_clinical_report.pdf",
-                                    mime="application/pdf",
-                                    width="stretch",
-                                    key=f"dl_pdf_{cid}",
-                                )
+                                if f"pdf_bytes_{cid}" in st.session_state:
+                                    st.download_button(
+                                        "Download PDF",
+                                        data=st.session_state[f"pdf_bytes_{cid}"],
+                                        file_name=f"{cid}_clinical_report.pdf",
+                                        mime="application/pdf",
+                                        width="stretch",
+                                        key=f"dl_pdf_{cid}",
+                                        on_click="ignore",
+                                    )
 
-                            loaded_for_json = get_case(cid)
-                            if loaded_for_json:
-                                st.download_button(
-                                    "Download JSON",
-                                    data=loaded_for_json.to_json(),
-                                    file_name=f"{cid}_case.json",
-                                    mime="application/json",
-                                    width="stretch",
-                                    key=f"dl_json_{cid}",
-                                )
+                                loaded_for_json = get_case(cid)
+                                if loaded_for_json:
+                                    st.download_button(
+                                        "Download JSON",
+                                        data=loaded_for_json.to_json(),
+                                        file_name=f"{cid}_case.json",
+                                        mime="application/json",
+                                        width="stretch",
+                                        key=f"dl_json_{cid}",
+                                        on_click="ignore",
+                                    )
 
                             st.markdown("---")
                             # Archive action

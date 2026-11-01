@@ -242,10 +242,14 @@ def render_rubric_explorer(db: KentDB, pipeline: Any) -> None:
                 key="explorer_sort_by",
             )
 
-    # 5. Search Execution
+    # 5. Search Execution (submit-only: results cached in session_state)
     query_clean = (search_query or "").strip()
-    if query_clean:
+    # Only execute a new search when the form was explicitly submitted.
+    # Cached results are re-displayed between submissions to avoid redundant
+    # vector queries on every Streamlit rerun (CONVENTIONS §19 – lazy search).
+    if search_submitted and query_clean:
         st.session_state["explorer_query"] = query_clean
+        st.session_state["explorer_results"] = None  # invalidate cache
         with st.spinner("Searching Repertory rubrics..."):
             if search_mode == "Meaning":
                 if pipeline and hasattr(pipeline, "vector_store") and pipeline.vector_store:
@@ -301,89 +305,103 @@ def render_rubric_explorer(db: KentDB, pipeline: Any) -> None:
             filtered_results.sort(key=lambda r: r.get("similarity", 0.0) or 0.0, reverse=True)
 
         display_results = filtered_results[:int(limit)]
+        st.session_state["explorer_results"] = display_results
+        st.session_state["explorer_query_display"] = query_clean
 
         # 8. Render Results or No-Results State
-        if display_results:
-            st.html(
-                f"""
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 8px;">
-                    <div style="font-size: 13.5px; color: var(--text-muted, #A3B0C2);">
-                        Found <b style="color: var(--text, #E8EDF3);">{len(display_results)}</b> matching {pluralize(len(display_results), 'rubric', 'rubrics', include_count=False)}
-                    </div>
+        _display = display_results
+    else:
+        # Not submitting: use cached results from previous search (if any)
+        _display = st.session_state.get("explorer_results", [])
+        query_clean = st.session_state.get("explorer_query_display", query_clean)
+
+    display_results = _display or []
+
+    if display_results:
+        st.html(
+            f"""
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 8px;">
+                <div style="font-size: 13.5px; color: var(--text-muted, #A3B0C2);">
+                    Found <b style="color: var(--text, #E8EDF3);">{len(display_results)}</b> matching {pluralize(len(display_results), 'rubric', 'rubrics', include_count=False)}
                 </div>
-                """
+            </div>
+            """
+        )
+
+        # Render rubric cards with multi-select support
+        selected_rubrics_in_view: List[Dict[str, Any]] = []
+        for r in display_results:
+            is_chk = render_rubric_card(
+                rubric=r,
+                db=db,
+                query=query_clean,
+                selectable=True,
+                is_selected=False,
             )
+            if is_chk:
+                selected_rubrics_in_view.append(r)
 
-            # Render rubric cards with multi-select support
-            selected_rubrics_in_view: List[Dict[str, Any]] = []
-            for r in display_results:
-                is_chk = render_rubric_card(
-                    rubric=r,
-                    db=db,
-                    query=query_clean,
-                    selectable=True,
-                    is_selected=False,
+        # Sticky Multi-Select Action Bar when ≥1 checked
+        if selected_rubrics_in_view:
+            c_sel_text, c_sel_btn = st.columns([3, 1.5], vertical_alignment="center")
+            with c_sel_text:
+                st.html(
+                    f"""
+                    <div class="sticky-explorer-bar">
+                        <span style="font-weight: 700; color: var(--text, #E8EDF3);">
+                            {len(selected_rubrics_in_view)} rubrics selected
+                        </span>
+                    </div>
+                    """
                 )
-                if is_chk:
-                    selected_rubrics_in_view.append(r)
+            with c_sel_btn:
+                if st.button(
+                    f"Add {len(selected_rubrics_in_view)} to Case Tray",
+                    type="primary",
+                    width="stretch",
+                    key="btn_add_selected_rubrics",
+                ):
+                    if "case_tray" not in st.session_state:
+                        st.session_state.case_tray = {"rubrics": [], "remedies": []}
+                    cur_c = st.session_state.get("current_case")
 
-            # Sticky Multi-Select Action Bar when ≥1 checked
-            if selected_rubrics_in_view:
-                c_sel_text, c_sel_btn = st.columns([3, 1.5], vertical_alignment="center")
-                with c_sel_text:
-                    st.html(
-                        f"""
-                        <div class="sticky-explorer-bar">
-                            <span style="font-weight: 700; color: var(--text, #E8EDF3);">
-                                {len(selected_rubrics_in_view)} rubrics selected
-                            </span>
-                        </div>
-                        """
-                    )
-                with c_sel_btn:
-                    if st.button(
-                        f"Add {len(selected_rubrics_in_view)} to Case Tray",
-                        type="primary",
-                        width="stretch",
-                        key="btn_add_selected_rubrics",
-                    ):
-                        if "case_tray" not in st.session_state:
-                            st.session_state.case_tray = {"rubrics": [], "remedies": []}
-                        cur_c = st.session_state.get("current_case")
+                    added_count = 0
+                    for sel_r in selected_rubrics_in_view:
+                        raw_id = sel_r.get("id") or sel_r.get("rubric_id")
+                        try:
+                            sel_id = int(str(raw_id).replace("rubric_", "").strip())
+                        except (ValueError, TypeError):
+                            continue
 
-                        added_count = 0
-                        for sel_r in selected_rubrics_in_view:
-                            raw_id = sel_r.get("id") or sel_r.get("rubric_id")
-                            try:
-                                sel_id = int(str(raw_id).replace("rubric_", "").strip())
-                            except (ValueError, TypeError):
-                                continue
+                        in_tray = any(item.get("id") == sel_id for item in st.session_state.case_tray.get("rubrics", []))
+                        if not in_tray:
+                            path_val = sel_r.get("path", f"Rubric #{sel_id}")
+                            leaf_val = path_val.split(" › ")[-1] if " › " in path_val else path_val
+                            st.session_state.case_tray["rubrics"].append({
+                                "id": sel_id,
+                                "rubric_id": sel_id,
+                                "path": path_val,
+                                "name": leaf_val,
+                                "similarity": sel_r.get("similarity", 1.0),
+                                "remedy_count": sel_r.get("remedy_count", 0),
+                            })
+                            if cur_c is not None and sel_id not in cur_c.selected_rubric_ids:
+                                cur_c.selected_rubric_ids.append(sel_id)
+                            added_count += 1
 
-                            in_tray = any(item.get("id") == sel_id for item in st.session_state.case_tray.get("rubrics", []))
-                            if not in_tray:
-                                path_val = sel_r.get("path", f"Rubric #{sel_id}")
-                                leaf_val = path_val.split(" › ")[-1] if " › " in path_val else path_val
-                                st.session_state.case_tray["rubrics"].append({
-                                    "id": sel_id,
-                                    "rubric_id": sel_id,
-                                    "path": path_val,
-                                    "name": leaf_val,
-                                    "similarity": sel_r.get("similarity", 1.0),
-                                    "remedy_count": sel_r.get("remedy_count", 0),
-                                })
-                                if cur_c is not None and sel_id not in cur_c.selected_rubric_ids:
-                                    cur_c.selected_rubric_ids.append(sel_id)
-                                added_count += 1
+                    if cur_c is not None and added_count > 0:
+                        try:
+                            save_case(cur_c)
+                        except Exception:
+                            pass
 
-                        if cur_c is not None and added_count > 0:
-                            try:
-                                save_case(cur_c)
-                            except Exception:
-                                pass
+                    st.toast(f"Added {added_count} rubrics to Case Tray.")
+                    st.rerun()
 
-                        st.toast(f"Added {added_count} rubrics to Case Tray.")
-                        st.rerun()
-
+    else:
+        if st.session_state.get("explorer_results") is None and not search_submitted:
+            # First load – show empty state, guide user to search
+            st.info("Enter a clinical symptom query above and click Search.")
         else:
             st.info("No rubrics matched the specified search criteria.")
             st.markdown("##### Suggested Clinical Searches:")

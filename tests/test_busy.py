@@ -3,7 +3,7 @@
 Test (a): busy_slot renders a disabled twin button and clears it gracefully.
 Test (b): Source guards
   - no use_container_width in any src/dashboard/**/*.py
-  - no non-ASCII chars in st.toast / st.info / st.warning icon= args
+  - no non-ASCII chars in st.toast / st.info / st.warning icon= args (allow :material/...:)
   - styles.css has NO button[kind= selectors
 """
 
@@ -12,6 +12,7 @@ from __future__ import annotations
 import ast
 import re
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -41,55 +42,40 @@ def test_busy_module_importable() -> None:
     assert callable(inject_busy_runtime)
 
 
-def test_busy_slot_is_context_manager() -> None:
-    """busy_slot must be a contextlib-based context manager (has __enter__/__exit__)."""
-    import contextlib
-
+def test_busy_slot_renders_twin_and_clears() -> None:
+    """busy_slot shows a disabled '__busy' twin during the call and clears it after."""
     from src.dashboard.components.busy import busy_slot
 
-    # It is decorated with @contextlib.contextmanager, so calling it returns
-    # a _GeneratorContextManager.
-    # We call it with a mock slot that does nothing.
+    mock_slot = MagicMock()
+    with busy_slot(mock_slot, "Analyzing rubrics...", key="btn_rep", type="primary"):
+        mock_slot.button.assert_called_once_with(
+            "Analyzing rubrics...",
+            key="btn_rep__busy",
+            type="primary",
+            disabled=True,
+            width="stretch",
+            icon=None,
+        )
+        assert mock_slot.empty.call_count == 0
 
-    class _FakeSlot:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *_):
-            return False
-
-        def button(self, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003
-            pass
-
-    fake = _FakeSlot()
-
-    # Must not raise; the yield point is the key contract
-    cm = busy_slot(fake, "Working...", key="test_busy_key")
-    assert hasattr(cm, "__enter__")
-    assert hasattr(cm, "__exit__")
+    mock_slot.empty.assert_called_once()
 
 
-def test_inject_busy_runtime_soft_fails_without_session(monkeypatch: pytest.MonkeyPatch) -> None:
-    """inject_busy_runtime must not crash even if session_state check raises."""
+def test_inject_busy_runtime_calls_html(monkeypatch: pytest.MonkeyPatch) -> None:
+    """inject_busy_runtime injects script tag with unsafe_allow_javascript=True."""
     import streamlit as st
 
-    from src.dashboard.components.busy import _INJECTED_KEY, inject_busy_runtime
+    from src.dashboard.components.busy import inject_busy_runtime
 
-    # Simulate already injected (guard key present) → should be a no-op
-    original_get = st.session_state.get
+    mock_html = MagicMock()
+    monkeypatch.setattr(st, "html", mock_html)
 
-    injected_flag: dict[str, bool] = {}
-
-    def _mock_get(key: str, default: object = None) -> object:  # noqa: ANN001
-        if key == _INJECTED_KEY:
-            return injected_flag.get(key, False)
-        return original_get(key, default)
-
-    monkeypatch.setattr(st.session_state, "get", _mock_get)
-    injected_flag[_INJECTED_KEY] = True
-
-    # Should return immediately without calling st.html (no error)
-    inject_busy_runtime()  # No exception = pass
+    inject_busy_runtime()
+    mock_html.assert_called_once()
+    args, kwargs = mock_html.call_args
+    assert "<script>" in args[0]
+    assert "window.__kentBusy" in args[0]
+    assert kwargs.get("unsafe_allow_javascript") is True
 
 
 # ---------------------------------------------------------------------------
@@ -126,7 +112,7 @@ def test_no_emoji_in_toast_args() -> None:
     """st.toast / st.info / st.warning calls must use ASCII-only strings.
 
     We parse the AST of every dashboard Python file and check that all
-    string literals passed as the first positional arg (or ``icon=`` kwarg)
+    string literals passed as the first positional arg (or icon= kwarg)
     to those functions contain only printable ASCII characters (ord < 128).
     """
     NON_ASCII = re.compile(r"[^\x00-\x7F]")
@@ -144,11 +130,9 @@ def test_no_emoji_in_toast_args() -> None:
             if not isinstance(node, ast.Call):
                 continue
             func = node.func
-            # Match st.toast / st.info / st.warning (attribute calls)
             if not (isinstance(func, ast.Attribute) and func.attr in TARGETS):
                 continue
 
-            # Check first positional arg (the message)
             for arg in node.args[:1]:
                 if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
                     if NON_ASCII.search(arg.value):
@@ -156,7 +140,6 @@ def test_no_emoji_in_toast_args() -> None:
                             f"{path.name}:{node.lineno}: non-ASCII in st.{func.attr}({arg.value!r})"
                         )
 
-            # Check icon= keyword arg
             for kw in node.keywords:
                 if kw.arg == "icon" and isinstance(kw.value, ast.Constant):
                     val = kw.value.value

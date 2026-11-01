@@ -96,6 +96,7 @@ def test_render_rubric_card_mind_badge(monkeypatch):
     monkeypatch.setattr(st, "html", lambda text, **kw: html_rendered.append(text))
     # Mock expander
     class DummyExpander:
+        open = True
         def __enter__(self): return self
         def __exit__(self, *args): pass
     monkeypatch.setattr(st, "expander", lambda *args, **kw: DummyExpander())
@@ -143,6 +144,7 @@ def test_render_rubric_card_safe_id_handling(monkeypatch):
     monkeypatch.setattr(st, "columns", lambda n: [DummyColumns() for _ in range(n)])
 
     class DummyExpander:
+        open = True
         def __enter__(self): return self
         def __exit__(self, *args): pass
 

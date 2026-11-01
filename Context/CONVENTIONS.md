@@ -271,4 +271,15 @@ def get_rubric_path(rubric_id: int, db_path: Optional[Union[str, Path]] = None) 
 
 ---
 
+## 23. Busy Feedback, Loading Performance & Navigation Conventions
+
+- **`busy.js` Contract**: User clicks immediately show button-level loading feedback within ~120ms (`data-kent-busy="true"`). The global loading indicator (`html[data-kent-busy="true"]`) is strictly gated on user interactions and never keyed solely on `data-test-script-state` (to avoid flashing during periodic fragment runs). Minimum visibility time of 450ms is enforced to prevent visual flicker.
+- **`busy_slot` Context Manager**: Wrap long-running operations (>500ms) with `busy_slot(slot, label, key=..., type=...)`. The twin button reserves the key suffix `__busy` (`f"{key}__busy"`) which receives the `.st-key-*__busy` CSS spinner while disabled.
+- **Never Key Global Indicator on Script-State Alone**: Header telemetry polls every 2 seconds via `@st.fragment(run_every="2s")`. This flips `data-test-script-state` to `running`. The JS runtime must track `lastInput` gesture timestamps within a 1500ms window before activating global progress bars.
+- **Download Buttons (`on_click="ignore"`)**: All `st.download_button` calls MUST include `on_click="ignore"` to prevent clicking a download button from triggering a full app rerun or stuck spinner.
+- **Lazy Tabs and the `main_tabs` Callback Rule**: All top-level tabs use `tabs = dict(zip(TAB_LABELS, st.tabs(TAB_LABELS, key="main_tabs", on_change="rerun")))` with `with tabs[name]: if tabs[name].open:`. Inter-tab navigation (e.g. from Resume or New Case) MUST occur inside widget `on_click` callbacks setting `st.session_state.main_tabs = "Case Workspace"`, because widget keys cannot be mutated during the same run after instantiation.
+- **Search-on-Submit & On-Demand Exports**: Never run unbounded vector searches or N+1 SQLite queries on initial page render. Rubric search only executes on form submission (Enter or button); exports are prepared on demand with cached byte buffers.
+
+---
+
 _End of file._

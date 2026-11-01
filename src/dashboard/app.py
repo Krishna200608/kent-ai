@@ -58,7 +58,7 @@ logger = logging.getLogger("dashboard")
 # Set wide page layout
 st.set_page_config(
     page_title="Kent-AI · Classical Homeopathic Repertorization (Kent Framework)",
-    page_icon="🌿",
+    page_icon=":material/spa:",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -85,58 +85,65 @@ def main():
     dm: DialogueManager = st.session_state.dialogue_manager
     current_case: ClinicalCase = st.session_state.current_case
 
-    tab_workspace, tab_library, tab_explorer, tab_mm, tab_methodology, tab_settings = st.tabs([
+    TAB_LABELS = [
         "Case Workspace",
         "Case Library",
         "Rubric Explorer",
         "Materia Medica",
         "Methodology",
         "Settings",
-    ])
+    ]
+    tabs = dict(zip(TAB_LABELS, st.tabs(TAB_LABELS, key="main_tabs", on_change="rerun")))
 
     # =========================================================================
     # TAB 1: Case Workspace (4-Step Clinician Workflow)
     # =========================================================================
-    with tab_workspace:
-        render_case_bar(current_case)
-        step = st.session_state.get("workspace_step", 1)
+    with tabs["Case Workspace"]:
+        if tabs["Case Workspace"].open:
+            render_case_bar(current_case)
+            step = st.session_state.get("workspace_step", 1)
 
-        if step == 1:
-            render_step1_intake(dm, current_case, pipeline)
-        elif step == 2:
-            render_step2_review(current_case, pipeline)
-        elif step == 3:
-            report = st.session_state.get("current_report")
-            render_step3_analysis(current_case, report, db, pipeline)
-        elif step == 4:
-            render_step4_report(current_case, db)
+            if step == 1:
+                render_step1_intake(dm, current_case, pipeline)
+            elif step == 2:
+                render_step2_review(current_case, pipeline)
+            elif step == 3:
+                report = st.session_state.get("current_report")
+                render_step3_analysis(current_case, report, db, pipeline)
+            elif step == 4:
+                render_step4_report(current_case, db)
 
     # =========================================================================
     # TAB 2: Case Library
     # =========================================================================
-    with tab_library:
-        render_case_library(current_case)
+    with tabs["Case Library"]:
+        if tabs["Case Library"].open:
+            render_case_library(current_case)
 
     # =========================================================================
     # TAB 3: Rubric Explorer
     # =========================================================================
-    with tab_explorer:
-        render_rubric_explorer(db, pipeline)
+    with tabs["Rubric Explorer"]:
+        if tabs["Rubric Explorer"].open:
+            render_rubric_explorer(db, pipeline)
 
     # =========================================================================
     # TAB 4: Materia Medica & Differential Comparison
     # =========================================================================
-    with tab_mm:
-        render_materia_medica_view(db)
+    with tabs["Materia Medica"]:
+        if tabs["Materia Medica"].open:
+            render_materia_medica_view(db)
 
     # =========================================================================
     # TAB 5: Settings & Methodology
     # =========================================================================
-    with tab_methodology:
-        render_methodology_view()
+    with tabs["Methodology"]:
+        if tabs["Methodology"].open:
+            render_methodology_view()
 
-    with tab_settings:
-        render_settings_view()
+    with tabs["Settings"]:
+        if tabs["Settings"].open:
+            render_settings_view()
 
     # Inject busy/loading feedback runtime (must be at end of main)
     inject_busy_runtime()

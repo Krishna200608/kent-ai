@@ -1,132 +1,69 @@
-/**
- * busy.js – Kent-AI button busy / loading feedback runtime.
- *
- * Contract:
- *  - Runs once per page load (guarded by window.__kentBusy).
- *  - On any primary/secondary button click (not download, not form-submit twin)
- *    adds data-kent-busy="true" within GRACE ms and raises html[data-kent-busy].
- *  - Clears on the next Streamlit notRunning transition (MIN_VISIBLE enforced).
- *  - Adds html[data-kent-slow] when the run exceeds SLOW_THRESHOLD ms.
- *  - Sweeps orphan [data-tip] tooltip nodes that JS injected but Streamlit pruned.
- *  - Never keys on script-state alone for global indicator (header fragment polls
- *    every 2 s and also sets "running"); we track a user-click flag separately.
- */
 (() => {
   if (window.__kentBusy) return;
   window.__kentBusy = true;
-
-  const GRACE = 700;        // ms before showing busy state (avoids flash on fast ops)
-  const MIN_VISIBLE = 450;  // ms minimum spinner visibility once shown
-  const SPIN_DELAY = 150;   // ms from click to first visual feedback
-  const SLOW_THRESHOLD = 4000; // ms before showing slow-operation overlay
-
   const root = document.documentElement;
-  let _userClickPending = false;
-  let _busyShownAt = 0;
-  let _graceTimer = null;
-  let _slowTimer = null;
-  let _clearTimer = null;
+  const GRACE = 700, MIN_VISIBLE = 450, SPIN_DELAY = 120, SLOW_AFTER = 3000, USER_WINDOW = 1500;
+  let lastInput = 0, btn = null, t0 = 0, sawRun = false, rootOwned = false, tGrace, tSlow, tRelease;
+  const app = () => document.querySelector('[data-testid="stApp"]');
+  const live = document.createElement('div');
+  live.className = 'sr-only'; live.setAttribute('role', 'status'); live.setAttribute('aria-live', 'polite');
+  document.body.appendChild(live);
 
-  /** Show global busy indicator. */
-  function _showBusy() {
-    _busyShownAt = Date.now();
+  const mark = () => { lastInput = performance.now(); };
+  document.addEventListener('pointerdown', mark, true);
+  document.addEventListener('keydown', (e) => {
+    const typing = e.target.matches && e.target.matches('input, textarea, [contenteditable="true"]');
+    if (e.key === 'Enter' || e.key === 'Tab' || (e.key === ' ' && !typing)) mark();
+  }, true);
+
+  function begin(b) {
+    finish(true);
+    btn = b; rootOwned = true; t0 = performance.now(); sawRun = false;
+    if (b) { b.setAttribute('data-kent-busy', 'true'); b.setAttribute('aria-busy', 'true'); }
     root.setAttribute('data-kent-busy', 'true');
-    _slowTimer = setTimeout(() => {
-      root.setAttribute('data-kent-slow', 'true');
-    }, SLOW_THRESHOLD);
+    live.textContent = 'Working';
+    // If the script never starts, the click did not rerun (download ignore, popover, etc.)
+    tGrace = setTimeout(() => { if (!sawRun) finish(true); }, GRACE);
+    tSlow = setTimeout(() => root.setAttribute('data-kent-slow', 'true'), SLOW_AFTER);
   }
-
-  /** Clear global busy indicator, honouring MIN_VISIBLE. */
-  function _clearBusy() {
-    clearTimeout(_graceTimer);
-    clearTimeout(_slowTimer);
-    root.removeAttribute('data-kent-slow');
-    const elapsed = Date.now() - _busyShownAt;
-    const remaining = Math.max(0, MIN_VISIBLE - elapsed);
-    _clearTimer = setTimeout(() => {
-      if (!_userClickPending) {
-        root.removeAttribute('data-kent-busy');
-        // Also clear any data-kent-busy on individual buttons
-        document.querySelectorAll('button[data-kent-busy="true"]').forEach(b => {
-          b.removeAttribute('data-kent-busy');
-        });
-      }
-    }, remaining);
+  function finish(now) {
+    clearTimeout(tGrace); clearTimeout(tSlow); clearTimeout(tRelease);
+    const b = btn; btn = null;
+    const done = () => {
+      if (b) { b.removeAttribute('data-kent-busy'); b.removeAttribute('aria-busy'); }
+      root.removeAttribute('data-kent-busy'); root.removeAttribute('data-kent-slow');
+      rootOwned = false; live.textContent = '';
+    };
+    const shown = performance.now() - t0;
+    if (now || !rootOwned || shown < SPIN_DELAY) done();
+    else tRelease = setTimeout(done, Math.max(0, MIN_VISIBLE - shown));
   }
-
-  /** Mark a button as locally busy. */
-  function _markButton(btn) {
-    if (!btn) return;
-    btn.setAttribute('data-kent-busy', 'true');
-    btn.setAttribute('aria-busy', 'true');
-  }
-
-  /** Clear a button's busy state. */
-  function _clearButton(btn) {
-    if (!btn) return;
-    btn.removeAttribute('data-kent-busy');
-    btn.removeAttribute('aria-busy');
-  }
-
-  /** Determine if a button is a download button (heuristic: its ancestor has data-testid="stDownloadButton"). */
-  function _isDownloadButton(btn) {
-    return !!btn.closest('[data-testid="stDownloadButton"]');
-  }
-
-  /** Determine if a button is a form-submit twin (has class containing "__busy"). */
-  function _isBusyTwin(btn) {
-    return btn.id && btn.id.includes('__busy');
-  }
-
-  /** Determine if a button is a popover trigger. */
-  function _isPopoverTrigger(btn) {
-    return !!btn.closest('[data-testid="stPopoverButton"]') || btn.getAttribute('data-testid') === 'stPopoverButton';
-  }
-
-  /** Global click handler — attach on first user gesture. */
   document.addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-testid^="stBaseButton-"]');
-    if (!btn) return;
-    if (_isDownloadButton(btn)) return;
-    if (_isBusyTwin(btn)) return;
-    if (_isPopoverTrigger(btn)) return;
+    const b = e.target.closest && e.target.closest('button[data-testid^="stBaseButton-"]');
+    if (!b || b.disabled || b.closest('header, [data-testid="stHeader"], [data-kent-nobusy]')) return;
+    begin(b);
+  }, true);
 
-    _userClickPending = true;
-    _markButton(btn);
-
-    clearTimeout(_graceTimer);
-    _graceTimer = setTimeout(() => {
-      _showBusy();
-    }, GRACE);
-  }, { capture: true, passive: true });
-
-  /**
-   * Watch Streamlit's data-test-script-state transitions.
-   * We ONLY clear busy when we see notRunning AND a user click was pending
-   * (prevents the header fragment's polling from toggling the indicator).
-   */
-  const appEl = document.querySelector('[data-testid="stApp"]');
-  if (appEl) {
-    const observer = new MutationObserver(() => {
-      const state = appEl.getAttribute('data-test-script-state');
-      if (state === 'notRunning' && _userClickPending) {
-        _userClickPending = false;
-        _clearBusy();
-      }
+  // Orphan tooltip safety net: hide (never remove; React owns the node) tooltips whose trigger is gone.
+  function sweepTooltips() {
+    document.querySelectorAll('[data-testid="stTooltipContent"]').forEach((tip) => {
+      const host = tip.closest('[id]');
+      if (host && !document.querySelector('[aria-describedby="' + host.id + '"]'))
+        host.setAttribute('data-kent-orphan', 'true');
     });
-    observer.observe(appEl, { attributes: true, attributeFilter: ['data-test-script-state'] });
   }
+  document.addEventListener('pointerdown', () => setTimeout(sweepTooltips, 150), true);
 
-  /**
-   * Orphan tooltip sweeper: every 3 s, hide any [data-kent-orphan] nodes
-   * that have been detached from their anchor (Streamlit re-render pruned them).
-   */
-  setInterval(() => {
-    document.querySelectorAll('[data-kent-orphan="true"]').forEach(el => {
-      if (!el.offsetParent) el.style.display = 'none';
-    });
-  }, 3000);
-
-  // Expose for test/debug
-  window.__kentBusyAPI = { showBusy: _showBusy, clearBusy: _clearBusy };
+  (function hook() {
+    const a = app();
+    if (!a) return void setTimeout(hook, 200);
+    new MutationObserver((records) => {
+      const s = a.getAttribute('data-test-script-state');
+      if (s === 'running' || records.some((r) => r.oldValue === 'running')) sawRun = true;
+      if (s === 'running') {
+        // Non-button user actions (Enter in input, checkbox, selectbox): only if user just interacted.
+        if (!rootOwned && performance.now() - lastInput < USER_WINDOW) { begin(null); sawRun = true; }
+      } else if (s === 'notRunning' && rootOwned) { finish(false); sweepTooltips(); }
+    }).observe(a, { attributes: true, attributeFilter: ['data-test-script-state'], attributeOldValue: true });
+  })();
 })();

@@ -99,7 +99,7 @@ def render_case_snapshot(
                     """
                 )
             with col_act:
-                with st.popover("✎", help=f"Inspect and edit {dim.label}"):
+                with st.popover("✎"):
                     st.markdown(f"##### {dim.label}")
                     prov_list = provenance_map.get(dim.internal_key, [])
                     if prov_list:

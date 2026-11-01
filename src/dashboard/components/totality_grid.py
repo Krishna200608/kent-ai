@@ -100,46 +100,45 @@ def render_classical_totality_matrix(
                 "</div>",
                 unsafe_allow_html=True,
             )
-            c_header = st.columns([6, 2, 2])
-            with c_header[0]:
-                st.markdown("<span style='font-size:11.5px; font-weight:700; color:#9CA3AF;'>Rubric</span>", unsafe_allow_html=True)
-            with c_header[1]:
-                st.markdown("<span style='font-size:11.5px; font-weight:700; color:#9CA3AF;'>Status</span>", unsafe_allow_html=True)
-            with c_header[2]:
-                st.markdown("<span style='font-size:11.5px; font-weight:700; color:#9CA3AF;'>Eliminatory</span>", unsafe_allow_html=True)
+            with st.form("form_filter_rubrics", border=False):
+                c_header = st.columns([6, 2, 2])
+                with c_header[0]:
+                    st.markdown("<span style='font-size:11.5px; font-weight:700; color:#9CA3AF;'>Rubric</span>", unsafe_allow_html=True)
+                with c_header[1]:
+                    st.markdown("<span style='font-size:11.5px; font-weight:700; color:#9CA3AF;'>Status</span>", unsafe_allow_html=True)
+                with c_header[2]:
+                    st.markdown("<span style='font-size:11.5px; font-weight:700; color:#9CA3AF;'>Eliminatory</span>", unsafe_allow_html=True)
 
-            changed = False
-            for r in rubrics:
-                r_id = int(r.get("rubric_id") or r.get("id"))
-                r_path = format_rubric_path(r.get("path", f"Rubric #{r_id}"))
-                is_muted = r_id in (case.muted_rubric_ids or [])
-                is_elim = r_id in (case.eliminatory_rubric_ids or [])
+                new_muted: List[int] = []
+                new_elim: List[int] = []
 
-                cols = st.columns([6, 2, 2])
-                with cols[0]:
-                    st.markdown(f"<div style='font-size:12px; color:#F3F4F6;'>{r_path}</div>", unsafe_allow_html=True)
-                with cols[1]:
-                    mute_state = st.checkbox("Mute", value=is_muted, key=f"mute_chk_{r_id}")
-                    if mute_state != is_muted:
-                        if mute_state:
-                            case.muted_rubric_ids.append(r_id)
-                        else:
-                            case.muted_rubric_ids.remove(r_id)
-                        changed = True
-                with cols[2]:
-                    elim_state = st.checkbox("Must Have", value=is_elim, key=f"elim_chk_{r_id}", disabled=is_muted)
-                    if elim_state != is_elim:
-                        if elim_state:
-                            case.eliminatory_rubric_ids.append(r_id)
-                        else:
-                            case.eliminatory_rubric_ids.remove(r_id)
-                        changed = True
+                for r in rubrics:
+                    r_id = int(r.get("rubric_id") or r.get("id"))
+                    r_path = format_rubric_path(r.get("path", f"Rubric #{r_id}"))
+                    is_muted = r_id in (case.muted_rubric_ids or [])
+                    is_elim = r_id in (case.eliminatory_rubric_ids or [])
 
-            if changed:
-                st.session_state.current_report = rescore_report(
-                    st.session_state.pipeline.ranker, report, case)
-                save_case(case)
-                st.rerun()
+                    cols = st.columns([6, 2, 2])
+                    with cols[0]:
+                        st.markdown(f"<div style='font-size:12px; color:#F3F4F6;'>{r_path}</div>", unsafe_allow_html=True)
+                    with cols[1]:
+                        m_val = st.checkbox("Mute", value=is_muted, key=f"mute_chk_{r_id}")
+                        if m_val:
+                            new_muted.append(r_id)
+                    with cols[2]:
+                        e_val = st.checkbox("Must Have", value=is_elim, key=f"elim_chk_{r_id}", disabled=m_val)
+                        if e_val and not m_val:
+                            new_elim.append(r_id)
+
+                apply_btn = st.form_submit_button("Apply filters", type="primary", width="stretch")
+                if apply_btn:
+                    case.muted_rubric_ids = new_muted
+                    case.eliminatory_rubric_ids = new_elim
+                    st.session_state.current_report = rescore_report(
+                        st.session_state.pipeline.ranker, report, case)
+                    save_case(case)
+                    st.toast("Filters applied and scores recomputed.")
+                    st.rerun()
 
     # Build Classical Totality Table
     # Sticky Table Header: Remedy Abbreviations as Columns

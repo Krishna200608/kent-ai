@@ -105,14 +105,21 @@ def render_step1_paste_view(current_case: ClinicalCase, dm: DialogueManager, pip
             )
         else:
             profile = None
+            is_cold = not st.session_state.get("_models_warmed", False)
             with st.status("Analyzing clinical narrative with local NLP pipeline...", expanded=True) as status_box:
                 try:
-                    status_box.write("Encoding clinical text with BioLinkBERT...")
+                    if is_cold:
+                        status_box.write("Loading models (first run only)...")
                     section_id = 1 if (current_case.scope_chapter and "MIND" in current_case.scope_chapter) else None
-                    status_box.write("Extracting symptom dimensions & filtering negations...")
                     profile = pipeline.extract_profile(clean_text, section_id=section_id)
-                    status_box.write("Arbitrating totality dimensions...")
+                    st.session_state["_models_warmed"] = True
+
+                    raw_spans = getattr(profile, "raw_entities", []) or []
+                    status_box.write(f"Encoded clinical text with BioLinkBERT · Extracted {len(raw_spans)} symptom entities")
+                    if getattr(profile, "negated", None):
+                        status_box.write(f"Filtered {len(profile.negated)} negated findings")
                     found_count = sum(1 for k in CANONICAL_DIMENSIONS if getattr(profile, k, []))
+                    status_box.write(f"Arbitrated totality dimensions · {found_count} of 7 dimensions mapped")
                     status_box.update(
                         label=f"Extraction complete! Found {found_count} of 7 dimensions.",
                         state="complete",

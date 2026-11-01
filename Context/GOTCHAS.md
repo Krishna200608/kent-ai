@@ -280,6 +280,26 @@ Querying remedy keynotes by abbreviation in modal dialogs (`show_remedy_dialog`)
 - **Root Cause**: Kent's Repertory stores abbreviation strings with trailing periods (e.g. `Acon.`, `Lach.`, `Bell.`, `Sulph.`), but clinical text and user inputs frequently omit the dot.
 - **Verified Workaround**: In `get_remedy_by_abbreviation` and `show_remedy_dialog`, execute a multi-candidate match query checking: 1) exact abbreviation, 2) abbreviation with dot appended, 3) abbreviation with dot stripped, and 4) `LOWER(normalized) = LOWER(?)`.
 
+### 8.20 Fragment Runs Flip `data-test-script-state="running"` (Header Polling Gotcha)
+When using `@st.fragment(run_every="2s")` to poll Ollama status in the top bar, Streamlit updates the root attribute `data-test-script-state="running"` every 2 seconds.
+- **Root Cause**: Fragment runs execute in the same script runner context and toggle DOM script state attributes during re-execution. Keying global busy overlays or progress bars on `data-test-script-state="running"` alone causes periodic flashing even when the app is completely idle.
+- **Verified Workaround**: Guard global loading indicators using user interaction tracking in `busy.js`. Record `lastInput = performance.now()` on `pointerdown` and `keydown` (Enter/Tab/Space), and only activate the global indicator if the script state transition occurred within a short window (`1500ms`) of a real user action.
+
+### 8.21 Orphan Tooltips Following Dynamic Streamlit DOM Pruning
+When buttons, icons, or popover triggers with `help="..."` are re-rendered or removed during Streamlit reruns, React may prune the trigger element while leaving the floating tooltip (`[data-testid="stTooltipContent"]`) mounted in the portal DOM.
+- **Root Cause**: Tooltip portals are rendered outside the element container. When the trigger is unmounted during state transitions, the tooltip element can become orphaned and permanently stuck on screen.
+- **Verified Workaround**: Never attach `help="..."` to icon-only buttons or popover triggers (`•••`, `✎`). Use explicit labels or keyboard-accessible `data-tip` patterns. In `busy.js`, run a periodic sweep (`sweepTooltips()`) checking whether the tooltip host has a corresponding `aria-describedby` trigger in the document; if not, apply `data-kent-orphan="true"` (`display: none !important`).
+
+### 8.22 Form Submit Buttons Use `kind="primaryFormSubmit"` Selector
+Form submission buttons rendered via `st.form_submit_button(type="primary")` do NOT match CSS rules targeting `button[kind="primary"]`.
+- **Root Cause**: Streamlit assigns `kind="primaryFormSubmit"` to form submission buttons. Generic `button[kind="primary"]` selectors fail to style submit buttons, causing contrast and color inconsistencies (e.g. illegible black text on default white buttons).
+- **Verified Workaround**: Target buttons using `button[data-testid^="stBaseButton-primary"]` and `button[data-testid^="stBaseButton-secondary"]` across all stylesheets. This matches both standard and form-submit button variants reliably.
+
+### 8.23 Lazy Tabs and the `main_tabs` Callback Rule
+Attempting to change active tabs programmatically by writing `st.session_state.main_tabs = "Case Workspace"` inside the main script body after `st.tabs` has already rendered fails to switch tabs or raises a Streamlit key mutation error.
+- **Root Cause**: Streamlit widget values cannot be modified during the same execution run after the widget has already been instantiated.
+- **Verified Workaround**: Place navigation state mutations strictly inside button `on_click` callbacks (e.g. `st.button("Resume", on_click=_load_and_resume_case, args=(cid,))`). Streamlit executes widget callbacks before the script runs, allowing `st.session_state.main_tabs = "Case Workspace"` to be set before `st.tabs(..., key="main_tabs")` is evaluated.
+
 ---
 
 ## 9. Multi-Model GPU Training & HuggingFace Gotchas

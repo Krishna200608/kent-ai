@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 import streamlit as st
 
+from src.dashboard.components.busy import busy_slot
 from src.dashboard.components.case_dialogs import show_remedy_dialog
 from src.dashboard.components.icons import get_icon
 from src.dashboard.components.totality_grid import render_classical_totality_matrix
@@ -46,13 +47,16 @@ def render_step3_analysis(
 
     if not report:
         st.info("No repertorization analysis performed yet for this case. Click below to analyze.")
-        if st.button("Run Repertorization Analysis", type="primary", key="btn_run_analysis_empty"):
-            report = pipeline.repertorize_case(current_case)
-            st.session_state.current_report = report
-            current_case.report_data = report.to_dict()
-            save_case(current_case)
-            st.toast("Repertorization analysis complete.")
-            st.rerun()
+        slot_empty = st.empty()
+        if slot_empty.button("Run Repertorization Analysis", type="primary", key="btn_run_analysis_empty"):
+            with busy_slot(slot_empty, "Analyzing rubrics...", key="btn_run_analysis_empty", type="primary"):
+                with st.spinner("Searching Kent's Repertory and computing totality scores...", show_time=True):
+                    report = pipeline.repertorize_case(current_case)
+                    st.session_state.current_report = report
+                    current_case.report_data = report.to_dict()
+                    save_case(current_case)
+                    st.toast("Repertorization analysis complete.")
+                    st.rerun()
         return
 
     # 1. Classical Totality Matrix
@@ -149,19 +153,21 @@ def render_step3_analysis(
             st.session_state.workspace_step = 2
             st.rerun()
     with col_s3_recomp:
-        if st.button("Recompute Totality Scores", type="secondary", width="stretch"):
-            with st.spinner("Re-ranking remedies with active rubric filters..."):
-                if report and hasattr(pipeline, "ranker"):
-                    rescored = rescore_report(pipeline.ranker, report, current_case)
-                    st.session_state.current_report = rescored
-                    current_case.report_data = rescored.to_dict()
-                else:
-                    report = pipeline.repertorize_case(current_case)
-                    st.session_state.current_report = report
-                    current_case.report_data = report.to_dict()
-                save_case(current_case)
-                st.toast("Totality scores recomputed.")
-                st.rerun()
+        slot_recomp = st.empty()
+        if slot_recomp.button("Recompute Totality Scores", type="secondary", width="stretch", key="btn_recompute_scores"):
+            with busy_slot(slot_recomp, "Recomputing...", key="btn_recompute_scores", type="secondary"):
+                with st.spinner("Re-ranking remedies with active rubric filters...", show_time=True):
+                    if report and hasattr(pipeline, "ranker"):
+                        rescored = rescore_report(pipeline.ranker, report, current_case)
+                        st.session_state.current_report = rescored
+                        current_case.report_data = rescored.to_dict()
+                    else:
+                        report = pipeline.repertorize_case(current_case)
+                        st.session_state.current_report = report
+                        current_case.report_data = report.to_dict()
+                    save_case(current_case)
+                    st.toast("Totality scores recomputed.")
+                    st.rerun()
     with col_s3_next:
         if st.button("View Clinical Report →", type="primary", width="stretch"):
             st.session_state.workspace_step = 4

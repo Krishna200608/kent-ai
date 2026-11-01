@@ -13,6 +13,7 @@ import json
 from datetime import datetime
 import streamlit as st
 
+from src.dashboard.components.busy import busy_slot
 from src.dashboard.components.icons import get_icon
 from src.dashboard.constants import (
     APP_VERSION,
@@ -80,22 +81,33 @@ def render_settings_view() -> None:
 
             c_test, c_status = st.columns([1.2, 2], vertical_alignment="center")
             with c_test:
-                if st.button("Test Connection", key="btn_test_ollama_settings", width="stretch"):
-                    is_online, latency_ms = get_ollama_latency()
-                    if is_online:
-                        st.toast(f"Ollama Online - {latency_ms:.0f}ms round-trip")
-                    else:
-                        st.toast("Ollama Offline - Ensure 'ollama serve' is running")
-                    st.rerun()
+                slot_test = st.empty()
+                if slot_test.button("Test Connection", key="btn_test_ollama_settings", width="stretch"):
+                    with busy_slot(slot_test, "Testing...", key="btn_test_ollama_settings", type="secondary"):
+                        with st.spinner("Testing Ollama connection...", show_time=True):
+                            is_online, latency_ms = get_ollama_latency()
+                            st.session_state["_last_ollama_test"] = (is_online, latency_ms, datetime.now())
+                            if is_online:
+                                st.toast(f"Ollama Online - {latency_ms:.0f}ms round-trip")
+                            else:
+                                st.toast("Ollama Offline - Ensure 'ollama serve' is running")
+                            st.rerun()
 
             with c_status:
-                is_online, latency_ms = get_ollama_latency()
+                test_cache = st.session_state.get("_last_ollama_test")
+                if test_cache:
+                    is_online, latency_ms, _ = test_cache
+                    checked_hint = " &middot; <span style='font-size:11px; color:var(--text-faint);'>checked just now</span>"
+                else:
+                    is_online, latency_ms = get_ollama_latency()
+                    checked_hint = ""
+
                 if is_online:
                     st.html(
                         f"""
                         <div style="font-size: 13px; color: var(--accent, #10B981); display: flex; align-items: center; gap: 6px;">
                             <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent, #10B981);"></span>
-                            <b>Online</b> ({latency_ms:.0f}ms round-trip)
+                            <b>Online</b> ({latency_ms:.0f}ms round-trip){checked_hint}
                         </div>
                         """
                     )
@@ -104,7 +116,7 @@ def render_settings_view() -> None:
                         f"""
                         <div style="font-size: 13px; color: #F59E0B; display: flex; align-items: center; gap: 6px;">
                             <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #F59E0B;"></span>
-                            <b>Offline Fallback</b> (Run <code>ollama serve</code> in terminal)
+                            <b>Offline Fallback</b> (Run <code>ollama serve</code> in terminal){checked_hint}
                         </div>
                         """
                     )
@@ -197,35 +209,45 @@ def render_settings_view() -> None:
             )
             all_cases_meta = list_cases(limit=1000)
             total_cases = len(all_cases_meta)
-            st.markdown(f"Local consultation storage holds **{total_cases}** cases.")
+            act_cnt = sum(1 for c in all_cases_meta if c.get("status") not in ("ARCHIVED", "DRAFT_EMPTY"))
+            arc_cnt = sum(1 for c in all_cases_meta if c.get("status") == "ARCHIVED")
+            drf_cnt = sum(1 for c in all_cases_meta if c.get("status") == "DRAFT_EMPTY" or (c.get("status") == "DRAFT" and c.get("total_symptoms", 0) == 0))
+            st.markdown(f"Local consultation storage holds **{total_cases}** cases ({act_cnt} active &middot; {arc_cnt} archived &middot; {drf_cnt} empty drafts).")
 
-            # Export All Cases Backup
-            all_cases_data = []
-            for meta in all_cases_meta:
-                c_obj = get_case(meta["case_id"])
-                if c_obj:
-                    all_cases_data.append(c_obj.to_dict())
-
-            export_payload = json.dumps(
-                {
-                    "exported_at": datetime.now().isoformat(),
-                    "app_version": APP_VERSION,
-                    "case_count": len(all_cases_data),
-                    "cases": all_cases_data,
-                },
-                indent=2,
-            )
-
-            today_str = datetime.now().strftime("%Y%m%d")
-            st.download_button(
-                label=f"Export All Cases ({total_cases}) to JSON",
-                data=export_payload,
-                file_name=f"kent_ai_backup_{today_str}.json",
-                mime="application/json",
-                width="stretch",
-                key="btn_export_all_cases",
-                help="Download full JSON archive of all saved consultations",
-            )
+            # Export All Cases Backup (On-Demand)
+            backup_key = "settings_backup_cache"
+            if backup_key not in st.session_state:
+                slot_prep = st.empty()
+                if slot_prep.button(f"Prepare Backup ({total_cases} Cases)", key="btn_prep_backup", width="stretch"):
+                    with busy_slot(slot_prep, "Compiling backup...", key="btn_prep_backup", type="secondary"):
+                        with st.spinner("Exporting all consultation records...", show_time=True):
+                            all_cases_data = []
+                            for meta in all_cases_meta:
+                                c_obj = get_case(meta["case_id"])
+                                if c_obj:
+                                    all_cases_data.append(c_obj.to_dict())
+                            st.session_state[backup_key] = json.dumps(
+                                {
+                                    "exported_at": datetime.now().isoformat(),
+                                    "app_version": APP_VERSION,
+                                    "case_count": len(all_cases_data),
+                                    "cases": all_cases_data,
+                                },
+                                indent=2,
+                            )
+                            st.rerun()
+            else:
+                today_str = datetime.now().strftime("%Y%m%d")
+                st.download_button(
+                    label=f"Download Backup ({total_cases} Cases)",
+                    data=st.session_state[backup_key],
+                    file_name=f"kent_ai_backup_{today_str}.json",
+                    mime="application/json",
+                    width="stretch",
+                    key="btn_export_all_cases",
+                    help="Download full JSON archive of all saved consultations",
+                    on_click="ignore",
+                )
 
             st.markdown("---")
             # Import Consultations
@@ -241,17 +263,24 @@ def render_settings_view() -> None:
                     import_data = json.load(uploaded)
                     cases_to_import = import_data.get("cases", [])
                     if isinstance(cases_to_import, list) and cases_to_import:
-                        if st.button(f"Confirm Import of {len(cases_to_import)} Cases", type="primary", width="stretch", key="btn_confirm_import"):
-                            imported_count = 0
-                            for item in cases_to_import:
-                                try:
-                                    c_instance = ClinicalCase.from_dict(item)
-                                    save_case(c_instance)
-                                    imported_count += 1
-                                except Exception:
-                                    pass
-                            st.toast(f"Successfully imported {imported_count} cases.")
-                            st.rerun()
+                        existing_ids = {m["case_id"] for m in all_cases_meta}
+                        dup_count = sum(1 for c in cases_to_import if isinstance(c, dict) and c.get("case_id") in existing_ids)
+                        st.info(f"Backup file contains **{len(cases_to_import)}** cases ({dup_count} duplicate IDs will be updated).")
+
+                        slot_imp = st.empty()
+                        if slot_imp.button(f"Confirm Import of {len(cases_to_import)} Cases", type="primary", width="stretch", key="btn_confirm_import"):
+                            with busy_slot(slot_imp, "Importing...", key="btn_confirm_import", type="primary"):
+                                with st.spinner("Writing cases to SQLite...", show_time=True):
+                                    imported_count = 0
+                                    for item in cases_to_import:
+                                        try:
+                                            c_instance = ClinicalCase.from_dict(item)
+                                            save_case(c_instance)
+                                            imported_count += 1
+                                        except Exception:
+                                            pass
+                                    st.toast(f"Successfully imported {imported_count} cases.")
+                                    st.rerun()
                 except Exception as err:
                     st.error(f"Failed to parse uploaded backup file: {err}")
 
@@ -266,7 +295,8 @@ def render_settings_view() -> None:
                     placeholder="DELETE ALL",
                 )
                 can_delete = (confirm_typed.strip() == "DELETE ALL")
-                if st.button(
+                slot_purge = st.empty()
+                if slot_purge.button(
                     "Permanently Delete All Cases",
                     type="primary",
                     disabled=not can_delete,
@@ -274,10 +304,12 @@ def render_settings_view() -> None:
                     key="btn_purge_all_cases",
                     help="Requires exact confirmation phrase",
                 ):
-                    for meta in all_cases_meta:
-                        delete_case(meta["case_id"])
-                    st.toast("All consultation records deleted.")
-                    st.rerun()
+                    with busy_slot(slot_purge, "Purging...", key="btn_purge_all_cases", type="primary"):
+                        with st.spinner("Purging local records...", show_time=True):
+                            for meta in all_cases_meta:
+                                delete_case(meta["case_id"])
+                            st.toast("All consultation records deleted.")
+                            st.rerun()
 
         # 4. About & System Information
         with st.container(border=True):

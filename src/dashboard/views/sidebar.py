@@ -7,6 +7,7 @@ import uuid
 import streamlit as st
 
 from src.dashboard.components.case_dialogs import show_first_run_disclaimer_dialog
+from src.dashboard.components.busy import busy_slot
 from src.dashboard.components.icons import get_icon
 from src.dashboard.components.ollama_status import check_ollama_online, get_ollama_latency
 from src.dashboard.components.totality_ring import render_totality_ring
@@ -126,7 +127,7 @@ def render_sidebar_active_case_card(case: Optional[ClinicalCase]) -> None:
         width="stretch",
     ):
         st.session_state.workspace_step = curr_step
-        st.session_state.active_nav_tab = "Case Workspace"
+        st.session_state.main_tabs = "Case Workspace"
         st.rerun()
 
 
@@ -159,7 +160,7 @@ def render_sidebar_case_tray() -> None:
             """
         )
         if st.button("Open Rubric Explorer", key="sidebar_tray_open_explorer", width="stretch"):
-            st.session_state.active_nav_tab = "Rubric Explorer"
+            st.session_state.main_tabs = "Rubric Explorer"
             st.toast("Navigate to the Rubric Explorer tab to search rubrics.")
             st.rerun()
         return
@@ -206,21 +207,25 @@ def render_sidebar_case_tray() -> None:
 
     # Primary Tray Actions
     if rubrics:
-        if st.button("Repertorize This Case", type="primary", width="stretch", key="tray_repertorize_btn"):
-            pipeline = st.session_state.pipeline
-            ranked = pipeline.ranker.rank(rubrics, top_n=10)
-            report = PatientReport(
-                patient_id=f"TRAY-{uuid.uuid4().hex[:6].upper()}",
-                transcript=f"Totality compiled from {pluralize(len(rubrics), 'manually selected rubric', 'manually selected rubrics')} in Case Tray.",
-                dimensions={"case_rubrics": [r.get("path") or r.get("name") for r in rubrics]},
-                matched_rubrics=rubrics,
-                ranked_remedies=ranked,
-                search_queries=[r.get("path", "") for r in rubrics],
-            )
-            st.session_state.current_report = report
-            st.session_state.workspace_step = 4
-            st.toast("Case repertorized! Displayed in Step 4 Report.")
-            st.rerun()
+        slot_tray_rep = st.empty()
+        if slot_tray_rep.button("Repertorize This Case", type="primary", width="stretch", key="tray_repertorize_btn"):
+            with busy_slot(slot_tray_rep, "Repertorizing...", key="tray_repertorize_btn", type="primary"):
+                with st.spinner("Repertorizing tray rubrics...", show_time=True):
+                    pipeline = st.session_state.pipeline
+                    ranked = pipeline.ranker.rank(rubrics, top_n=10)
+                    report = PatientReport(
+                        patient_id=f"TRAY-{uuid.uuid4().hex[:6].upper()}",
+                        transcript=f"Totality compiled from {pluralize(len(rubrics), 'manually selected rubric', 'manually selected rubrics')} in Case Tray.",
+                        dimensions={"case_rubrics": [r.get("path") or r.get("name") for r in rubrics]},
+                        matched_rubrics=rubrics,
+                        ranked_remedies=ranked,
+                        search_queries=[r.get("path", "") for r in rubrics],
+                    )
+                    st.session_state.current_report = report
+                    st.session_state.workspace_step = 4
+                    st.session_state.main_tabs = "Case Workspace"
+                    st.toast("Case repertorized! Displayed in Step 4 Report.")
+                    st.rerun()
 
     # Clear Tray Control
     if total_items > 3:

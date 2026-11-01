@@ -9,6 +9,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from src.dashboard.components.busy import busy_slot
 from src.dashboard.components.icons import get_icon
 from src.dashboard.components.rubric_tree import render_rubric_card
 from src.dashboard.components.totality_grid import render_classical_totality_matrix
@@ -175,10 +176,12 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
                 pdf_key = f"rep_pdf_{case.case_id}_{case.updated_at}"
                 pdf_bytes = st.session_state.get(pdf_key)
                 if not pdf_bytes:
-                    if st.button("Prepare PDF Export", key="btn_prep_rep_pdf", width="stretch"):
-                        with st.spinner("Compiling PDF report..."):
-                            st.session_state[pdf_key] = generate_case_pdf(case)
-                            st.rerun()
+                    slot_pdf = st.empty()
+                    if slot_pdf.button("Prepare PDF Export", key="btn_prep_rep_pdf", width="stretch"):
+                        with busy_slot(slot_pdf, "Compiling PDF...", key="btn_prep_rep_pdf", type="secondary"):
+                            with st.spinner("Compiling PDF report...", show_time=True):
+                                st.session_state[pdf_key] = generate_case_pdf(case)
+                                st.rerun()
                 else:
                     st.download_button(
                         "Download PDF Report",
@@ -187,6 +190,7 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
                         mime="application/pdf",
                         width="stretch",
                         key="btn_rep_dl_pdf",
+                        on_click="ignore",
                     )
             st.download_button(
                 "Export Markdown",
@@ -195,6 +199,7 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
                 mime="text/markdown",
                 width="stretch",
                 key="btn_rep_dl_md",
+                on_click="ignore",
             )
         st.markdown("---")
 

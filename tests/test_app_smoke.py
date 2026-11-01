@@ -254,6 +254,7 @@ def test_smoke_chat_saved_case_single_continue_button_and_live_labels():
 def test_smoke_case_library_bulk_selection():
     """Verify Case Library renders Select All button and enables bulk selection actions."""
     at = AppTest.from_file(_APP_PATH, default_timeout=30)
+    at.session_state["main_tabs"] = "Case Library"
     at.run()
     assert not at.exception
 
