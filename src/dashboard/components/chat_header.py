@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 import streamlit as st
 
 from src.dashboard.components.icons import get_icon
+from src.dashboard.components.ollama_status import check_ollama_online
 from src.dashboard.dimensions import KENT_DIMENSIONS_ORDERED
 from src.dashboard.utils import esc, safe_rerun_fragment
 from src.data.case_store import save_case
@@ -18,6 +19,13 @@ from src.data.case_store import save_case
 if TYPE_CHECKING:
     from src.chatbot.dialogue_manager import DialogueManager
     from src.models.case import ClinicalCase
+
+__all__ = [
+    "format_chat_transcript_md",
+    "get_current_step_label",
+    "render_chat_header",
+    "render_chat_llm_badge",
+]
 
 
 def get_current_step_label(dm: DialogueManager) -> str:
@@ -72,10 +80,43 @@ def format_chat_transcript_md(dm: DialogueManager) -> str:
     return "\n".join(lines)
 
 
+@st.fragment(run_every="2s")
+def render_chat_llm_badge(dm: DialogueManager | None = None) -> None:
+    """Dynamically poll and render the live LLM engine status badge every 2s without full-page rerun."""
+    if dm is None:
+        dm = st.session_state.get("dialogue_manager")
+
+    api_base = getattr(dm, "api_base", "http://127.0.0.1:11434") if dm else "http://127.0.0.1:11434"
+    is_online = check_ollama_online(api_base)
+
+    if is_online:
+        if dm is not None and getattr(dm, "last_call_failed", False):
+            dm.last_call_failed = False
+        st.html(
+            """
+            <div style="display: flex; justify-content: flex-end; align-items: center; height: 100%;">
+                <span style="font-size: 12px; color: #10B981; display: inline-flex; align-items: center; gap: 5px; font-weight: 600;" tabindex="0" title="LLaMA 3:8B is online on 127.0.0.1:11434">
+                    <span class="status-dot"></span> LLaMA 3:8B Online
+                </span>
+            </div>
+            """
+        )
+    else:
+        st.html(
+            """
+            <div style="display: flex; justify-content: flex-end; align-items: center; height: 100%;">
+                <span style="font-size: 11.5px; color: #F59E0B; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" tabindex="0" title="Ollama daemon is offline on 127.0.0.1:11434. Run 'ollama serve' in terminal to activate LLaMA 3.">
+                    <span class="status-dot-amber"></span> Offline Fallback (ollama serve)
+                </span>
+            </div>
+            """
+        )
+
+
 def render_chat_header(
     dm: DialogueManager,
     active_case: ClinicalCase | None,
-    is_llm_online: bool,
+    is_llm_online: bool = True,
 ) -> None:
     """Render single consolidated dialogue header row."""
     col_hdr_left, col_hdr_right = st.columns([5, 6], vertical_alignment="center")
@@ -169,29 +210,5 @@ def render_chat_header(
                         safe_rerun_fragment()
 
         with c_status:
-            if is_llm_online and not getattr(dm, "last_call_failed", False):
-                st.html(
-                    """
-                    <div style="display: flex; justify-content: flex-end; align-items: center; height: 100%;">
-                        <span style="font-size: 12px; color: #10B981; display: inline-flex; align-items: center; gap: 5px; font-weight: 600;" tabindex="0" title="LLaMA 3:8B is online">
-                            <span class="status-dot"></span> LLaMA 3:8B Online
-                        </span>
-                    </div>
-                    """
-                )
-            else:
-                col_warn_txt, col_retry_btn = st.columns([2.5, 1], vertical_alignment="center")
-                with col_warn_txt:
-                    st.html(
-                        """
-                        <span style="font-size: 11.5px; color: #F59E0B; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="Scripted FSM mode active">
-                            <span class="status-dot-amber"></span> Scripted mode
-                        </span>
-                        """
-                    )
-                with col_retry_btn:
-                    if st.button("Retry", key="btn_hdr_retry_conn", help="Retry LLM connection"):
-                        dm.last_call_failed = False
-                        st.cache_data.clear()
-                        safe_rerun_fragment()
+            render_chat_llm_badge(dm)
 

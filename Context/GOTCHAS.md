@@ -254,6 +254,12 @@ In the `DONE` state, displaying UI navigation commands (like `"Proceed to Review
 - **Root Cause**: Mixing UI workflow buttons with conversational suggestions.
 - **Verified Workaround**: Provide typed terminal action options via `dm.get_action_options()` (`continue_review`, `add_detail`, `start_new`), rendered as real Streamlit buttons in the docked action bar. Suggestion chips in `DONE` state strictly contain genuine conversational replies (`"Everything looks accurate"`, etc.).
 
+### 8.15 Real-Time Daemon Polling via `@st.fragment(run_every=...)` & Bare Test Context
+When rendering dynamic hardware/daemon status indicators (e.g. Ollama online/offline badge) that must auto-update without page reloads, using `@st.fragment(run_every="2s")` allows isolated WebSocket polling every 2 seconds without disrupting chat inputs or stepper navigation.
+- **Gotcha 1 (Sticky Failure State)**: If a chat turn fails while Ollama is offline, `dm.last_call_failed = True` persists even when Ollama is started in another terminal. The polling fragment must explicitly reset `dm.last_call_failed = False` whenever `check_ollama_online()` returns `True`.
+- **Gotcha 2 (Cache Duration)**: Caching ping functions with long TTLs (e.g. 10s) delays badge responsiveness. Reduce TTL to 2s to align with polling intervals.
+- **Gotcha 3 (Testing Fragment Functions in Unit Tests)**: Streamlit's `@st.fragment` decorator returns `None` immediately if `get_script_run_ctx() is None` (bare pytest execution without an active script runner). When writing unit tests for a fragment function outside `AppTest`, invoke `getattr(func, "__wrapped__", func)(*args)` to execute the underlying logic directly.
+
 ---
 
 ## 9. Multi-Model GPU Training & HuggingFace Gotchas

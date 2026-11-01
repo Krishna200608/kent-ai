@@ -17,7 +17,7 @@ def is_ollama_online(api_base: str = "http://127.0.0.1:11434") -> bool:
 
     Tries 127.0.0.1 first to bypass Windows IPv6 resolution latency on localhost.
     """
-    candidates = ["http://127.0.0.1:11434", api_base, "http://localhost:11434"]
+    candidates = ["http://127.0.0.1:11434", api_base]
     seen: set = set()
     unique_candidates = [c for c in candidates if c and not (c in seen or seen.add(c))]
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -25,7 +25,7 @@ def is_ollama_online(api_base: str = "http://127.0.0.1:11434") -> bool:
         try:
             url = f"{base.rstrip('/')}/api/tags"
             req = urllib.request.Request(url, method="GET")
-            with opener.open(req, timeout=1.5) as resp:
+            with opener.open(req, timeout=0.4) as resp:
                 if resp.status == 200:
                     return True
         except Exception:

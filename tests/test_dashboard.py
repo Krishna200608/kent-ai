@@ -208,3 +208,94 @@ def test_dashboard_engine_options_and_pipeline():
     p_hybrid = get_pipeline(ENGINE_OPTIONS[3])
     assert isinstance(p_hybrid, HybridPipelineOrchestrator)
 
+
+def test_check_ollama_online_and_caching(monkeypatch):
+    """Verify check_ollama_online returns False in mock mode and True when server returns 200."""
+    from src.dashboard.components.ollama_status import check_ollama_online
+
+    # 1. In mock pipeline mode, always returns False
+    monkeypatch.setenv("KENT_MOCK_PIPELINE", "1")
+    assert check_ollama_online() is False
+
+    # 2. When mock mode disabled and HTTP 200 returned
+    monkeypatch.setenv("KENT_MOCK_PIPELINE", "0")
+
+    class DummyResponse:
+        status = 200
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+
+    class DummyOpener:
+        def open(self, req, timeout=None):
+            return DummyResponse()
+
+    monkeypatch.setattr("urllib.request.build_opener", lambda *args: DummyOpener())
+    # Clear cache to verify fresh call
+    import streamlit as st
+    st.cache_data.clear()
+    assert check_ollama_online("http://127.0.0.1:11434") is True
+
+
+def test_render_chat_llm_badge_dynamic(monkeypatch):
+    """Verify render_chat_llm_badge auto-resets last_call_failed and renders online vs offline fallback HTML."""
+    import streamlit as st
+    from src.chatbot.dialogue_manager import DialogueManager
+    from src.dashboard.components.chat_header import render_chat_llm_badge
+
+    dm = DialogueManager()
+    dm.last_call_failed = True
+
+    html_captured = []
+    monkeypatch.setattr(st, "html", lambda h, **kw: html_captured.append(h))
+
+    # Case 1: Ollama is online -> clears last_call_failed and displays LLaMA 3:8B Online
+    monkeypatch.setattr("src.dashboard.components.chat_header.check_ollama_online", lambda *args, **kw: True)
+    fn = getattr(render_chat_llm_badge, "__wrapped__", render_chat_llm_badge)
+    fn(dm)
+
+    assert dm.last_call_failed is False
+    assert len(html_captured) == 1
+    assert "LLaMA 3:8B Online" in html_captured[0]
+    assert "status-dot" in html_captured[0]
+
+    # Case 2: Ollama is offline -> displays Offline Fallback
+    html_captured.clear()
+    monkeypatch.setattr("src.dashboard.components.chat_header.check_ollama_online", lambda *args, **kw: False)
+    fn(dm)
+
+    assert len(html_captured) == 1
+    assert "Offline Fallback (ollama serve)" in html_captured[0]
+    assert "status-dot-amber" in html_captured[0]
+
+
+def test_render_header_dynamic(monkeypatch):
+    """Verify top brand header renders dynamic online and offline status pills with auto-reset."""
+    import streamlit as st
+    from src.chatbot.dialogue_manager import DialogueManager
+    from src.dashboard.views.header import render_header
+
+    dm = DialogueManager()
+    dm.last_call_failed = True
+    st.session_state["dialogue_manager"] = dm
+
+    html_captured = []
+    monkeypatch.setattr(st, "html", lambda h, **kw: html_captured.append(h))
+    fn = getattr(render_header, "__wrapped__", render_header)
+
+    # Case 1: Online
+    monkeypatch.setattr("src.dashboard.views.header.check_ollama_online", lambda *args, **kw: True)
+    fn()
+
+    assert dm.last_call_failed is False
+    assert len(html_captured) == 1
+    assert "LLaMA 3:8B Online" in html_captured[0]
+
+    # Case 2: Offline
+    html_captured.clear()
+    monkeypatch.setattr("src.dashboard.views.header.check_ollama_online", lambda *args, **kw: False)
+    fn()
+
+    assert len(html_captured) == 1
+    assert "Offline Fallback (ollama serve)" in html_captured[0]
+
+

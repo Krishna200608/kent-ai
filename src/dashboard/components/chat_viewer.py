@@ -23,6 +23,7 @@ from src.dashboard.components.chat_header import (
 )
 from src.dashboard.components.chat_messages import render_chat_messages
 from src.dashboard.components.icons import get_icon
+from src.dashboard.components.ollama_status import check_ollama_online, ollama_online
 from src.dashboard.components.symptom_strip import (
     render_slot_badges,
     render_slot_badges_html,
@@ -54,35 +55,6 @@ __all__ = [
 ]
 
 format_chat_transcript = format_chat_transcript_md
-
-
-@st.cache_data(ttl=10, show_spinner=False)
-def check_ollama_online(api_base: str = "http://127.0.0.1:11434") -> bool:
-    """Direct HTTP ping to check if local Ollama daemon is active and responding.
-
-    Checks 127.0.0.1 (IPv4) first to bypass Windows IPv6 resolution latency.
-    Bypasses system proxies for local addresses. Cached for 10s to eliminate latency.
-    """
-    if os.environ.get("KENT_MOCK_PIPELINE", "0") == "1":
-        return False
-
-    candidates = ["http://127.0.0.1:11434", api_base, "http://localhost:11434"]
-    seen = set()
-    unique_candidates = [c for c in candidates if c and not (c in seen or seen.add(c))]
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-    for base in unique_candidates:
-        try:
-            url = f"{base.rstrip('/')}/api/tags"
-            req = urllib.request.Request(url, method="GET")
-            with opener.open(req, timeout=1.5) as resp:
-                if resp.status == 200:
-                    return True
-        except Exception:
-            continue
-    return False
-
-
-ollama_online = check_ollama_online
 
 
 def render_chat_interface(dm: DialogueManager) -> None:
