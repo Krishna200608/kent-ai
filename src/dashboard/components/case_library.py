@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 import logging
 import math
+import time
 from typing import Any, Dict, List, Optional
 import streamlit as st
 
@@ -141,6 +142,28 @@ def _on_click_load_demo() -> None:
     st.session_state.main_tabs = "Case Workspace"
     st.toast("Loaded demonstration clinical case.")
 
+
+@st.dialog("Confirm Permanent Deletion")
+def _confirm_delete_case_dialog(cid_to_del: str) -> None:
+    """Confirm single case deletion with 10s+ undo capability."""
+    st.markdown(
+        f"Are you sure you want to permanently delete case **`{esc(cid_to_del)}`**?<br>"
+        "This will remove the consultation records from local SQLite storage.",
+        unsafe_allow_html=True,
+    )
+    c_del_yes, c_del_no = st.columns([1.2, 1])
+    with c_del_yes:
+        if st.button("Delete Permanently", type="primary", width="stretch", key=f"dlg_del_yes_{cid_to_del}"):
+            case_obj = get_case(cid_to_del)
+            if case_obj:
+                st.session_state["_last_deleted_case"] = (case_obj, time.time())
+            delete_case(cid_to_del)
+            st.toast(f"Deleted {cid_to_del}. You can undo this action.")
+            st.rerun()
+    with c_del_no:
+        if st.button("Cancel", width="stretch", key=f"dlg_del_no_{cid_to_del}"):
+            st.rerun()
+
 def render_case_library(current_case: ClinicalCase) -> None:
     """Render patient cases library with search, filtering, pagination, table view, and bulk actions."""
     all_cases = list_cases(limit=300)
@@ -168,6 +191,23 @@ def render_case_library(current_case: ClinicalCase) -> None:
     ]
     non_blank_cases = [c for c in all_cases if c not in blank_cases]
     blank_count = len(blank_cases)
+
+    # 1.5. Undo Banner for Single Case Deletion
+    last_deleted = st.session_state.get("_last_deleted_case")
+    if last_deleted:
+        del_case, del_time = last_deleted
+        if time.time() - del_time < 30.0:
+            c_undo_msg, c_undo_act = st.columns([4, 1.2], vertical_alignment="center")
+            with c_undo_msg:
+                st.info(f"Case {del_case.case_id} was deleted.", icon=":material/info:")
+            with c_undo_act:
+                if st.button("Undo Delete", key="btn_undo_del_single", type="primary", width="stretch"):
+                    save_case(del_case)
+                    st.session_state.pop("_last_deleted_case", None)
+                    st.toast(f"Restored case {del_case.case_id}.")
+                    st.rerun()
+        else:
+            st.session_state.pop("_last_deleted_case", None)
 
     # 2. Main Search & "+ New Case" Toolbar Row
     col_search, col_demo, col_new = st.columns([3.5, 1.3, 1.2], vertical_alignment="bottom")
@@ -584,16 +624,12 @@ def render_case_library(current_case: ClinicalCase) -> None:
                                     st.toast(f"Archived {cid}.")
                                     st.rerun()
 
-                            # Delete action
-                            confirm_del = st.checkbox("Confirm deletion", key=f"chk_del_{cid}")
+                            # Delete action (opens st.dialog confirmation with undo)
                             if st.button(
                                 "Delete Case",
                                 key=f"btn_del_{cid}",
-                                type="primary" if confirm_del else "secondary",
-                                disabled=not confirm_del,
+                                type="secondary",
                                 width="stretch",
                                 help="Permanently delete this case from the database",
                             ):
-                                delete_case(cid)
-                                st.toast(f"Deleted {cid}.")
-                                st.rerun()
+                                _confirm_delete_case_dialog(cid)
