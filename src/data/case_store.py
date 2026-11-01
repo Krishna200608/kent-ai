@@ -221,16 +221,23 @@ def list_cases(limit: int = 50, db_path: Optional[Union[str, Path]] = None) -> L
                 except Exception:
                     pass
 
+            demo_parts = []
+            if r["patient_age"]:
+                demo_parts.append(f"{r['patient_age']}y")
+            if r["patient_sex"] and r["patient_sex"] != "Unspecified":
+                demo_parts.append(r["patient_sex"][0].upper())
+            demo_str = " ".join(demo_parts)
+
             summaries.append({
                 "case_id": r["case_id"],
                 "patient_name": r["patient_name"],
-                "demographics": f"{r['patient_age'] or '?'}{r['patient_sex'][0] if r['patient_sex'] else ''}",
+                "demographics": demo_str,
                 "chief_complaint": r["chief_complaint"],
                 "status": r["status"],
                 "updated_at": r["updated_at"],
                 "dimensions_captured": dim_count,
                 "total_symptoms": total_symptoms,
-                "top_remedy": top_remedy or "—",
+                "top_remedy": top_remedy or "",
             })
 
         return summaries

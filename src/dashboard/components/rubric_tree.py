@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 import streamlit as st
 
 from src.dashboard.components.icons import get_icon
+from src.dashboard.constants import format_rubric_path
 from src.dashboard.dimensions import pluralize
 from src.data.kent_db import KentDB
 
@@ -48,20 +49,20 @@ def render_rubric_card(
     sim = rubric.get("similarity")
     remedy_count = rubric.get("remedy_count", 0)
 
-    # Format hierarchy path into prefix and leaf symptom
-    clean_path = str(path)
-    if ">" in clean_path:
-        parts = clean_path.split(">")
-        prefix = " > ".join(p.strip() for p in parts[:-1])
+    # Format hierarchy path into prefix and leaf symptom with ' › ' breadcrumbs
+    formatted_path = format_rubric_path(path)
+    if " › " in formatted_path:
+        parts = formatted_path.split(" › ")
+        prefix = " › ".join(p.strip() for p in parts[:-1])
         leaf = parts[-1].strip()
     else:
         prefix = ""
-        leaf = clean_path
+        leaf = formatted_path
 
     # Omit MIND chapter prefix when viewing within single chapter scope
     disp_prefix = prefix
-    if omit_chapter_prefix and (prefix == "MIND" or prefix.startswith("MIND >")):
-        disp_prefix = prefix[4:].lstrip(" >").strip()
+    if omit_chapter_prefix and (prefix == "MIND" or prefix.startswith("MIND ›")):
+        disp_prefix = prefix[4:].lstrip(" ›").strip()
 
     # Query highlighting for hierarchy
     high_prefix = highlight_query_words(disp_prefix, query) if disp_prefix else ""

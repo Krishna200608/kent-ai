@@ -1,15 +1,39 @@
 :root {
-    --accent: #10B981;
-    --accent-hover: #059669;
-    --on-accent: #FFFFFF;
-    --text-1: #F9FAFB;
-    --text-2: #D1D5DB;
-    --text-3: #9CA3AF;
-    --surface-0: #0B0F17;
-    --surface-1: #111827;
-    --surface-2: #1F2937;
-    --border: rgba(255, 255, 255, 0.08);
-    --focus: #38BDF8;
+    --bg: #0B1117;
+    --surface: #121A23;
+    --surface-2: #182330;
+    --line: #243243;
+    --text: #E8EDF3;
+    --text-muted: #A3B0C2;     /* ≥4.5:1 on all surfaces */
+    --text-faint: #8A98AE;     /* decorative/secondary only */
+    --accent: #10B981;         /* primary actions + "captured/online" state ONLY */
+    --accent-hover: #34D399;
+    --accent-ink: #03160F;     /* text ON accent fills (≈7:1) */
+    --accent-soft: rgba(16, 185, 129, 0.14);
+    --info: #5BB8F0;
+    --warn: #F5B94A;
+    --danger: #F26D6D;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-rubric: "Source Serif 4", Georgia, "Times New Roman", serif;
+
+    /* Legacy mappings for backward-compatibility */
+    --surface-0: var(--bg);
+    --surface-1: var(--surface);
+    --border: var(--line);
+    --on-accent: var(--accent-ink);
+    --focus: var(--accent);
+    --text-1: var(--text);
+    --text-2: var(--text-muted);
+    --text-3: var(--text-faint);
 }
 
 /* Accessible focus ring for keyboard navigation (WCAG 2.1 AA) */
@@ -20,8 +44,24 @@ select:focus-visible,
 [role="button"]:focus-visible,
 [role="tab"]:focus-visible,
 [tabindex]:focus-visible {
-    outline: 2px solid var(--focus) !important;
+    outline: 2px solid var(--accent) !important;
     outline-offset: 2px !important;
+}
+
+/* Remove default browser/Streamlit blue focus rings */
+input:focus,
+textarea:focus,
+[data-baseweb="input"] input:focus,
+[data-baseweb="textarea"] textarea:focus,
+.stChatInput textarea:focus {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 1px var(--accent) !important;
+    outline: none !important;
+}
+
+/* Hide Streamlit auto-anchor header action link icons */
+[data-testid="stHeaderActionElements"] {
+    display: none !important;
 }
 
 /* Reduced motion preference for clinical accessibility */
@@ -692,36 +732,41 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.st-key-report_card):hover {
 }
 
 .stTabs [data-baseweb="tab-list"] {
-    gap: 8px;
-    background-color: rgba(17, 24, 39, 0.7);
-    padding: 8px 10px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 4px;
+    background-color: var(--surface);
+    padding: 6px 8px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line);
     margin-bottom: 16px;
 }
 
 .stTabs [data-baseweb="tab"] {
-    height: 42px;
-    border-radius: 8px !important;
-    color: #9CA3AF !important;
+    height: 40px;
+    border-radius: 0 !important;
+    color: var(--text-muted) !important;
     font-size: 14px !important;
-    font-weight: 600 !important;
-    padding: 0 18px !important;
-    border: 1px solid transparent !important;
-    transition: all 0.2s ease !important;
+    font-weight: 500 !important;
+    padding: 10px 16px !important;
+    border: none !important;
+    border-bottom: 2px solid transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transition: color 0.15s ease, border-color 0.15s ease !important;
 }
 
 .stTabs [data-baseweb="tab"]:hover {
-    color: #F9FAFB !important;
-    background: rgba(255, 255, 255, 0.05) !important;
+    color: var(--text) !important;
+    background: transparent !important;
+    border-bottom: 2px solid var(--line) !important;
 }
 
 .stTabs [aria-selected="true"] {
-    background: rgba(16, 185, 129, 0.18) !important;
-    color: #10B981 !important;
+    background: transparent !important;
+    color: var(--text) !important;
     font-weight: 700 !important;
-    border: 1px solid rgba(16, 185, 129, 0.45) !important;
-    box-shadow: 0 2px 10px rgba(16, 185, 129, 0.2) !important;
+    border: none !important;
+    border-bottom: 2px solid var(--accent) !important;
+    box-shadow: none !important;
 }
 
 .stitch-metric {
@@ -1387,12 +1432,62 @@ button:disabled:hover,
     }
 }
 
-/* Touch-friendly chips & quick-reply pills (WP-C2) */
+/* Touch-friendly chips & quick-reply pills (WP-C2 & Phase 1) */
+div[data-testid="stPills"],
+div[data-testid="stPills"] > div,
+.stPills {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+}
+
 div[data-testid="stPills"] button,
 .stPills button {
-    min-height: 40px !important;
-    padding: 8px 14px !important;
+    min-height: 38px !important;
+    padding: 6px 14px !important;
     font-size: 13px !important;
+    border-radius: 9999px !important;
+}
+
+/* Primary Buttons (Phase 1 Tokens & Discipline) */
+.stButton > button[kind="primary"],
+button[data-testid="baseButton-primary"] {
+    background-color: var(--accent) !important;
+    color: var(--accent-ink) !important;
+    border: 1px solid var(--accent) !important;
+    font-weight: 600 !important;
+    border-radius: var(--radius-sm) !important;
+    transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease !important;
+}
+
+.stButton > button[kind="primary"]:hover:not(:disabled),
+button[data-testid="baseButton-primary"]:hover:not(:disabled) {
+    background-color: var(--accent-hover) !important;
+    border-color: var(--accent-hover) !important;
+    color: var(--accent-ink) !important;
+}
+
+.stButton > button[kind="primary"]:active:not(:disabled),
+button[data-testid="baseButton-primary"]:active:not(:disabled) {
+    background-color: var(--accent) !important;
+    transform: translateY(1px);
+}
+
+.stButton > button[kind="primary"]:disabled,
+button[data-testid="baseButton-primary"]:disabled {
+    background-color: var(--surface-2) !important;
+    border-color: var(--line) !important;
+    color: var(--text-faint) !important;
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+}
+
+/* Stepper & Case Bar z-index fix to prevent tooltip clipping */
+.persistent-case-bar {
+    min-height: 52px;
+    overflow: visible !important;
+    position: relative;
+    z-index: 20;
 }
 
 

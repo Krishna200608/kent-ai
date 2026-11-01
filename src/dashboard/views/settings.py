@@ -5,6 +5,7 @@ from __future__ import annotations
 import streamlit as st
 
 from src.dashboard.components.icons import get_icon
+from src.dashboard.constants import GRADE_WEIGHTS, MODEL_DISPLAY_NAME
 
 
 def render_settings_view() -> None:
@@ -22,8 +23,11 @@ def render_settings_view() -> None:
                 </div>
                 """
             )
+            w3 = GRADE_WEIGHTS.get(3, 3.0)
+            w2 = GRADE_WEIGHTS.get(2, 2.0)
+            w1 = GRADE_WEIGHTS.get(1, 1.0)
             st.markdown(
-                """
+                f"""
                 Classical homeopathic repertorization adheres to the hierarchical evaluation of symptoms established by Dr. James Tyler Kent:
                 
                 1. **Mental & Emotional Generals (Paramount)**: Will, affections, memory, intellect, anxiety, grief, and fears.
@@ -31,9 +35,9 @@ def render_settings_view() -> None:
                 3. **Particular Symptoms (Localities)**: Specific bodily organs, sensations, and local modalities.
                 
                 **Totality Scoring Formula:**
-                - Grade 3 (Bold): **3.0×** weighting (confirmed by multiple provers & clinical cures)
-                - Grade 2 (Italics): **2.0×** weighting (qualified by clinical observation)
-                - Grade 1 (Roman): **1.0×** weighting (occasional prover observation)
+                - Grade 3 (Bold): **{w3:.1f}×** weighting (confirmed by multiple provers & clinical cures)
+                - Grade 2 (Italics): **{w2:.1f}×** weighting (qualified by clinical observation)
+                - Grade 1 (Roman): **{w1:.1f}×** weighting (occasional prover observation)
                 - Specificity Multiplier: Evaluated via inverse rubric frequency, granting higher value to uncommon, characteristic keynotes.
                 """
             )
@@ -49,13 +53,13 @@ def render_settings_view() -> None:
                 """
             )
             st.markdown(
-                """
+                f"""
                 Kent-AI integrates specialized biomedical language models fine-tuned on 15-class BIO token classification:
                 
                 - **BioLinkBERT-Base (110M)**: Pretrained on PubMed citation graphs. Evaluated at ~18ms latency with high token precision.
                 - **PubMedBERT (110M)**: Biomedical domain-specific vocabulary achieving 41.56% Recall@20 on held-out clinical cases.
                 - **4-Encoder Ensemble (414M)**: Majority voting across BioLinkBERT, PubMedBERT, Bio_ClinicalBERT, and DeBERTa-v3.
-                - **Two-Stage Hybrid**: High-recall ensemble extraction paired with LLaMA 3.1 8B contextual arbitration.
+                - **Two-Stage Hybrid**: High-recall ensemble extraction paired with {MODEL_DISPLAY_NAME} contextual arbitration.
                 """
             )
 

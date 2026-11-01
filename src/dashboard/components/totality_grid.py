@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 import streamlit as st
 
 from src.dashboard.components.icons import get_icon
+from src.dashboard.constants import format_rubric_path
 from src.dashboard.utils import esc
 from src.data.case_store import save_case
 from src.data.kent_db import KentDB
@@ -110,7 +111,7 @@ def render_classical_totality_matrix(
             changed = False
             for r in rubrics:
                 r_id = int(r.get("rubric_id") or r.get("id"))
-                r_path = r.get("path", f"Rubric #{r_id}")
+                r_path = format_rubric_path(r.get("path", f"Rubric #{r_id}"))
                 is_muted = r_id in (case.muted_rubric_ids or [])
                 is_elim = r_id in (case.eliminatory_rubric_ids or [])
 
@@ -167,16 +168,17 @@ def render_classical_totality_matrix(
     for idx, r in enumerate(rubrics, start=1):
         r_id = int(r.get("rubric_id") or r.get("id"))
         full_path = r.get("path") or f"Rubric #{r_id}"
+        formatted_path = format_rubric_path(full_path)
         sim = r.get("similarity", 1.0)
 
         # Hierarchical Breadcrumbs
-        parts = [p.strip() for p in full_path.split(">")]
+        parts = [p.strip() for p in formatted_path.split(" › ")]
         if len(parts) > 1:
-            crumb_prefix = " &rsaquo; ".join(esc(p) for p in parts[:-1])
+            crumb_prefix = " › ".join(esc(p) for p in parts[:-1])
             crumb_leaf = esc(parts[-1])
             breadcrumb_html = f'<div style="font-size: 11px; color: #9CA3AF;">{crumb_prefix}</div><div style="font-size: 12px; font-weight: 700; color: #F9FAFB;">{crumb_leaf}</div>'
         else:
-            breadcrumb_html = f'<div style="font-size: 12px; font-weight: 700; color: #F9FAFB;">{esc(full_path)}</div>'
+            breadcrumb_html = f'<div style="font-size: 12px; font-weight: 700; color: #F9FAFB;">{esc(formatted_path)}</div>'
 
         # Badges
         status_badges = []

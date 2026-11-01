@@ -12,6 +12,7 @@ import streamlit as st
 from src.config import get_project_root
 from src.chatbot.dialogue_manager import DialogueManager
 from src.data.kent_db import KentDB
+from src.dashboard.constants import MODEL_DISPLAY_NAME
 from src.data.case_store import generate_case_id
 from src.models.case import ClinicalCase
 from src.models.symptom_ner import SymptomNER
@@ -29,7 +30,7 @@ ENGINE_OPTIONS = [
     "BioLinkBERT Fast Mode (~18ms)",
     "PubMedBERT (Top Rubric Alignment)",
     "Multi-Model Ensemble (4 Encoders, Majority Voting)",
-    "Two-Stage Hybrid (Ensemble Mining + LLaMA 3 Arbitration)",
+    "Two-Stage Hybrid (Ensemble Mining + " + MODEL_DISPLAY_NAME + " Arbitration)",
 ]
 
 

@@ -32,15 +32,12 @@ def render_materia_medica_view(db: KentDB) -> None:
                     st.session_state.rem_filter_text = "Lach"
                 rem_search = st.text_input(
                     "Filter Remedy by Name or Abbreviation:",
-                    value=st.session_state.rem_filter_text,
-                    key="rem_input_widget",
+                    key="rem_filter_text",
                     placeholder="e.g. 'Lach', 'Phos', 'Nux-v', 'Ars', 'Acon'...",
                 )
-                st.session_state.rem_filter_text = rem_search
             with col_rem_clear:
                 if st.button("✕ Clear", help="Clear remedy search filter", width="stretch"):
                     st.session_state.rem_filter_text = ""
-                    st.session_state.rem_input_widget = ""
                     st.rerun()
             with col_rem_toggle:
                 prioritize_mind = st.checkbox(

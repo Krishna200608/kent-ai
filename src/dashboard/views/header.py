@@ -6,6 +6,7 @@ import streamlit as st
 
 from src.dashboard.components.icons import get_icon
 from src.dashboard.components.ollama_status import check_ollama_online
+from src.dashboard.constants import MODEL_DISPLAY_NAME
 from src.models.case import ClinicalCase
 
 
@@ -24,7 +25,7 @@ def render_header() -> None:
     if is_llm_online and dm is not None and getattr(dm, "last_call_failed", False):
         dm.last_call_failed = False
 
-    llm_desc = "LLaMA 3:8B Online" if is_llm_online else "Offline Fallback (ollama serve)"
+    llm_desc = f"{MODEL_DISPLAY_NAME} Online" if is_llm_online else "Offline Fallback (ollama serve)"
 
     tooltip_text = (
         f"Active Scope: {active_scope} | "

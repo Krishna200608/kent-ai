@@ -11,6 +11,7 @@ import streamlit as st
 
 from src.dashboard.components.case_bulk_actions import render_bulk_action_bar
 from src.dashboard.components.icons import get_icon
+from src.dashboard.components.totality_ring import totality_ring
 from src.dashboard.pdf_exporter import generate_case_pdf
 from src.dashboard.utils import esc
 from src.data.case_store import (
@@ -238,6 +239,14 @@ def render_case_library(current_case: ClinicalCase) -> None:
                 )
 
             with col_info:
+                demo_chip = f" &middot; {esc(c_info['demographics'])}" if c_info.get("demographics") else ""
+                top_rem = c_info.get("top_remedy")
+                lead_rem_html = (
+                    f"Leading Remedy: <b>{esc(top_rem)}</b>"
+                    if (top_rem and top_rem != "—")
+                    else "<span style='color: #8A98AE;'>Not analysed yet</span>"
+                )
+
                 st.html(
                     f"""
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
@@ -246,11 +255,13 @@ def render_case_library(current_case: ClinicalCase) -> None:
                         {active_badge}
                     </div>
                     <div style="font-size: 12px; color: #9CA3AF; margin-bottom: 6px;">
-                        <b>{esc(c_info['patient_name'])}</b> &middot; {esc(c_info['demographics'])} &middot; <code>{esc(cid)}</code> &middot; Updated {esc(rel_time)}
+                        <b>{esc(c_info['patient_name'])}</b>{demo_chip} &middot; <code>{esc(cid)}</code> &middot; Updated <span title="{esc(c_info['updated_at'])}">{esc(rel_time)}</span>
                     </div>
-                    <div style="font-size: 11.5px; color: #D1D5DB; display: flex; gap: 14px; flex-wrap: wrap;">
-                        <span>Totality: <b>{dims_count}/7</b> dimensions ({c_info.get('total_symptoms', 0)} symptoms)</span>
-                        <span>Leading Remedy: <b>{esc(c_info.get('top_remedy', '—'))}</b></span>
+                    <div style="font-size: 11.5px; color: #D1D5DB; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                        <span style="display: inline-flex; align-items: center; gap: 6px;">
+                            {totality_ring(dims_count, size=18)} Totality: <b>{dims_count}/7</b> dimensions ({c_info.get('total_symptoms', 0)} symptoms)
+                        </span>
+                        <span>{lead_rem_html}</span>
                     </div>
                     """
                 )

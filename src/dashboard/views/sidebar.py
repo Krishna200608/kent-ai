@@ -6,6 +6,7 @@ import uuid
 import streamlit as st
 
 from src.dashboard.components.icons import get_icon
+from src.dashboard.constants import format_rubric_path
 from src.dashboard.dimensions import pluralize
 from src.dashboard.session import ENGINE_OPTIONS, get_pipeline
 from src.models.case import ClinicalCase
@@ -47,7 +48,8 @@ def render_sidebar_case_tray():
         for idx, r in enumerate(rubrics):
             col_r_txt, col_r_del = st.columns([5, 1])
             with col_r_txt:
-                r_name = r.get("path") or r.get("name", "Rubric")
+                raw_name = r.get("path") or r.get("name", "Rubric")
+                r_name = format_rubric_path(raw_name)
                 if len(r_name) > 34:
                     r_name = "..." + r_name[-31:]
                 st.markdown(f"<span style='font-size: 11.5px; color: #E5E7EB;'>&bull; {r_name}</span>", unsafe_allow_html=True)
@@ -122,12 +124,9 @@ def render_sidebar():
             "MIND Chapter Focus (4,933 rubrics)",
             "All 37 Chapters (74,513 rubrics)",
         ]
-        curr_scope = st.session_state.get("repertory_scope", scope_options[0])
-        default_idx = 0 if "MIND" in curr_scope else 1
         new_scope = st.radio(
             "Repertory Scope Control",
             scope_options,
-            index=default_idx,
             key="repertory_scope",
             label_visibility="collapsed",
             help="Single source of truth for intake analysis and repertorization across all workspaces.",
@@ -161,7 +160,6 @@ def render_sidebar():
 
             st.toggle(
                 "Developer telemetry",
-                value=st.session_state.get("show_dev_details", False),
                 key="show_dev_details",
                 help="Toggle low-level system latency, rubric IDs, and model details.",
             )

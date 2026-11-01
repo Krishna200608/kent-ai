@@ -9,6 +9,7 @@ from __future__ import annotations
 import streamlit as st
 
 from src.dashboard.components.icons import get_icon
+from src.dashboard.components.totality_ring import totality_ring
 from src.dashboard.utils import esc
 from src.data.case_store import save_case
 from src.models.case import ClinicalCase
@@ -23,6 +24,14 @@ def render_case_bar(case: ClinicalCase) -> None:
     has_report = case.report_data is not None or st.session_state.get("current_report") is not None
     ready_for_repertorization = case.is_ready_for_repertorization
 
+    # Demographics formatting without leaking '?' or bare '—'
+    demo_parts = []
+    if case.patient_age:
+        demo_parts.append(f"{case.patient_age}y")
+    if case.patient_sex and case.patient_sex != "Unspecified":
+        demo_parts.append(case.patient_sex)
+    demo_html = f" &middot; {esc(' '.join(demo_parts))}" if demo_parts else ""
+
     # Row 1: Case context banner + Quick Actions (Patient Info popover, Save Case button)
     col_case_meta, col_case_actions = st.columns([7, 3], vertical_alignment="center")
 
@@ -36,10 +45,11 @@ def render_case_bar(case: ClinicalCase) -> None:
                         <span style="font-weight: 700; letter-spacing: 0.02em;">{esc(case.case_id)}</span>
                     </div>
                     <div class="case-demographics">
-                        <b>{esc(case.patient_name)}</b> &middot; {esc(case.patient_age or '—')} {esc(case.patient_sex or '')}
+                        <b>{esc(case.patient_name)}</b>{demo_html}
                     </div>
-                    <div class="case-totality-pill" tabindex="0" aria-label="{filled_dims} of 7 Kentian symptom dimensions recorded" data-tip="{filled_dims} of 7 Kentian symptom dimensions recorded" title="{filled_dims} of 7 Kentian symptom dimensions recorded">
-                        <span class="status-dot"></span> Totality: <b>{filled_dims}/7</b>
+                    <div class="case-totality-pill" tabindex="0" aria-label="{filled_dims} of 7 Kentian symptom dimensions recorded" title="{filled_dims} of 7 Kentian symptom dimensions recorded" style="display: inline-flex; align-items: center; gap: 6px;">
+                        {totality_ring(case, size=18)}
+                        <span>Totality: <b>{filled_dims}/7</b></span>
                     </div>
                     {f'<div class="case-rubrics-pill">{rubrics_count} Rubrics</div>' if rubrics_count else ''}
                 </div>
@@ -90,7 +100,7 @@ def render_case_bar(case: ClinicalCase) -> None:
             with st_cols[idx]:
                 is_active = (current_step == step_num)
                 btn_type = "primary" if is_active else "secondary"
-                display_label = step_label if is_enabled else f"{step_label} [Locked]"
+                display_label = step_label
                 if st.button(
                     display_label,
                     type=btn_type,
@@ -101,8 +111,5 @@ def render_case_bar(case: ClinicalCase) -> None:
                 ):
                     st.session_state.workspace_step = step_num
                     st.rerun()
-
-    if not ready_for_repertorization:
-        st.caption("Complete Review to unlock Analysis.")
 
     st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)

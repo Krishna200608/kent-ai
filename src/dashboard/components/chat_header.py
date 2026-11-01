@@ -12,6 +12,7 @@ import streamlit as st
 
 from src.dashboard.components.icons import get_icon
 from src.dashboard.components.ollama_status import check_ollama_online
+from src.dashboard.constants import MODEL_DISPLAY_NAME
 from src.dashboard.dimensions import KENT_DIMENSIONS_ORDERED
 from src.dashboard.utils import esc, safe_rerun_fragment
 from src.data.case_store import save_case
@@ -93,10 +94,10 @@ def render_chat_llm_badge(dm: DialogueManager | None = None) -> None:
         if dm is not None and getattr(dm, "last_call_failed", False):
             dm.last_call_failed = False
         st.html(
-            """
+            f"""
             <div style="display: flex; justify-content: flex-end; align-items: center; height: 100%;">
-                <span style="font-size: 12px; color: #10B981; display: inline-flex; align-items: center; gap: 5px; font-weight: 600;" tabindex="0" title="LLaMA 3:8B is online on 127.0.0.1:11434">
-                    <span class="status-dot"></span> LLaMA 3:8B Online
+                <span style="font-size: 12px; color: #10B981; display: inline-flex; align-items: center; gap: 5px; font-weight: 600;" tabindex="0" title="{esc(MODEL_DISPLAY_NAME)} is online on 127.0.0.1:11434">
+                    <span class="status-dot"></span> {esc(MODEL_DISPLAY_NAME)} Online
                 </span>
             </div>
             """

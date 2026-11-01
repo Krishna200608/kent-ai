@@ -7,6 +7,7 @@ from src.data.kent_db import KentDB
 from src.pipeline.orchestrator import PatientReport
 from src.dashboard.components.chat_viewer import render_slot_badges
 from src.dashboard.components.rubric_tree import render_rubric_card
+from src.dashboard.constants import MODEL_DISPLAY_NAME
 
 
 def test_kent_db_get_remedy_rubrics():
@@ -255,7 +256,7 @@ def test_render_chat_llm_badge_dynamic(monkeypatch):
 
     assert dm.last_call_failed is False
     assert len(html_captured) == 1
-    assert "LLaMA 3:8B Online" in html_captured[0]
+    assert f"{MODEL_DISPLAY_NAME} Online" in html_captured[0]
     assert "status-dot" in html_captured[0]
 
     # Case 2: Ollama is offline -> displays Offline Fallback
@@ -288,7 +289,7 @@ def test_render_header_dynamic(monkeypatch):
 
     assert dm.last_call_failed is False
     assert len(html_captured) == 1
-    assert "LLaMA 3:8B Online" in html_captured[0]
+    assert f"{MODEL_DISPLAY_NAME} Online" in html_captured[0]
 
     # Case 2: Offline
     html_captured.clear()
