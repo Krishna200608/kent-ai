@@ -165,3 +165,45 @@ def test_phase3_get_ollama_latency(monkeypatch):
     assert online is False
     assert lat == 0
 
+
+def test_phase4_case_snapshot_component():
+    """Verify Case Snapshot rail component is defined and callable."""
+    from src.dashboard.components.case_snapshot import render_case_snapshot
+    assert callable(render_case_snapshot)
+
+
+def test_phase4_step_aware_neutral_suggestions():
+    """Verify neutral step-aware suggestion config map and suppression in practitioner mode."""
+    import streamlit as st
+    from src.chatbot.dialogue_manager import DialogueManager
+    from src.dashboard.components.chat_chips import (
+        NEUTRAL_STEP_SUGGESTIONS,
+        render_quick_reply_chips,
+    )
+
+    assert "GREETING" in NEUTRAL_STEP_SUGGESTIONS
+    assert "LOCATION" in NEUTRAL_STEP_SUGGESTIONS
+    assert "SENSATION" in NEUTRAL_STEP_SUGGESTIONS
+    assert "MODALITY" in NEUTRAL_STEP_SUGGESTIONS
+    assert "TEMPORAL" in NEUTRAL_STEP_SUGGESTIONS
+    assert "MENTAL" in NEUTRAL_STEP_SUGGESTIONS
+
+    greeting_suggs = NEUTRAL_STEP_SUGGESTIONS["GREETING"]
+    assert "I'd like to describe how I feel" in greeting_suggs
+    assert "I have a physical complaint" in greeting_suggs
+    assert "It's mostly emotional" in greeting_suggs
+
+    dm = DialogueManager()
+
+    # When Speaking as = Practitioner, chips must be hidden
+    dm.set_intake_mode("practitioner")
+    chips = render_quick_reply_chips(dm)
+    assert chips is None
+
+    # When show_suggested_replies is False, chips must be hidden
+    dm.set_intake_mode("patient")
+    st.session_state["show_suggested_replies"] = False
+    chips = render_quick_reply_chips(dm)
+    assert chips is None
+
+

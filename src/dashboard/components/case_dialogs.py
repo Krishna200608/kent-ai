@@ -99,3 +99,4 @@ def show_first_run_disclaimer_dialog() -> None:
         st.session_state["has_acknowledged_disclaimer"] = True
         st.toast("Acknowledgement recorded.")
         st.rerun()
+

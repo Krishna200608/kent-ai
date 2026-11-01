@@ -1738,6 +1738,226 @@ button[data-testid="baseButton-primary"]:disabled {
     z-index: 20;
 }
 
+/* ========================================================= */
+/* Phase 4: Case Workspace, Snapshot Rail & Chat Polish      */
+/* ========================================================= */
+
+/* Case Snapshot Header */
+.case-snapshot-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line, #243243);
+}
+
+/* Snapshot Row States */
+.snapshot-row {
+    padding: 7px 10px;
+    border-radius: 6px;
+    background: var(--surface-2, #182330);
+    border: 1px solid var(--line, #243243);
+    margin-bottom: 5px;
+    transition: border-color 0.15s ease;
+}
+
+.snapshot-row.state-captured {
+    border-color: rgba(16, 185, 129, 0.4);
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.snapshot-row.state-low-confidence {
+    border-color: rgba(245, 158, 11, 0.4);
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.snapshot-row.state-edited {
+    border-color: rgba(96, 165, 250, 0.4);
+    background: rgba(96, 165, 250, 0.05);
+}
+
+.snapshot-row.state-empty {
+    border-style: dashed;
+    opacity: 0.65;
+}
+
+.snapshot-row-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+.snapshot-dim-label {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--text, #E8EDF3);
+}
+
+.snapshot-dim-hint {
+    font-size: 10px;
+    color: var(--text-faint, #8A98AE);
+}
+
+.snapshot-dim-val {
+    font-size: 12px;
+    color: var(--accent, #10B981);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.snapshot-dim-empty {
+    font-size: 11px;
+    font-style: italic;
+    color: var(--text-faint, #8A98AE);
+}
+
+.snap-state-tag {
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 1px 5px;
+    border-radius: 3px;
+}
+
+.snap-state-tag.captured {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--accent, #10B981);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.snap-state-tag.low-conf {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning, #F59E0B);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.snap-state-tag.edited {
+    background: rgba(96, 165, 250, 0.15);
+    color: #60A5FA;
+    border: 1px solid rgba(96, 165, 250, 0.35);
+}
+
+.snapshot-readiness-line {
+    font-size: 11.5px;
+    color: var(--text-muted, #A3B0C2);
+    margin: 8px 0 6px 0;
+    padding-top: 6px;
+    border-top: 1px solid var(--line, #243243);
+}
+
+.snapshot-soft-warning {
+    font-size: 11px;
+    color: var(--warning, #F59E0B);
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    border-radius: 5px;
+    padding: 5px 8px;
+    margin-bottom: 6px;
+    line-height: 1.35;
+}
+
+/* Chat Stage Widget in Header */
+.chat-stage-widget {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 4px 8px;
+    background: var(--surface-2, #182330);
+    border: 1px solid var(--line, #243243);
+    border-radius: 6px;
+}
+
+.chat-stage-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11.5px;
+}
+
+.chat-stage-name {
+    font-weight: 700;
+    color: var(--text, #E8EDF3);
+}
+
+.chat-stage-count {
+    color: var(--accent, #10B981);
+    font-family: var(--font-mono, monospace);
+    font-size: 10.5px;
+}
+
+.chat-stage-progress-track {
+    width: 100%;
+    height: 3px;
+    background: var(--line, #243243);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.chat-stage-progress-fill {
+    height: 100%;
+    background: var(--accent, #10B981);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+/* Chat Welcome Banner */
+.chat-welcome-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(16, 185, 129, 0.06);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.chat-welcome-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--accent, #10B981);
+}
+
+.chat-welcome-sub {
+    font-size: 11px;
+    color: var(--text-muted, #A3B0C2);
+    margin-top: 2px;
+}
+
+/* Paste Privacy Line & Word Count */
+.paste-privacy-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-faint, #8A98AE);
+}
+
+.paste-word-count {
+    font-family: var(--font-mono, monospace);
+    color: var(--text-faint, #8A98AE);
+}
+
+/* Compact Chat Bubbles */
+[data-testid="stChatMessage"] {
+    padding: 8px 12px !important;
+    gap: 8px !important;
+    font-size: 13.5px !important;
+    line-height: 1.5 !important;
+}
+
+[data-testid="stChatMessageAvatarAssistant"],
+[data-testid="stChatMessageAvatarUser"] {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
+}
+
+
 
 
 

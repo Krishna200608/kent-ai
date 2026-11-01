@@ -1,10 +1,12 @@
-"""Chat message rendering with per-turn captured token chips, goal expanders, and undo buttons (Phase 14)."""
+"""Chat message rendering with compact bubbles, hover timestamps, and per-turn undo controls (Phase 4 & UI Overhaul)."""
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 import streamlit as st
 
+from src.dashboard.components.icons import get_icon
 from src.dashboard.utils import esc, safe_rerun_fragment
 from src.data.case_store import save_case
 
@@ -19,9 +21,23 @@ def render_chat_messages(
     assistant_avatar: str,
     user_avatar: str,
 ) -> None:
-    """Render conversation history, per-turn captured chips, goal explanation, and live region."""
+    """Render conversation history with compact bubbles, collapsible welcome blurb, and hover timestamps."""
     is_practitioner = getattr(dm, "intake_mode", "patient") == "practitioner"
     total_turns = len(dm.history)
+
+    # 1. Welcome blurb collapses after the first user message
+    if total_turns <= 1:
+        st.html(
+            f"""
+            <div class="chat-welcome-banner">
+                <div class="chat-welcome-icon">{get_icon('sparkles', size=18, color='var(--accent, #10B981)')}</div>
+                <div>
+                    <div class="chat-welcome-title">Kent-AI Clinical Companion Active</div>
+                    <div class="chat-welcome-sub">Speak naturally about physical symptoms, modalities, triggers, and emotional state. Kent-AI guides dynamic clinical intake to discover matching repertory rubrics.</div>
+                </div>
+            </div>
+            """
+        )
 
     latest_assistant_text = ""
 
@@ -29,6 +45,7 @@ def render_chat_messages(
         role = msg.get("role", "user")
         c_text = msg.get("content", "").strip()
         clean_text = dm.clean_message_text(c_text) if role == "assistant" else c_text
+        time_hint = msg.get("time") or datetime.now().strftime("%H:%M")
 
         if role == "assistant":
             latest_assistant_text = clean_text
@@ -44,36 +61,49 @@ def render_chat_messages(
 
             with st.chat_message("assistant", avatar=assistant_avatar):
                 st.html(
-                    f"<div style='font-size: 11.5px; font-weight: 700; color: #10B981; margin-bottom: 4px; letter-spacing: 0.02em; display: flex; align-items: center;'>"
+                    f"<div class='chat-msg-header' style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;'>"
+                    f"<span style='font-size: 11.5px; font-weight: 700; color: var(--accent, #10B981); letter-spacing: 0.02em;'>"
                     f"Kent-AI {origin_badge}"
+                    f"</span>"
+                    f"<span style='font-size: 10.5px; color: var(--text-faint, #8A98AE);' title='Received at {time_hint}'>{time_hint}</span>"
                     f"</div>"
                 )
                 st.markdown(clean_text)
 
-                # Under the latest assistant message: goal description and undo
+                # Under the latest assistant message: goal description and turn actions
                 if idx == total_turns - 1:
                     current_goal = dm.state_machine.get_current_goal_description()
                     with st.expander("Why am I asking this?", expanded=False):
                         st.markdown(
-                            f"<div style='font-size: 12.5px; color: #9CA3AF; line-height: 1.5;'>{esc(current_goal)}</div>",
+                            f"<div style='font-size: 12.5px; color: var(--text-muted, #A3B0C2); line-height: 1.5;'>{esc(current_goal)}</div>",
                             unsafe_allow_html=True,
                         )
 
                     if total_turns >= 2:
-                        if st.button("Undo last answer", key="btn_undo_last_answer", help="Revert the last response and captured symptoms"):
-                            dm.undo_last_turn()
-                            if active_case:
-                                dm.sync_to_case(active_case)
-                                save_case(active_case)
-                            st.toast("Reverted last turn.")
-                            safe_rerun_fragment()
+                        c_undo, c_regen = st.columns([1, 1], vertical_alignment="center")
+                        with c_undo:
+                            if st.button("Undo last answer", key="btn_undo_last_answer", help="Revert the last response and captured symptoms", width="stretch"):
+                                dm.undo_last_turn()
+                                if active_case:
+                                    dm.sync_to_case(active_case)
+                                    save_case(active_case)
+                                st.toast("Reverted last turn.")
+                                safe_rerun_fragment()
+                        with c_regen:
+                            if st.button("↺ Regenerate", key="btn_regen_last_answer", help="Regenerate question", width="stretch"):
+                                dm.history.pop()
+                                st.toast("Regenerating question...")
+                                safe_rerun_fragment()
 
         else:
             speaker_label = "Practitioner" if is_practitioner else "You"
             with st.chat_message("user", avatar=user_avatar):
                 st.html(
-                    f"<div style='font-size: 11.5px; font-weight: 700; color: #94A3B8; margin-bottom: 4px; letter-spacing: 0.02em;'>"
+                    f"<div class='chat-msg-header' style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;'>"
+                    f"<span style='font-size: 11.5px; font-weight: 700; color: var(--text-muted, #A3B0C2); letter-spacing: 0.02em;'>"
                     f"{esc(speaker_label)}"
+                    f"</span>"
+                    f"<span style='font-size: 10.5px; color: var(--text-faint, #8A98AE);' title='Sent at {time_hint}'>{time_hint}</span>"
                     f"</div>"
                 )
                 st.markdown(clean_text)
@@ -112,4 +142,3 @@ def render_chat_messages(
         st.html(
             f'<div role="status" aria-live="polite" class="sr-only">{esc(latest_assistant_text)}</div>'
         )
-

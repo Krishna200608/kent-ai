@@ -119,3 +119,38 @@ This document records architectural decisions, assumptions, backend changes, and
   - `test_phase3_sidebar_exports_and_components`, `test_phase3_tray_persistence_sync`, `test_phase3_get_ollama_latency` added to `tests/test_ui_overhaul.py`.
   - All 19 dashboard, smoke, and overhaul tests passing 100%.
 
+---
+
+### Phase 4: Case Workspace, Snapshot Rail, and Chat Polish (Complete)
+- **7:3 Two-Column Workspace Layout (`src/dashboard/views/step1_intake.py`)**:
+  - Established clean 7:3 split: Left (70%) = intake workflow selector, dialogue console, paste notes, suggestions, input; Right (30%) = sticky **Case Snapshot** rail.
+- **Sticky Case Snapshot Rail (`src/dashboard/components/case_snapshot.py`)**:
+  - Replaced redundant Totality Strip, Active Case Summary, and What to Include dimension lists.
+  - 7 canonical rows in prioritized order (`get_canonical_dimensions` respecting MIND priority).
+  - Row states: empty (dashed), captured (accent soft), low-confidence review (amber warning), edited by clinician (blue).
+  - Popover per captured row displaying source text provenance, extraction confidence %, and inline edit/update action.
+  - Readiness line (`Ready: n/7 · Missing: ...`) with soft warnings when <3 dimensions are captured or when mental is missing in MIND scope.
+  - Single primary "Continue to Review →" button gated on ≥1 dimension.
+  - Bottom overflow ⋯ menu with Markdown export and "Start over" reset.
+- **Dialogue Console Header & Controls (`src/dashboard/components/chat_header.py`)**:
+  - Consolidated "Speaking as:" segmented control (`intake_style_control` with Patient / Practitioner options).
+  - Interactive stage progress widget: stage label + count with thin progress track and hover flow tooltip.
+  - Unified Export popover (Download .md, Download .txt, copyable block).
+  - "Start over" popover confirmation stating message and dimension counts lost, with 30s undo snapshot support.
+- **Chat Messages & Scroll Polish (`src/dashboard/components/chat_messages.py`, `chat_viewer.py`)**:
+  - Transcript scroll container sized via `clamp(420px, 60vh, 640px)`.
+  - Welcome blurb banner collapses after the first user message.
+  - Compact message bubbles with 28px avatars, hover timestamps, and assistant question regeneration (`↺ Regenerate`).
+- **Step-Aware Neutral Suggestions (`src/dashboard/components/chat_chips.py`)**:
+  - Replaced static symptom chips with config-driven neutral suggestions (`NEUTRAL_STEP_SUGGESTIONS`) keyed by intake state.
+  - Automatically hidden when Speaking as = Practitioner or when `show_suggested_replies` toggle is off.
+- **Paste Notes Polish (`src/dashboard/views/step1_paste.py`)**:
+  - Word count counter directly below narrative textarea.
+  - Verified local privacy notice: "Stored on this device; nothing leaves this machine."
+  - Extraction wrapped in `st.status` with multi-stage progress (Encoding → Extracting → Arbitrating → Complete).
+  - Collapsible clinical documentation tips expander.
+- **Tests Added**:
+  - `test_phase4_case_snapshot_component` and `test_phase4_step_aware_neutral_suggestions` in `tests/test_ui_overhaul.py`.
+  - All 11 smoke tests and 21 unit tests passing 100%.
+
+

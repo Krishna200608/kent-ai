@@ -1,7 +1,7 @@
-"""Single unified header row for Kent-AI clinical dialogue console (Phase 14).
+"""Single unified header row for Kent-AI clinical dialogue console (Phase 4 & UI Overhaul).
 
-Consolidates dialogue state indicator, patient/practitioner segmented control,
-engine status, and a single 'More' overflow popover (transcript, copy, reset).
+Consolidates thin progress bar, 'Speaking as' segmented control,
+engine status, unified Export popover, and safe 'Start over' action.
 """
 
 from __future__ import annotations
@@ -96,7 +96,7 @@ def render_chat_llm_badge(dm: DialogueManager | None = None) -> None:
         st.html(
             f"""
             <div style="display: flex; justify-content: flex-end; align-items: center; height: 100%;">
-                <span style="font-size: 12px; color: #10B981; display: inline-flex; align-items: center; gap: 5px; font-weight: 600;" tabindex="0" title="{esc(MODEL_DISPLAY_NAME)} is online on 127.0.0.1:11434">
+                <span style="font-size: 12px; color: var(--accent, #10B981); display: inline-flex; align-items: center; gap: 5px; font-weight: 600;" tabindex="0" title="{esc(MODEL_DISPLAY_NAME)} is online on 127.0.0.1:11434">
                     <span class="status-dot"></span> {esc(MODEL_DISPLAY_NAME)} Online
                 </span>
             </div>
@@ -106,7 +106,7 @@ def render_chat_llm_badge(dm: DialogueManager | None = None) -> None:
         st.html(
             """
             <div style="display: flex; justify-content: flex-end; align-items: center; height: 100%;">
-                <span style="font-size: 11.5px; color: #F59E0B; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" tabindex="0" title="Ollama daemon is offline on 127.0.0.1:11434. Run 'ollama serve' in terminal to activate LLaMA 3.">
+                <span style="font-size: 11.5px; color: var(--warning, #F59E0B); display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" tabindex="0" title="Ollama daemon is offline on 127.0.0.1:11434. Run 'ollama serve' in terminal to activate LLaMA 3.">
                     <span class="status-dot-amber"></span> Offline Fallback (ollama serve)
                 </span>
             </div>
@@ -119,97 +119,109 @@ def render_chat_header(
     active_case: ClinicalCase | None,
     is_llm_online: bool = True,
 ) -> None:
-    """Render single consolidated dialogue header row."""
-    col_hdr_left, col_hdr_right = st.columns([5, 6], vertical_alignment="center")
+    """Render single consolidated dialogue header row with progress bar, speaking as, and actions."""
+    stages = dm.state_machine.get_clinical_stage_flow()
+    current_state = dm.state_machine.current_state
 
-    is_practitioner = getattr(dm, "intake_mode", "patient") == "practitioner"
-    mode_badge_html = (
-        '<span class="badge" style="background: rgba(16, 185, 129, 0.16); border: 1px solid rgba(16, 185, 129, 0.45); color: #34D399; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px;">Practitioner-Led</span>'
-        if is_practitioner
-        else '<span class="badge" style="background: rgba(59, 130, 246, 0.16); border: 1px solid rgba(59, 130, 246, 0.45); color: #93C5FD; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px;">Patient Self-Intake</span>'
-    )
+    current_idx = 0
+    current_label = "Greeting"
+    for idx, (st_enum, label) in enumerate(stages):
+        if st_enum == current_state:
+            current_idx = idx
+            current_label = label
+            break
 
-    with col_hdr_left:
+    total_stages = len(stages)
+    progress_pct = max(10, int(((current_idx + 1) / total_stages) * 100))
+    stages_summary = " › ".join(l for _, l in stages)
+
+    col_prog, col_mode, col_act, col_status = st.columns([4, 3, 2.5, 2.5], vertical_alignment="center")
+
+    with col_prog:
         st.html(
             f"""
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                <span style="font-size: 14.5px; font-weight: 700; color: #F3F4F6; display: flex; align-items: center; gap: 6px;">
-                    {get_icon('forum', size=18, color='#10B981')} Dialogue
-                </span>
-                <span class="step-counter-badge">{esc(get_current_step_label(dm))}</span>
-                {mode_badge_html}
+            <div class="chat-stage-widget" title="{esc(stages_summary)}">
+                <div class="chat-stage-label-row">
+                    <span class="chat-stage-name">{esc(current_label)}</span>
+                    <span class="chat-stage-count">{current_idx + 1}/{total_stages}</span>
+                </div>
+                <div class="chat-stage-progress-track">
+                    <div class="chat-stage-progress-fill" style="width: {progress_pct}%;"></div>
+                </div>
             </div>
             """
         )
 
-    with col_hdr_right:
-        c_mode, c_more, c_status = st.columns([2, 1.2, 2], vertical_alignment="center")
+    with col_mode:
+        curr_mode = getattr(dm, "intake_mode", "patient").capitalize()
+        selected_style = st.segmented_control(
+            "Speaking as:",
+            options=["Patient", "Practitioner"],
+            default="Patient" if curr_mode == "Patient" else "Practitioner",
+            key="intake_style_control",
+            label_visibility="visible",
+            help="Patient self-intake (conversational) vs Practitioner-led (rapid clinical findings)",
+        )
+        if selected_style:
+            target_mode = selected_style.lower()
+            if target_mode != getattr(dm, "intake_mode", "patient"):
+                dm.set_intake_mode(target_mode)
+                if active_case:
+                    dm.sync_to_case(active_case)
+                    save_case(active_case)
+                st.toast(f"Switched voice to {selected_style}.")
+                safe_rerun_fragment()
 
-        with c_mode:
-            curr_mode = getattr(dm, "intake_mode", "patient").capitalize()
-            selected_style = st.segmented_control(
-                "Intake Style",
-                options=["Patient", "Practitioner"],
-                default="Patient" if curr_mode == "Patient" else "Practitioner",
-                key="intake_style_control",
-                label_visibility="collapsed",
-                help="Patient self-intake (conversational) vs Practitioner-led (rapid clinical entry)",
-            )
-            if selected_style:
-                target_mode = selected_style.lower()
-                if target_mode != getattr(dm, "intake_mode", "patient"):
-                    dm.set_intake_mode(target_mode)
-                    if active_case:
-                        dm.sync_to_case(active_case)
-                        save_case(active_case)
-                    st.toast(f"Switched to {selected_style} mode.")
-                    safe_rerun_fragment()
-
-        with c_more:
-            with st.popover("More", width="stretch", help="Export transcript, copy consultation, or reset consultation"):
-                st.markdown("##### Consultation Options")
+    with col_act:
+        c_exp, c_reset = st.columns([1, 1], vertical_alignment="center")
+        with c_exp:
+            with st.popover("Export", help="Export consultation transcript"):
+                st.markdown("##### Export Consultation")
                 transcript_text = format_chat_transcript_md(dm)
                 cid = active_case.case_id if active_case else "consultation"
 
                 st.download_button(
-                    label="Export Transcript (.md)",
+                    "Download Markdown (.md)",
                     data=transcript_text,
                     file_name=f"{cid}_transcript_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
                     mime="text/markdown",
                     width="stretch",
                     key="chat_hdr_download_md",
                 )
-
+                st.download_button(
+                    "Download Plain Text (.txt)",
+                    data=transcript_text,
+                    file_name=f"{cid}_transcript.txt",
+                    mime="text/plain",
+                    width="stretch",
+                    key="chat_hdr_download_txt",
+                )
                 st.markdown("---")
-                st.markdown("<div style='font-size: 12px; font-weight: 600; color: #D1D5DB; margin-bottom: 4px;'>Copy Consultation:</div>", unsafe_allow_html=True)
+                st.markdown("<div style='font-size: 11.5px; font-weight: 600; color: #D1D5DB; margin-bottom: 4px;'>Copy Markdown:</div>", unsafe_allow_html=True)
                 st.code(transcript_text, language="markdown")
 
-                st.markdown("---")
-                if st.session_state.get("confirm_chat_reset", False):
-                    st.warning("Reset consultation and clear dialogue?")
-                    col_y, col_n = st.columns(2)
-                    with col_y:
-                        if st.button("Yes, Reset", type="primary", width="stretch", key="btn_confirm_chat_reset_yes"):
-                            dm.reset()
-                            dm.get_greeting()
-                            if active_case:
-                                active_case.dimensions = {k: [] for k in active_case.dimensions}
-                                active_case.dialogue_history = []
-                                active_case.extraction_meta = {"intake_mode": dm.intake_mode}
-                                dm.sync_to_case(active_case)
-                                save_case(active_case)
-                            st.session_state.confirm_chat_reset = False
-                            st.toast("Consultation reset.")
-                            safe_rerun_fragment()
-                    with col_n:
-                        if st.button("Cancel", width="stretch", key="btn_confirm_chat_reset_no"):
-                            st.session_state.confirm_chat_reset = False
-                            safe_rerun_fragment()
-                else:
-                    if st.button("Reset Consultation", type="secondary", width="stretch", key="btn_chat_reset_trigger"):
-                        st.session_state.confirm_chat_reset = True
-                        safe_rerun_fragment()
+        with c_reset:
+            msg_count = len(dm.history)
+            dim_count = sum(1 for v in dm.extracted_slots.values() if v)
+            with st.popover("Start over", help="Reset consultation and start fresh"):
+                st.markdown("##### Start Over?")
+                st.caption(f"This will clear **{msg_count} messages** and **{dim_count} captured dimensions**.")
+                if st.button("Confirm Reset", type="primary", key="btn_confirm_chat_start_over", width="stretch"):
+                    st.session_state["undo_consultation_snapshot"] = {
+                        "history": list(dm.history),
+                        "slots": dict(dm.extracted_slots),
+                        "case_dimensions": dict(active_case.dimensions) if active_case else {},
+                    }
+                    dm.reset()
+                    dm.get_greeting()
+                    if active_case:
+                        active_case.dimensions = {k: [] for k in active_case.dimensions}
+                        active_case.dialogue_history = []
+                        active_case.extraction_meta = {"intake_mode": dm.intake_mode}
+                        dm.sync_to_case(active_case)
+                        save_case(active_case)
+                    st.toast("Consultation reset. Undo available.")
+                    safe_rerun_fragment()
 
-        with c_status:
-            render_chat_llm_badge(dm)
-
+    with col_status:
+        render_chat_llm_badge(dm)

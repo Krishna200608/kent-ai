@@ -1,20 +1,18 @@
-"""Chat viewer component for interactive clinical intake (Phase 2, 7 & 14).
+"""Chat viewer component for interactive clinical intake (Phase 4 & UI Overhaul).
 
-Orchestrates multi-turn clinical conversation, 7-dimension totality strip,
-accessible chat message list, suggested response chips, and review handover.
+Orchestrates multi-turn clinical conversation, accessible chat messages,
+step-aware suggested response chips, streaming token delivery, and case synchronization.
 """
 
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
 from typing import Optional
-import urllib.request
 import streamlit as st
 
 from src.chatbot.dialogue_manager import DialogueManager
-from src.dashboard.components.chat_actions import render_chat_action_bar
+from src.chatbot.state_machine import IntakeState
 from src.dashboard.components.chat_chips import render_quick_reply_chips
 from src.dashboard.components.chat_header import (
     format_chat_transcript_md,
@@ -58,32 +56,10 @@ format_chat_transcript = format_chat_transcript_md
 
 
 def render_chat_interface(dm: DialogueManager) -> None:
-    """Render full-width multi-turn conversation, 7-dimension HUD, and docked review bar."""
+    """Render full-width multi-turn conversation and input within left workspace column."""
     active_case = st.session_state.get("current_case")
 
-    filled_count = sum(
-        1 for dim in KENT_DIMENSIONS_ORDERED
-        if (dim.key in dm.state_machine.filled_slots) or bool(dm.extracted_slots.get(dim.key))
-    )
-
-    # 1. Symptom Totality Strip
-    hud_html = f"""
-    <div class="stGlassCard" style="margin-bottom: 12px; padding: 14px 18px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                {get_icon('track_changes', color='#10B981', size=18)}
-                <span style="font-weight: 700; font-size: 15px; color: #F9FAFB;">Symptom Totality Strip</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 13px; font-weight: 700; color: #10B981;">{filled_count} of 7 Dimensions Captured</span>
-            </div>
-        </div>
-        {render_slot_badges_html(dm.extracted_slots, dm=dm)}
-    </div>
-    """
-    st.markdown(hud_html, unsafe_allow_html=True)
-
-    # 2. Dialogue Console Header
+    # 1. Dialogue Console Header Row
     is_llm_online = check_ollama_online(getattr(dm, "api_base", "http://127.0.0.1:11434"))
     if is_llm_online and hasattr(dm, "api_base"):
         dm.api_base = "http://127.0.0.1:11434"
@@ -96,14 +72,48 @@ def render_chat_interface(dm: DialogueManager) -> None:
 
     is_streaming = st.session_state.get("chat_is_streaming", False)
 
-    # 3. Main Chat Container with scrollable message area
+    # 2. Main Chat Container with scrollable message area
     with st.container(border=True):
-        scroll_area = st.container(height=450)
+        scroll_area = st.container(height=480)
         with scroll_area:
             render_chat_messages(dm, active_case, ASSISTANT_AVATAR, USER_AVATAR)
 
         # Suggested responses docked right above input inside chat panel
         selected_chip = render_quick_reply_chips(dm, in_container=False)
+
+        # Terminal DONE state action buttons if consultation completed
+        if dm.state_machine.current_state == IntakeState.DONE:
+            actions = dm.get_action_options()
+            if actions:
+                st.markdown("<div style='margin: 8px 0;'></div>", unsafe_allow_html=True)
+                cols = st.columns(len(actions))
+                for idx, act in enumerate(actions):
+                    act_id = act.get("id")
+                    act_label = act.get("label", "")
+                    act_type = "primary" if act.get("type") == "primary" else "secondary"
+                    with cols[idx]:
+                        if st.button(act_label, type=act_type, width="stretch", key=f"btn_done_act_{act_id}"):
+                            if act_id == "continue_review":
+                                st.session_state.workspace_step = 2
+                                st.rerun(scope="app")
+                            elif act_id == "add_detail":
+                                dm.state_machine.current_state = IntakeState.CLARIFICATION
+                                dm.prepare_turn("I would like to add another detail.")
+                                if active_case:
+                                    dm.sync_to_case(active_case)
+                                    save_case(active_case)
+                                safe_rerun_fragment()
+                            elif act_id == "start_new":
+                                dm.reset()
+                                dm.get_greeting()
+                                if active_case:
+                                    active_case.dimensions = {k: [] for k in active_case.dimensions}
+                                    active_case.dialogue_history = []
+                                    active_case.extraction_meta = {"intake_mode": dm.intake_mode}
+                                    dm.sync_to_case(active_case)
+                                    save_case(active_case)
+                                st.toast("Started new consultation.")
+                                safe_rerun_fragment()
 
         # Dynamic placeholder based on mode
         is_practitioner = getattr(dm, "intake_mode", "patient") == "practitioner"
@@ -115,10 +125,7 @@ def render_chat_interface(dm: DialogueManager) -> None:
 
         user_prompt = st.chat_input(input_placeholder, disabled=is_streaming)
 
-    # 4. Docked Action Bar under chat panel
-    render_chat_action_bar(dm, active_case)
-
-    # 5. Process turn input (from chip or user input)
+    # 3. Process turn input (from chip or user input)
     input_to_process = selected_chip or user_prompt
     if input_to_process:
         raw = []
@@ -126,31 +133,34 @@ def render_chat_interface(dm: DialogueManager) -> None:
             speaker_label = "Practitioner" if is_practitioner else "You"
             with st.chat_message("user", avatar=USER_AVATAR):
                 st.html(
-                    f"<div style='font-size: 11.5px; font-weight: 700; color: #94A3B8; margin-bottom: 4px; letter-spacing: 0.02em;'>"
+                    f"<div class='chat-msg-header' style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;'>"
+                    f"<span style='font-size: 11.5px; font-weight: 700; color: var(--text-muted, #A3B0C2); letter-spacing: 0.02em;'>"
                     f"{esc(speaker_label)}"
+                    f"</span>"
                     f"</div>"
                 )
                 st.markdown(input_to_process)
 
             with st.chat_message("assistant", avatar=ASSISTANT_AVATAR):
                 st.html(
-                    "<div style='font-size: 11.5px; font-weight: 700; color: #10B981; margin-bottom: 4px; letter-spacing: 0.02em;'>"
-                    "Kent-AI"
-                    "</div>"
+                    f"<div class='chat-msg-header' style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;'>"
+                    f"<span style='font-size: 11.5px; font-weight: 700; color: var(--accent, #10B981); letter-spacing: 0.02em;'>"
+                    f"Kent-AI"
+                    f"</span>"
+                    f"</div>"
                 )
                 thinking_box = st.empty()
-                thinking_box.markdown(
+                thinking_box.html(
                     f"""
                     <div class="skeleton-thinking-bubble">
-                        <div style="font-size: 11.5px; color: #10B981; font-weight: 700; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-                            <span class="status-dot"></span> {get_icon('sparkles', size=13, color='#10B981')} Kent-AI is reflecting...
+                        <div style="font-size: 11.5px; color: var(--accent, #10B981); font-weight: 700; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                            <span class="status-dot"></span> {get_icon('sparkles', size=13, color='var(--accent, #10B981)')} Kent-AI is reflecting...
                         </div>
                         <div class="skeleton-shimmer-line line-1"></div>
                         <div class="skeleton-shimmer-line line-2"></div>
                         <div class="skeleton-shimmer-line line-3"></div>
                     </div>
-                    """,
-                    unsafe_allow_html=True,
+                    """
                 )
 
                 prompt = dm.prepare_turn(input_to_process)

@@ -76,3 +76,4 @@ def render_step_action_bar(
                     save_case(case)
                     st.session_state.workspace_step = next_step_num
                     st.rerun()
+

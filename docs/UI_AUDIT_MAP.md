@@ -52,3 +52,4 @@
   - `IN REVIEW`: ≥2 dimensions captured, un-analyzed.
   - `ANALYZED`: Ranked remedies and repertorization report generated.
   - `ARCHIVED`: User-archived or completed case.
+
