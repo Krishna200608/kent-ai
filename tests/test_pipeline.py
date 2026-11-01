@@ -226,5 +226,5 @@ def test_extract_profile_matches_first_stage_and_never_touches_vector_store(mock
 
 
 # Explicit alias name matching WP4 specification
-test_extract_profile_no_vector_access = test_extract_profile_no_vector_store_access
+test_extract_profile_no_vector_access = test_extract_profile_matches_first_stage_and_never_touches_vector_store
 
