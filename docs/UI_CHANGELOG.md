@@ -274,6 +274,38 @@ This document records architectural decisions, assumptions, backend changes, and
   - `test_phase8_step_views_and_materia_medica_exports` in `tests/test_ui_overhaul.py`.
   - Full smoke test suite (`test_app_smoke.py`), overhaul suite (16 tests), and dashboard suite (10 tests) all passing 100%.
 
+---
+
+### Phase 9: Caching, Performance & Demonstration Case Mode (Complete)
+- **Service Caching**:
+  - Maintained singletons for `get_db()` and `get_pipeline()` wrapped in `@st.cache_resource`.
+  - Fast Ollama ping latency cached via `@st.cache_data(ttl=2)` in `src/dashboard/components/ollama_status.py`.
+- **Realistic Demonstration Case Generator (`src/dashboard/components/demo_case.py`)**:
+  - `create_demo_case()`: produces a realistic MIND consultation case (`DEMO-MIND-001`) with 6/7 totality dimensions, chief complaint, clinical summary, and extraction metadata.
+  - Allows clinicians and researchers to test Review, Analysis, Totality Matrix, and Reports immediately without waiting for local LLM generation.
+- **Demo Mode Triggers**:
+  - Added "Load Demo Case" in `case_snapshot.py` action popover.
+  - Added "Load Demo Case" button to the `case_library.py` toolbar.
+- **Tests Added**:
+  - `test_phase9_demo_case_creation` in `tests/test_ui_overhaul.py`.
+  - Full smoke test suite (`test_app_smoke.py`), overhaul suite (17 tests), and dashboard suite (10 tests) all passing 100%.
+
+---
+
+### Phase 10: Final QA, Verification & Acceptance Audit (Complete)
+- **Regression Suite Verification**:
+  - `tests/test_app_smoke.py`: 11/11 tests green (53.33s).
+  - `tests/test_ui_overhaul.py`: 17/17 tests green (8.18s).
+  - `tests/test_dashboard.py`: 10/10 tests green (42.66s).
+  - Total: 38/38 passing unit and integration tests across the dashboard suite.
+- **UI Hygiene & Accessibility Audit**:
+  - Zero emojis in toasts, buttons, or HTML content (verified by `test_source_guards_no_emoji_in_toasts_and_no_x_buttons`).
+  - Strict HTML escaping: all user and LLM interpolated strings pass through `src.dashboard.utils.esc()`.
+  - Design tokens used exclusively via `:root` CSS variables; zero hard-coded brand colors or duplicate inline styles.
+  - Contrast compliance: text on surfaces meets or exceeds WCAG AA (≥4.5:1 ratio).
+  - All existing ~81 saved consultations in SQLite load seamlessly with complete backward compatibility.
+
+
 
 
 

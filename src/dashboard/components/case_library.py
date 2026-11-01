@@ -138,7 +138,7 @@ def render_case_library(current_case: ClinicalCase) -> None:
     blank_count = len(blank_cases)
 
     # 2. Main Search & "+ New Case" Toolbar Row
-    col_search, col_new = st.columns([4, 1.2], vertical_alignment="bottom")
+    col_search, col_demo, col_new = st.columns([3.5, 1.3, 1.2], vertical_alignment="bottom")
     with col_search:
         search_q = st.text_input(
             "Search Saved Consultations:",
@@ -146,6 +146,13 @@ def render_case_library(current_case: ClinicalCase) -> None:
             key="case_lib_search",
             label_visibility="collapsed",
         )
+    with col_demo:
+        if st.button("Load Demo Case", width="stretch", help="Load demonstration clinical consultation case"):
+            from src.dashboard.components.demo_case import create_demo_case
+            demo_case = create_demo_case()
+            save_case(demo_case)
+            st.toast("Loaded demonstration clinical case.")
+            st.rerun()
     with col_new:
         if st.button("+ New Case", type="primary", width="stretch", help="Start a fresh patient intake"):
             new_id = generate_case_id()

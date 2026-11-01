@@ -210,6 +210,17 @@ def render_case_snapshot(
             f"</div>",
             unsafe_allow_html=True,
         )
+        if st.button("Load Demo Case", type="secondary", width="stretch", key="snapshot_load_demo_btn", help="Load demonstration clinical case"):
+            from src.dashboard.components.demo_case import create_demo_case
+            demo_case = create_demo_case()
+            st.session_state.current_case = demo_case
+            save_case(demo_case)
+            if dm:
+                dm.reset()
+                dm.resume_from_case(demo_case)
+            st.toast("Loaded demonstration clinical case.")
+            st.rerun()
+
         if st.button("Start Over (Reset Case)", type="secondary", width="stretch", key="snapshot_reset_case_btn"):
             if dm:
                 dm.reset()

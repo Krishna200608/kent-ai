@@ -305,6 +305,18 @@ def test_phase8_step_views_and_materia_medica_exports():
     assert callable(render_materia_medica_view)
 
 
+def test_phase9_demo_case_creation():
+    """Verify demo case creation generates valid clinical case with 6/7 dimensions and extraction metadata."""
+    from src.dashboard.components.demo_case import create_demo_case
+
+    case = create_demo_case()
+    assert case.case_id == "DEMO-MIND-001"
+    assert case.filled_dimensions_count == 6
+    assert case.is_ready_for_repertorization is True
+    assert case.extraction_meta.get("is_demo") is True
+
+
+
 
 
 
