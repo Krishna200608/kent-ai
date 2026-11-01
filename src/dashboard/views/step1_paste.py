@@ -85,6 +85,7 @@ def render_step1_paste_view(current_case: ClinicalCase, dm: DialogueManager, pip
             "Extract & review",
             type="primary",
             width="stretch",
+            shortcut="Ctrl+Enter",
         )
 
     # Collapsible clinical documentation tips

@@ -192,6 +192,7 @@ def render_case_library(current_case: ClinicalCase) -> None:
             key="btn_lib_new_case",
             type="primary",
             width="stretch",
+            shortcut="Alt+N",
             help="Start a fresh patient intake",
             on_click=_on_click_new_case,
         )

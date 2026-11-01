@@ -222,6 +222,7 @@ def render_step2_review(current_case: ClinicalCase, pipeline: Any) -> None:
                 type="primary",
                 disabled=not can_repertorize,
                 width="stretch",
+                shortcut="Ctrl+Enter",
                 help="Search Kent's Repertory and compute classical totality ranking",
             ):
                 with busy_slot(slot_rep, "Analyzing rubrics...", key="btn_run_rep", type="primary"):

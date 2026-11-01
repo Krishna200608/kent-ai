@@ -180,6 +180,6 @@ def render_step3_analysis(
                         st.toast("Totality scores recomputed.")
                         st.rerun()
         with col_s3_next:
-            if st.button("View Clinical Report →", type="primary", width="stretch"):
+            if st.button("View Clinical Report →", type="primary", width="stretch", shortcut="Ctrl+Enter"):
                 st.session_state.workspace_step = 4
                 st.rerun()

@@ -78,7 +78,7 @@ def render_case_bar(case: ClinicalCase) -> None:
 
         with c_save:
             slot_save = st.empty()
-            if slot_save.button("Save", type="secondary", width="stretch", help=f"Save case {case.case_id} to local SQLite database", key="case_bar_save_btn"):
+            if slot_save.button("Save", type="secondary", width="stretch", help=f"Save case {case.case_id} to local SQLite database", key="case_bar_save_btn", shortcut="Ctrl+S"):
                 with busy_slot(slot_save, "Saving...", key="case_bar_save_btn", type="secondary"):
                     save_case(case)
                     now_str = datetime.now().strftime("%H:%M")
