@@ -65,8 +65,14 @@ kent-ai/
 │   │   └── ranker.py              # ★ CORE: Remedy intersection & grade ranker (Phase 5) — implemented
 │   │
 │   ├── chatbot/
-│   │   ├── state_machine.py       # ★ CORE: FSM with IntakeState enum & adaptive slot skipping (Phase 6) — implemented
-│   │   ├── dialogue_manager.py    # ★ CORE: Multi-turn dialogue manager with LLaMA 3 streaming & slot sanitization (Phase 6 & 12) — implemented
+│   │   ├── state_machine.py       # ★ CORE: FSM with IntakeState enum, advance_to_next_gap & denied_slots (Phase 6 & 14) — implemented
+│   │   ├── dialogue_manager.py    # ★ CORE: Multi-turn dialogue manager with resume_from_case, undo & safety screening (Phase 6, 12, 14) — implemented
+│   │   ├── turn_history.py        # ★ CORE: Turn capture diffs, opener generation & undo helpers (Phase 14) — implemented
+│   │   ├── fallbacks.py           # ★ CORE: Deterministic FSM offline response templates (Phase 14) — implemented
+│   │   ├── answer_palettes.py     # ★ CORE: Standardized Kentian vocabulary palettes per active state (Phase 14) — implemented
+│   │   ├── suggestions.py         # ★ CORE: Dynamic suggestion generator with Skip & None of these chips (Phase 6, 12, 14) — implemented
+│   │   ├── slot_extractor.py      # ★ CORE: 3-tier slot extraction pipeline (Phase 6) — implemented
+│   │   ├── ollama_client.py       # ★ CORE: Resilient streaming Ollama HTTP client (Phase 6 & 12) — implemented
 │   │   └── prompts.py             # Prompt templates (case gen, resolver, chatbot bedside persona) — active
 │   │
 │   ├── pipeline/
@@ -97,7 +103,11 @@ kent-ai/
 │           ├── case_library.py    # ★ CORE: Saved patient consultation library & management — implemented (Phase 11)
 │           ├── remedy_comparison.py # ★ CORE: Differential Materia Medica side-by-side keynotes comparison — implemented (Phase 11)
 │           ├── rubric_tree.py     # ★ CORE: Rubric cards with expandable 3-grade remedy inspector (Phase 7) — implemented
-│           ├── chat_viewer.py     # ★ CORE: Bedside dialogue console with streaming, shimmer reflection & HUD pills (Phase 7 & 12) — implemented
+│           ├── chat_viewer.py     # ★ CORE: Bedside dialogue console orchestrator (<250 lines) (Phase 7, 12, 14) — implemented
+│           ├── chat_header.py     # ★ CORE: Unified dialogue header row, segmented mode & More popover (Phase 14) — implemented
+│           ├── chat_messages.py   # ★ CORE: Accessible message stream, per-turn captured chips & undo (Phase 14) — implemented
+│           ├── chat_actions.py    # ★ CORE: Docked review action bar with dynamic totality summary (Phase 14) — implemented
+│           ├── chat_chips.py      # ★ CORE: Dynamic suggestion pills with touch-friendly 40px sizing (Phase 12 & 14) — implemented
 │           └── icons.py           # ★ CORE: Material Design SVG icon helpers — implemented
 │
 ├── scripts/

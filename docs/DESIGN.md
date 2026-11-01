@@ -174,6 +174,42 @@ Step 1 features a top-level `st.segmented_control` with three distinct operation
 +--------------------------------------------------------------------------------------------------+
 ```
 
+### 3.8 Bedside Dialogue Console Wireframe (Full Width, Phase 14)
+
+```text
++--------------------------------------------------------------------------------------------------+
+| Header:  [Kent-AI] Scope: MIND | Engine: BioLinkBERT | LLaMA 3:8B Online                         |
+| Stepper: [1. Intake (Active)] [2. Review] [3. Analysis] [4. Report]                              |
++--------------------------------------------------------------------------------------------------+
+| Mode: (*) Guided conversation   ( ) Paste notes   ( ) Enter manually                             |
+| Workflow: Guided conversation — patient present, about 5-8 min                                   |
+|                                                                                                  |
+| Symptom Totality Strip: 3 of 7 Dimensions Captured                                               |
+| [ LOC: Forehead ] [ SEN: Throbbing ] [ AGG: Heat ] [ AMEL ] [ CONC ] [ TEMP ] [ MENT ]           |
++--------------------------------------------------------------------------------------------------+
+| Unified Dialogue Console (Full Width, Clean Elevation):                                          |
+| Header: [Dialogue] Step 3 of 10: Modalities   [Patient | Practitioner]   [More v]   * LLaMA Online|
+| +----------------------------------------------------------------------------------------------+ |
+| | [Kent-AI] [Scripted]                                                                         | |
+| | Hello, I am Kent-AI, your clinical homeopathic intake assistant...                           | |
+| |                                                                                              | |
+| | [You]                                                                                        | |
+| | Throbbing pain in the forehead, worse in warm rooms                                          | |
+| | [LOC: Forehead] [Remove]  [SEN: Throbbing] [Remove]  [AGG: Warm rooms] [Remove]              | |
+| |                                                                                              | |
+| | [Kent-AI]                                                                                    | |
+| | That helps. Has anything brought you relief, such as open fresh air or cold compresses?      | |
+| | v Why am I asking this? (Inquire into ameliorating factors to refine repertory rubrics)      | |
+| | [Undo last answer]                                                                           | |
+| +----------------------------------------------------------------------------------------------+ |
+| Suggested Responses (<=5): [Better: Cold compress] [Better: Fresh air] [Better: Rest] [Skip]   |
+| [ Tell Kent-AI how you are feeling...                                                        ] |
+|                                                                                                  |
+| Docked Action Bar:                                                                               |
+| 3 of 7 captured. Not yet: Better from, Concomitant, Mental/Emotional.   [Continue to Review ->] |
++--------------------------------------------------------------------------------------------------+
+```
+
 ---
 
 _End of file._

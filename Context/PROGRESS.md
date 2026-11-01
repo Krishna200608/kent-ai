@@ -1,7 +1,7 @@
 # Kent-AI — Progress Tracker
 
 > Last updated: 2026-11-01 by Antigravity
-> Phase: Complete through Phase 13 (Step 1 Clinical Narrative Intake Redesign, Accessibility & Consistency Polish; 133 Unit & Integration Tests Passing, 0 Warnings)
+> Phase: Complete through Phase 14 (Step 1 Guided Conversation Chat Redesign & Multi-Turn Polish; 145 Unit & Smoke Tests Passing, 0 Errors)
 
 ---
 
@@ -475,10 +475,34 @@ pytest tests/ -v
 
 ---
 
+## Phase 14 — Step 1 Guided Conversation Chat Redesign & Multi-Turn Polish ✅
+
+**Status**: Complete
+**Date**: 2026-11-01
+**Agent**: Antigravity (Gemini 3.8 Flash)
+
+### Deliverables
+
+| Task | Status | Key File(s) |
+|---|---|---|
+| Dialogue Core Resume & Opener | ✅ Done | `src/chatbot/dialogue_manager.py`, `src/chatbot/turn_history.py` |
+| Per-Turn Capture Metadata & Undo | ✅ Done | `src/chatbot/dialogue_manager.py`, `src/chatbot/turn_history.py` |
+| Action Options Separation (DONE State) | ✅ Done | `src/chatbot/dialogue_manager.py`, `src/chatbot/suggestions.py` |
+| Lazy Patient Report Compute | ✅ Done | `src/chatbot/dialogue_manager.py` |
+| Non-Blocking Safety Screening | ✅ Done | `src/chatbot/dialogue_manager.py`, `src/pipeline/safety.py` |
+| Component Modularization (<250 lines) | ✅ Done | `src/dashboard/components/chat_header.py`, `chat_messages.py`, `chat_actions.py`, `chat_viewer.py` |
+| Full-Width Bedside Chat Layout | ✅ Done | `src/dashboard/views/step1_intake.py` |
+| Accessible Live Regions & Touch Targets | ✅ Done | `src/dashboard/components/chat_messages.py`, `src/dashboard/styles.css` |
+| Answer Palettes Vocabulary | ✅ Done | `src/chatbot/answer_palettes.py` |
+| Test Suite Expansion | ✅ Done | `tests/test_dialogue_manager.py`, `tests/test_app_smoke.py` (145 passing tests) |
+
+---
+
 ## Changelog
 
 | Date | Phase | Agent | Change |
 |---|---|---|---|
+| 2026-11-01 | 14 / Chat | Antigravity | Guided conversation chat redesign: implemented resume_from_case(), deterministic gap-aware openers, per-turn capture diffs, undo_capture/undo_last_turn, get_action_options() typed buttons, lazy get_patient_report(), non-blocking safety notices; modularized chat_viewer.py into chat_header, chat_messages, chat_actions; removed col_ctrl right rail for full-width layout; touch-friendly 40px pills; 145/145 tests passing. |
 | 2026-09-26 | 0 | Antigravity | Initial scaffolding complete. All directories, kent_db, configs, tests, stubs, EDA notebook, git init. |
 | 2026-09-26 | 1 | Antigravity | Case generator core, BIO tagger with drift repair, data splitter, and CLI complete. |
 | 2026-09-26 | 2 | Antigravity | 74,513 rubrics indexed into ChromaDB persistent HNSW cosine index. |

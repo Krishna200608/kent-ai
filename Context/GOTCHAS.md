@@ -239,6 +239,21 @@ Adding new columns like `extraction_meta_json TEXT` to `clinical_cases` in SQLit
 - **Root Cause**: SQLite `CREATE TABLE IF NOT EXISTS` ignores schema evolution when the table already exists.
 - **Verified Workaround**: Query `PRAGMA table_info(clinical_cases)` in `init_case_db(db_path)` to inspect existing column names, and execute `ALTER TABLE clinical_cases ADD COLUMN extraction_meta_json TEXT` conditionally. Fallback gracefully in `get_case` with `json.loads(row["extraction_meta_json"] or "{}")`.
 
+### 8.12 `st.segmented_control` with `key` and `default`
+Passing both `default=...` and specifying a `key` whose value already exists in `st.session_state` logs a Streamlit warning: `The widget with key "intake_mode_select" was created with a default value but also had its value set via the Session State API.`
+- **Root Cause**: Streamlit elements disallow specifying an initial `default` argument if the key is already populated in session state.
+- **Verified Workaround**: Ensure `st.session_state[key]` is set if missing or invalid, and omit the `default` parameter entirely from `st.segmented_control`.
+
+### 8.13 `ClinicalCase.is_blank` vs. Seeded Initial Assistant Greeting
+When starting or resuming a consultation, `DialogueManager` seeds an assistant greeting (`dm.history = [greeting]`). If `c.transcript` is populated from this alone, `case.is_blank` returns `False`, breaking draft management and AppTest smoke assertions.
+- **Root Cause**: `is_blank` checked `bool(self.transcript and self.transcript.strip())`.
+- **Verified Workaround**: Check `has_user_turns = any(t.get("role") == "user" for t in self.dialogue_history)`. If no patient/practitioner turns exist yet, the consultation remains blank and `c.transcript` is empty.
+
+### 8.14 Separation of UI Actions from Genuine Chat Replies
+In the `DONE` state, displaying UI navigation commands (like `"Proceed to Review →"`) in suggestion chips leaked them into user messages if clicked, requiring substring routing hacks like `"proceed to review" in input.lower()`.
+- **Root Cause**: Mixing UI workflow buttons with conversational suggestions.
+- **Verified Workaround**: Provide typed terminal action options via `dm.get_action_options()` (`continue_review`, `add_detail`, `start_new`), rendered as real Streamlit buttons in the docked action bar. Suggestion chips in `DONE` state strictly contain genuine conversational replies (`"Everything looks accurate"`, etc.).
+
 ---
 
 ## 9. Multi-Model GPU Training & HuggingFace Gotchas

@@ -249,4 +249,15 @@ def get_rubric_path(rubric_id: int, db_path: Optional[Union[str, Path]] = None) 
 
 ---
 
+## 21. Dialogue Manager & Chat Component Conventions
+
+- **Modular UI Structure**: Chat components must remain modular and under ~500 lines (`chat_header.py`, `chat_messages.py`, `chat_actions.py`, and `chat_viewer.py` orchestrator under 250 lines).
+- **Separation of UI Actions and Conversational Replies**: Do not place workflow navigation buttons into suggestion chips. Terminal actions belong in `dm.get_action_options()`, rendered as typed Streamlit buttons. Suggestion chips in `DONE` state strictly contain genuine conversational replies.
+- **Per-Turn Diff Tracking**: User turns record `turn_id` and `captured: {dim_key: [tokens]}` diffs. Undo operations (`undo_capture`, `undo_last_turn`) revert slots and dimensions atomically.
+- **Accessibility Live Regions**: Mount accessible live regions (`<div role="status" aria-live="polite" class="sr-only">`) announcing assistant turns to screen readers.
+- **Touch Target Dimensions**: Suggestion pills and interactive chips must achieve at least 40px minimum touch height (`min-height: 40px !important`, `padding: 8px 14px !important`).
+- **Emoji-Free Policy**: Never include emojis in UI labels, notification toasts (`st.toast`), or button texts.
+
+---
+
 _End of file._
