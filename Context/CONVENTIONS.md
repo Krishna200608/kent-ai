@@ -1,7 +1,7 @@
 # Kent-AI — Code Conventions
 
-> Last updated: 2026-10-31 by Antigravity
-> Phase: Complete through Phase 12 (Clinician-Centric Stepper, SQLite Case Store, Classical Totality Matrix, Bedside Streaming Dialogue, Shimmer Reflection Animation & Full-Screen Responsive Viewport; 108 Unit & Integration Tests Passing, 0 Warnings)
+> Last updated: 2026-11-01 by Antigravity
+> Phase: Complete through Phase 15 (Comprehensive Clinician UI/UX Overhaul, Phases 1–10; 168 Unit & Integration Tests Passing across 18 Test Modules, 0 Errors)
 
 ---
 
@@ -143,7 +143,7 @@ def get_rubric_path(rubric_id: int, db_path: Optional[Union[str, Path]] = None) 
 
 - Test framework: **pytest** (configured in `pyproject.toml`).
 - Test files live in `tests/` and are named `test_<module>.py`.
-- Test suite status: **73 passing tests across 13 test files** (100% pass rate in ~20-30s, 0 warnings).
+- Test suite status: **168 passing tests across 18 test files** (100% pass rate in ~116s, 0 errors, 0 warnings).
 - Use **class-based grouping** (`class TestKentDBReader:`) for related tests.
 - ChromaDB test fixtures must use unique ephemeral collection names (`f"test_rubrics_{uuid.uuid4().hex[:8]}"`) to prevent inter-test state contamination.
 - Tests run against the **real database** (no mocks for the SQLite layer) — this is intentional for correctness verification.
@@ -257,6 +257,17 @@ def get_rubric_path(rubric_id: int, db_path: Optional[Union[str, Path]] = None) 
 - **Accessibility Live Regions**: Mount accessible live regions (`<div role="status" aria-live="polite" class="sr-only">`) announcing assistant turns to screen readers.
 - **Touch Target Dimensions**: Suggestion pills and interactive chips must achieve at least 40px minimum touch height (`min-height: 40px !important`, `padding: 8px 14px !important`).
 - **Emoji-Free Policy**: Never include emojis in UI labels, notification toasts (`st.toast`), or button texts.
+
+---
+
+## 22. UI/UX Design System, Design Tokens & Ground-Truth Single Source
+
+- **Single Source of Truth (`constants.py`)**: All canonical dimension definitions (`get_canonical_dimensions`), grade weights (`GRADE_WEIGHTS`), model display names (`MODEL_DISPLAY_NAME`), and evaluation benchmarks (`EVALUATION_METRICS`) MUST be imported from `src/dashboard/constants.py`. Never hardcode duplicate dictionaries or weights in views.
+- **Design Tokens in CSS**: All visual styling must use CSS variables defined in `:root` inside `src/dashboard/styles.css` (`--bg: #0B1117`, `--surface: #121A23`, `--surface-2: #182330`, `--line: #243243`, `--text: #E8EDF3`, `--text-muted: #A3B0C2`, `--accent: #10B981`). Target stable hooks (`.st-key-*`, `data-testid`), never dynamic Streamlit hash classes.
+- **Signature Totality Ring**: Use the reusable 7-segment SVG glyph component from `src/dashboard/totality_ring.py` for all totality completeness indicators.
+- **Microcopy Discipline**: Microcopy must be sentence case, verb-first ("Continue to review", "Start over", "Open", "Export"), without conversational filler. Never leak unformatted `?` or bare `—` placeholders in clinical metadata.
+- **ASCII-Only Notification Constraint**: Strings passed to `st.toast()` MUST be strictly ASCII (`ord(c) < 128`). Use standard hyphens `-` instead of Unicode interpuncts `·` or arrows `→`.
+- **PyMuPDF Forward Compatibility**: Always use `import pymupdf as fitz` or `import pymupdf` to maintain forward compatibility and avoid deprecation warnings.
 
 ---
 

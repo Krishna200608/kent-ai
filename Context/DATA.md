@@ -1,7 +1,7 @@
 # Kent-AI — Data Context
 
-> Last updated: 2026-10-31 by Antigravity
-> Phase: Complete through Phase 12 (19,732 MIND Cases, 74,513 Rubrics Vectorized, SQLite Case Store, 6 Model Checkpoints & Adapters)
+> Last updated: 2026-11-01 by Antigravity
+> Phase: Complete through Phase 15 (19,732 MIND Cases, 74,513 Rubrics Vectorized, SQLite Case Store with Bulk Operations & Extraction Meta Migration, 6 Model Checkpoints & Adapters)
 
 ---
 
@@ -242,28 +242,45 @@ Kent's Repertory uses a typographic grading system for remedy prominence:
 
 ## Consultation Case Store Schema (`data/cases.sqlite`)
 
-Created in Phase 11 via `src/data/case_store.py` to persist active and historical patient consultations:
+Created in Phase 11 via `src/data/case_store.py` (and expanded in Phases 12, 13, 14, 15) to persist active, draft, and historical patient consultations:
 
 ```sql
-CREATE TABLE IF NOT EXISTS cases (
-    id                   TEXT PRIMARY KEY,  -- e.g. "CASE-2026-001"
-    created_at           TEXT NOT NULL,     -- ISO-8601 timestamp
-    updated_at           TEXT NOT NULL,     -- ISO-8601 timestamp
-    patient_name         TEXT NOT NULL,     -- Default "Anonymous Patient"
-    patient_age          INTEGER,           -- Optional age (e.g. 42)
-    patient_sex          TEXT,              -- Optional sex (e.g. "Female", "Male", "Other")
-    chief_complaint      TEXT,              -- Brief symptom complaint
-    raw_narrative        TEXT,              -- Full intake narrative or consultation transcript
-    intake_mode          TEXT,              -- "dialogue" or "narrative"
-    symptom_profile_json TEXT,              -- Serialized 7-dimension symptom dictionary
-    active_rubrics_json  TEXT,              -- Serialized matched & pinned rubric objects
-    remedy_scores_json   TEXT,              -- Serialized ranked remedy scores dictionary
-    status               TEXT NOT NULL      -- "intake", "review", "analyzed", "closed"
+CREATE TABLE IF NOT EXISTS clinical_cases (
+    case_id                  TEXT PRIMARY KEY,  -- e.g. "CASE-2026-001"
+    patient_name             TEXT NOT NULL,     -- Default "Anonymous Patient"
+    patient_age              INTEGER,           -- Optional age (e.g. 42)
+    patient_sex              TEXT,              -- Optional sex (e.g. "Female", "Male", "Other")
+    chief_complaint          TEXT,              -- Primary symptom chief complaint
+    status                   TEXT NOT NULL,     -- "Draft", "In review", "Analysed", "Archived"
+    created_at               TEXT NOT NULL,     -- ISO-8601 timestamp
+    updated_at               TEXT NOT NULL,     -- ISO-8601 timestamp
+    scope_chapter            TEXT,              -- "MIND" or "ALL"
+    ranking_mode             TEXT,              -- "standard", "filtered", "eliminatory"
+    dimensions_json          TEXT NOT NULL,     -- Serialized 7-dimension totality dictionary
+    transcript               TEXT,              -- Plain-text consultation transcript
+    history_json             TEXT,              -- Serialized multi-turn dialogue history array
+    selected_rubrics_json    TEXT,              -- Serialized pinned rubric ID list (Tray persistence)
+    muted_rubrics_json       TEXT,              -- Serialized muted rubric ID list
+    eliminatory_rubrics_json TEXT,              -- Serialized eliminatory rubric ID list
+    report_json              TEXT,              -- Serialized PatientReport / remedy rankings
+    clinical_notes           TEXT,              -- Clinician freeform observations
+    clinical_summary         TEXT,              -- Synthesized LLM / extractive physician brief (Phase 12)
+    extraction_meta_json     TEXT               -- Provenance metadata, negated tokens, intake_mode (Phase 13)
 );
 
-CREATE INDEX IF NOT EXISTS idx_cases_updated_at ON cases(updated_at DESC);
-CREATE INDEX IF NOT EXISTS idx_cases_status ON cases(status);
+CREATE INDEX IF NOT EXISTS idx_cases_updated_at ON clinical_cases(updated_at DESC);
 ```
+
+### Case Store Operations (`src/data/case_store.py`)
+
+- `save_case(case, db_path)`: Upsert case instance; skips auto-saving empty blank cases (`is_blank` guard).
+- `get_case(case_id, db_path)`: Fetch and deserialize `ClinicalCase` with backward-compatible schema migration.
+- `list_cases(db_path)`: Return summary list of all consultations sorted by `updated_at DESC`.
+- `delete_case(case_id, db_path)`: Atomic single case deletion.
+- `delete_cases(case_ids, db_path)`: Atomic batch deletion of multiple consultations (Phase 14).
+- `get_cases(case_ids, db_path)`: Batch retrieval of multiple cases by ID (Phase 14).
+- `update_cases_status(case_ids, status, db_path)`: Bulk status transition (`Draft`, `In review`, `Analysed`, `Archived`) (Phase 14).
+- `purge_blank_cases(db_path)`: Housekeeping cleanup of blank unedited drafts.
 
 ---
 

@@ -1,7 +1,7 @@
 # Kent-AI — Architecture Context
 
-> Last updated: 2026-10-31 by Antigravity
-> Phase: Complete through Phase 12 (Clinician-Centric Stepper, SQLite Case Store, Classical Totality Matrix, Bedside Streaming Dialogue, Shimmer Reflection Animation & Full-Screen Responsive Viewport; 108 Unit & Integration Tests Passing, 0 Warnings)
+> Last updated: 2026-11-01 by Antigravity
+> Phase: Complete through Phase 15 (Comprehensive Clinician UI/UX Overhaul, Phases 1–10; 168 Unit & Integration Tests Passing across 18 Test Modules, 0 Errors)
 
 ---
 
@@ -83,31 +83,46 @@ kent-ai/
 │   │   └── report_generator.py    # ★ CORE: JSON + Markdown reports (Phase 5) — implemented
 │   │
 │   └── dashboard/
-│       ├── app.py                 # ★ CORE: Streamlit 4-workspace clinical portal with 4-step stepper (Phase 7 & 11) — implemented
+│       ├── app.py                 # ★ CORE: Streamlit 6-tab clinical portal with 4-step stepper (Phase 7, 11, 15) — implemented
+│       ├── constants.py           # ★ CORE: Single source of truth for 7 canonical dimensions, grade weights, scope counts, model display name & evaluation benchmarks (Phase 15) — implemented
+│       ├── totality_ring.py       # ★ CORE: Reusable 7-segment SVG totality ring glyph (Phase 15) — implemented
 │       ├── dimensions.py          # ★ CORE: Canonical DIMENSION_MAP & pluralization helpers — implemented
 │       ├── examples.py            # ★ CORE: Clinical vignettes typed catalog for intake demonstrations (Phase 13) — implemented
-│       ├── pdf_exporter.py        # ★ CORE: Multi-page clinical consultation PDF export via ReportLab 5.1 — implemented (Phase 11)
-│       ├── styles.py              # ★ CORE: Google Stitch CSS injection, pulse glow, cards (Phase 7 & 11) — implemented
-│       ├── styles.css             # ★ CORE: Google Stitch CSS styles (midnight canvas #0A0F1D, full-screen collapse, shimmer skeleton) — implemented
+│       ├── pdf_exporter.py        # ★ CORE: Multi-page clinical consultation PDF export via ReportLab 5.1 & PyMuPDF — implemented (Phase 11 & 14)
+│       ├── styles.py              # ★ CORE: CSS injection & font definitions (Phase 7 & 15) — implemented
+│       ├── styles.css             # ★ CORE: Ground-truth design tokens palette (:root), 2px focus-visible rings, printable report layout (Phase 15) — implemented
+│       ├── utils.py               # ★ CORE: Mandatory HTML escaping esc() & safe fragment helpers — implemented
 │       ├── views/
-│       │   ├── step1_intake.py    # ★ CORE: Step 1 router & bedside dialogue console (Phase 7 & 13) — implemented
+│       │   ├── step1_intake.py    # ★ CORE: Step 1 router & 7:3 bedside console with Case Snapshot rail (Phase 13 & 15) — implemented
 │       │   ├── step1_paste.py     # ★ CORE: Step 1 paste clinical narrative intake with form & preview (Phase 13) — implemented
-│       │   ├── step2_review.py    # ★ CORE: Step 2 clinical review & dimension validation — implemented
-│       │   ├── step3_analysis.py  # ★ CORE: Step 3 repertorization analysis & matrix — implemented
-│       │   └── step4_report.py    # ★ CORE: Step 4 consolidated report & differential analysis — implemented
+│       │   ├── step2_review.py    # ★ CORE: Step 2 clinical review & dimension validation (Phase 15) — implemented
+│       │   ├── step3_analysis.py  # ★ CORE: Step 3 repertorization analysis & candidate comparison matrix (Phase 15) — implemented
+│       │   ├── step4_report.py    # ★ CORE: Step 4 consolidated report & printable paper layout (Phase 15) — implemented
+│       │   ├── explorer.py        # ★ CORE: Rubric Explorer with single-row hybrid search & Materia Medica modal inspection (Phase 15) — implemented
+│       │   ├── materia_medica.py  # ★ CORE: Dedicated Materia Medica remedy keynotes browser (Phase 15) — implemented
+│       │   ├── methodology.py     # ★ CORE: Dedicated Methodology & Kent Totality Principles reference (Phase 15) — implemented
+│       │   └── settings.py        # ★ CORE: Dedicated Settings & live Ollama telemetry console (Phase 15) — implemented
 │       └── components/
-│           ├── case_bar.py        # ★ CORE: Persistent top case status bar with quick save & patient demographics popover — implemented (Phase 11)
+│           ├── header.py          # ★ CORE: Compact single-row top bar (<=56px) with leaf mark & engine status pill (Phase 15) — implemented
+│           ├── case_bar.py        # ★ CORE: Persistent top case status bar with multi-line stepper buttons (Phase 11 & 15) — implemented
+│           ├── action_bar.py      # ★ CORE: Reusable sticky bottom action bar (Phase 15) — implemented
+│           ├── case_dialogs.py    # ★ CORE: Streamlit @st.dialog modals (Patient Info, Research Disclaimer, Materia Medica) (Phase 15) — implemented
+│           ├── case_snapshot.py   # ★ CORE: Sticky 30% right rail for Case Workspace with inspection popovers (Phase 15) — implemented
+│           ├── case_bulk_actions.py # ★ CORE: Multi-case selection, batch deletion, JSON bundle export & CSV summary (Phase 14 & 15) — implemented
+│           ├── case_library.py    # ★ CORE: Saved consultation library with dual view (Cards/Table) & pagination (Phase 14 & 15) — implemented
+│           ├── demo_case.py       # ★ CORE: Realistic MIND demonstration case generator (DEMO-MIND-001) (Phase 15) — implemented
+│           ├── ollama_status.py   # ★ CORE: Fast 2-second dynamic daemon polling & round-trip ping latency (Phase 14 & 15) — implemented
+│           ├── sidebar.py         # ★ CORE: Slim 296px sidebar with Active Case Card & persistent Case Tray (Phase 15) — implemented
 │           ├── totality_grid.py   # ★ CORE: Classical Repertory Totality Matrix (rubrics×remedies, grades 3/2/1, Mute/Elim toggles) — implemented (Phase 11)
 │           ├── extraction_preview.py # ★ CORE: Two-column highlighted narrative preview with overlap resolution (Phase 13) — implemented
 │           ├── intake_guide.py    # ★ CORE: 6-item dynamic intake checklist & privacy guidance (Phase 13) — implemented
-│           ├── case_library.py    # ★ CORE: Saved patient consultation library & management — implemented (Phase 11)
 │           ├── remedy_comparison.py # ★ CORE: Differential Materia Medica side-by-side keynotes comparison — implemented (Phase 11)
-│           ├── rubric_tree.py     # ★ CORE: Rubric cards with expandable 3-grade remedy inspector (Phase 7) — implemented
-│           ├── chat_viewer.py     # ★ CORE: Bedside dialogue console orchestrator (<250 lines) (Phase 7, 12, 14) — implemented
-│           ├── chat_header.py     # ★ CORE: Unified dialogue header row, segmented mode & More popover (Phase 14) — implemented
-│           ├── chat_messages.py   # ★ CORE: Accessible message stream, per-turn captured chips & undo (Phase 14) — implemented
+│           ├── rubric_tree.py     # ★ CORE: Rubric cards with breadcrumbs, specificity badges & grade chips (Phase 15) — implemented
+│           ├── chat_viewer.py     # ★ CORE: Bedside dialogue console orchestrator (<250 lines) (Phase 14 & 15) — implemented
+│           ├── chat_header.py     # ★ CORE: Dialogue header with stage tracker, mode toggle & export popover (Phase 14 & 15) — implemented
+│           ├── chat_messages.py   # ★ CORE: Accessible message stream, 28px avatars & collapsing welcome card (Phase 14 & 15) — implemented
 │           ├── chat_actions.py    # ★ CORE: Docked review action bar with dynamic totality summary (Phase 14) — implemented
-│           ├── chat_chips.py      # ★ CORE: Dynamic suggestion pills with touch-friendly 40px sizing (Phase 12 & 14) — implemented
+│           ├── chat_chips.py      # ★ CORE: Dynamic suggestion pills with neutral step-aware prompts (Phase 14 & 15) — implemented
 │           └── icons.py           # ★ CORE: Material Design SVG icon helpers — implemented
 │
 ├── scripts/
@@ -130,9 +145,9 @@ kent-ai/
 │   ├── 01_eda_repertory.ipynb     # EDA: sections, MIND depths, grades, search demo
 │   └── 02_case_generation_demo.ipynb # Interactive case generation & BIO inspection
 │
-├── tests/                         # ★ 133 passing unit & integration tests across 17 test modules (0 warnings)
+├── tests/                         # ★ 168 passing unit & integration tests across 18 test modules (0 errors, 0 warnings)
 │   ├── test_kent_db.py            # SQLite reader, views, FTS5 queries (13 tests)
-│   ├── test_case.py               # ClinicalCase model, extraction_meta, serialization & case_store SQLite CRUD (17 tests)
+│   ├── test_case.py               # ClinicalCase model, extraction_meta, bulk operations, serialization & case_store SQLite CRUD (17 tests)
 │   ├── test_bio_tagger.py         # Subword alignment & character offset repair (6 tests)
 │   ├── test_case_generator.py     # LLaMA 3 prompting & JSON parsing (3 tests)
 │   ├── test_splitter.py           # 80/10/10 deficit-balancing split algorithm (4 tests)
@@ -142,13 +157,14 @@ kent-ai/
 │   ├── test_ranker.py             # Remedy totality scoring & grade weighting (5 tests)
 │   ├── test_pipeline.py           # End-to-end transcript-to-report pipeline, extract_profile & two-stage flow (7 tests)
 │   ├── test_evaluation.py         # Academic evaluation suite, BIO metrics & report export (3 tests)
-│   ├── test_state_machine.py      # 10-state intake FSM & slot transitions (6 tests)
-│   ├── test_dialogue_manager.py   # Multi-turn context, unbracketed quick replies, streaming filter & slot sanitization (13 tests)
-│   ├── test_dashboard.py          # Slot badges, Totality Matrix, report export & transcript formatter (7 tests)
-│   ├── test_app_smoke.py          # AppTest headless UI smoke tests, stepper navigation, paste mode & example pills (8 tests)
+│   ├── test_state_machine.py      # 10-state intake FSM & slot transitions (8 tests)
+│   ├── test_dialogue_manager.py   # Multi-turn context, resume_from_case, streaming filter & slot sanitization (19 tests)
+│   ├── test_dashboard.py          # Slot badges, Totality Matrix, report export, dynamic badges & transcript formatter (10 tests)
+│   ├── test_app_smoke.py          # AppTest headless UI smoke tests, stepper, bulk selection, ASCII toast guards (11 tests)
 │   ├── test_llm_dataset.py        # Generative instruction dataset formatting & schema adherence (8 tests)
 │   ├── test_narrative.py          # Chief complaint derivation, recommended dimensions & highlight builder (8 tests)
-│   └── test_safety.py             # Red flag safety regex screening with negation awareness (3 tests)
+│   ├── test_safety.py             # Red flag safety regex screening with negation awareness (3 tests)
+│   └── test_ui_overhaul.py        # Design tokens, breadcrumbs, hybrid search, totality ring, dialogs & demo case (17 tests)
 │
 ├── docs/
 │   ├── Next_Steps.md              # Supervisor meeting briefing & roadmap (Dr. Arya)

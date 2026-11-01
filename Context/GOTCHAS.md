@@ -1,7 +1,7 @@
 # Kent-AI — Gotchas & Known Quirks
 
-> Last updated: 2026-10-31 by Antigravity
-> Phase: Complete through Phase 12 (Clinician-Centric Stepper, SQLite Case Store, Classical Totality Matrix, Bedside Streaming Dialogue, Shimmer Reflection Animation & Full-Screen Responsive Viewport; 108 Unit & Integration Tests Passing, 0 Warnings)
+> Last updated: 2026-11-01 by Antigravity
+> Phase: Complete through Phase 15 (Comprehensive Clinician UI/UX Overhaul, Phases 1–10; 168 Unit & Integration Tests Passing across 18 Test Modules, 0 Errors)
 
 ---
 
@@ -259,6 +259,26 @@ When rendering dynamic hardware/daemon status indicators (e.g. Ollama online/off
 - **Gotcha 1 (Sticky Failure State)**: If a chat turn fails while Ollama is offline, `dm.last_call_failed = True` persists even when Ollama is started in another terminal. The polling fragment must explicitly reset `dm.last_call_failed = False` whenever `check_ollama_online()` returns `True`.
 - **Gotcha 2 (Cache Duration)**: Caching ping functions with long TTLs (e.g. 10s) delays badge responsiveness. Reduce TTL to 2s to align with polling intervals.
 - **Gotcha 3 (Testing Fragment Functions in Unit Tests)**: Streamlit's `@st.fragment` decorator returns `None` immediately if `get_script_run_ctx() is None` (bare pytest execution without an active script runner). When writing unit tests for a fragment function outside `AppTest`, invoke `getattr(func, "__wrapped__", func)(*args)` to execute the underlying logic directly.
+
+### 8.16 Streamlit `st.columns()` Integer Count Requirement in Test Mocks
+When writing tests that mock Streamlit layout containers via `st.columns = lambda n: ...`, passing keyword arguments like `vertical_alignment="center"` or variable column proportion lists causes `TypeError: lambda() got an unexpected keyword argument` in the test runner.
+- **Root Cause**: Simplistic test mocks only accept a single integer count argument (`n: int`).
+- **Verified Workaround**: Inside component rendering functions (e.g. `render_rubric_card`), invoke `st.columns(n)` using plain integer counts without extra kwargs unless guarded or standardized across test harness fixtures.
+
+### 8.17 ASCII-Only Character Requirement for `st.toast` Notifications
+Calling `st.toast("Ollama Online · 12ms")` triggers assertion failure in `test_source_guards_no_emoji_in_toasts_and_no_x_buttons` during CI/CD audit passes.
+- **Root Cause**: The AST guard enforces that all `st.toast(...)` strings contain strictly ASCII characters (`ord(c) < 128`), treating Unicode interpuncts (`·`), arrows (`→`), and non-breaking spaces as potential emoji or unrendered symbol defects.
+- **Verified Workaround**: Strictly use ASCII hyphens (`-`) or ASCII arrows (`->`) in all toast messages (e.g. `st.toast("Ollama Online - 12ms")`).
+
+### 8.18 PyMuPDF / Fitz Deprecation Migration
+Referencing `import fitz` emits a `FutureWarning: The fitz API is deprecated and will be removed in future. Use import pymupdf instead.`
+- **Root Cause**: Upstream PyMuPDF 1.24+ deprecated the legacy C-extension `fitz` module namespace in favor of standard `pymupdf`.
+- **Verified Workaround**: Replace `import fitz` with `import pymupdf as fitz` or `import pymupdf` across all PDF exporters and verification tests.
+
+### 8.19 Trailing Dot Formatting in Kentian Remedy Abbreviations
+Querying remedy keynotes by abbreviation in modal dialogs (`show_remedy_dialog`) fails to resolve certain remedies when passing raw unpunctuated names (e.g. searching for `"Lach"` fails because the database stores `"Lach."`).
+- **Root Cause**: Kent's Repertory stores abbreviation strings with trailing periods (e.g. `Acon.`, `Lach.`, `Bell.`, `Sulph.`), but clinical text and user inputs frequently omit the dot.
+- **Verified Workaround**: In `get_remedy_by_abbreviation` and `show_remedy_dialog`, execute a multi-candidate match query checking: 1) exact abbreviation, 2) abbreviation with dot appended, 3) abbreviation with dot stripped, and 4) `LOWER(normalized) = LOWER(?)`.
 
 ---
 

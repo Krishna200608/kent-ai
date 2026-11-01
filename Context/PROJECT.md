@@ -1,7 +1,7 @@
 # Kent-AI — Project Context
 
-> Last updated: 2026-10-31 by Antigravity
-> Phase: Complete through Phase 12 (Clinician-Centric Stepper, SQLite Case Store, Classical Totality Matrix, Bedside Streaming Dialogue, Shimmer Reflection Animation & Full-Screen Responsive Viewport; 108 Unit & Integration Tests Passing, 0 Warnings)
+> Last updated: 2026-11-01 by Antigravity
+> Phase: Complete through Phase 15 (Comprehensive Clinician UI/UX Overhaul, Phases 1–10; 168 Unit & Integration Tests Passing across 18 Test Modules, 0 Errors)
 
 ---
 
@@ -78,6 +78,9 @@ It takes a patient's natural-language symptom description, extracts structured c
 | 10 | Multi-Model Ensembling & Hybrid Pipeline | ✅ Complete (Weighted voting, IoU span clustering, two-stage encoder-mining + LLM arbitration) | 31–32 |
 | 11 | Clinician-Centric Stepper, Case Persistence & Totality Matrix | ✅ Complete (Single typed ClinicalCase, SQLite case store, 4-step stepper, Totality Matrix, ReportLab PDF) | 33–34 |
 | 12 | Bedside Streaming Dialogue, Shimmer Reflection & Responsive Viewport | ✅ Complete (NDJSON chunk streaming, immediate reflection skeleton, syntax leak elimination, full-screen collapse) | 35 |
+| 13 | Step 1 Clinical Narrative Intake Redesign & Accessibility Polish | ✅ Complete (Segmented mode switching, highlighted preview, safety screening, WCAG AA contrast; 133 tests) | 36 |
+| 14 | Guided Conversation Chat Redesign & Case Library Bulk Actions | ✅ Complete (Deterministic openers, per-turn undo, bulk case selection & batch exports, PyMuPDF migration; 151 tests) | 37 |
+| 15 | Comprehensive Clinician UI/UX Overhaul & Design System (Phases 1–10) | ✅ Complete (Single source of truth in constants.py, token palette in styles.css, 7-segment totality ring, Case Snapshot rail, dual-view Case Library with pagination, hybrid Rubric Explorer with Materia Medica dialog, split Methodology/Settings, printable reports, demo case mode; 168 tests) | 38 |
 
 Full roadmap & phase tracking details: [`Context/PROGRESS.md`](PROGRESS.md)
 
