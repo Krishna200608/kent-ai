@@ -54,15 +54,18 @@ def init_case_db(db_path: Optional[Union[str, Path]] = None) -> None:
                 eliminatory_rubrics_json TEXT,
                 report_json TEXT,
                 clinical_notes TEXT,
-                clinical_summary TEXT
+                clinical_summary TEXT,
+                extraction_meta_json TEXT
             )
             """
         )
-        # Safe migration if table existed without clinical_summary
+        # Safe migration if table existed without clinical_summary or extraction_meta_json
         cur.execute("PRAGMA table_info(clinical_cases)")
         cols = [r[1] for r in cur.fetchall()]
         if "clinical_summary" not in cols:
             cur.execute("ALTER TABLE clinical_cases ADD COLUMN clinical_summary TEXT")
+        if "extraction_meta_json" not in cols:
+            cur.execute("ALTER TABLE clinical_cases ADD COLUMN extraction_meta_json TEXT")
 
         cur.execute("CREATE INDEX IF NOT EXISTS idx_cases_updated_at ON clinical_cases(updated_at DESC)")
         conn.commit()
@@ -82,8 +85,8 @@ def save_case(case: ClinicalCase, db_path: Optional[Union[str, Path]] = None) ->
             status, created_at, updated_at, scope_chapter, ranking_mode,
             dimensions_json, transcript, history_json, selected_rubrics_json,
             muted_rubrics_json, eliminatory_rubrics_json, report_json, clinical_notes,
-            clinical_summary
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            clinical_summary, extraction_meta_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(case_id) DO UPDATE SET
             patient_name=excluded.patient_name,
             patient_age=excluded.patient_age,
@@ -101,7 +104,8 @@ def save_case(case: ClinicalCase, db_path: Optional[Union[str, Path]] = None) ->
             eliminatory_rubrics_json=excluded.eliminatory_rubrics_json,
             report_json=excluded.report_json,
             clinical_notes=excluded.clinical_notes,
-            clinical_summary=excluded.clinical_summary
+            clinical_summary=excluded.clinical_summary,
+            extraction_meta_json=excluded.extraction_meta_json
     """
 
     params = (
@@ -124,6 +128,7 @@ def save_case(case: ClinicalCase, db_path: Optional[Union[str, Path]] = None) ->
         json.dumps(case.report_data) if case.report_data else None,
         case.clinical_notes,
         case.clinical_summary or "",
+        json.dumps(case.extraction_meta) if hasattr(case, "extraction_meta") and case.extraction_meta else None,
     )
 
     with sqlite3.connect(target_path) as conn:
@@ -170,6 +175,11 @@ def get_case(case_id: str, db_path: Optional[Union[str, Path]] = None) -> Option
                 row["clinical_summary"]
                 if "clinical_summary" in row.keys() and row["clinical_summary"]
                 else ((json.loads(row["report_json"]).get("clinical_summary", "")) if row["report_json"] else "")
+            ),
+            extraction_meta=(
+                json.loads(row["extraction_meta_json"])
+                if "extraction_meta_json" in row.keys() and row["extraction_meta_json"]
+                else {}
             ),
         )
 

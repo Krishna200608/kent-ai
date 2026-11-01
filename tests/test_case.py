@@ -427,3 +427,144 @@ def test_clinical_case_legacy_attribute_resilience():
     case.clinical_summary = "Updated physician summary"
     assert case.clinical_summary == "Updated physician summary"
 
+
+def test_extraction_meta_round_trip(tmp_path):
+    """Verify extraction_meta serialization and SQLite round trip."""
+    db_path = tmp_path / "meta_cases.sqlite"
+    case = ClinicalCase(case_id="CASE-META-001", patient_name="Meta Patient")
+    meta = {
+        "source": "paste",
+        "negated": ["fever", "nausea"],
+        "items": {
+            "location": [{"text": "forehead", "confidence": 0.95, "start": 10, "end": 18, "origin": "text"}],
+            "sensation": [{"text": "throbbing", "confidence": 0.88, "start": 22, "end": 31, "origin": "text"}],
+        },
+        "red_flags": [],
+    }
+    case.extraction_meta = meta
+    case.add_symptom("location", "forehead")
+
+    # to_dict / from_dict
+    d = case.to_dict()
+    assert d["extraction_meta"] == meta
+    loaded_case = ClinicalCase.from_dict(d)
+    assert loaded_case.extraction_meta == meta
+
+    # SQLite round trip
+    save_case(case, db_path=db_path)
+    retrieved = get_case("CASE-META-001", db_path=db_path)
+    assert retrieved is not None
+    assert retrieved.extraction_meta == meta
+
+
+def test_legacy_schema_migration_loads_empty_extraction_meta(tmp_path):
+    """Verify legacy SQLite DB created without extraction_meta_json column migrates and loads {."""
+    db_path = tmp_path / "legacy_v1.sqlite"
+    # Create legacy table without extraction_meta_json
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            """
+            CREATE TABLE clinical_cases (
+                case_id TEXT PRIMARY KEY,
+                patient_name TEXT NOT NULL,
+                patient_age INTEGER,
+                patient_sex TEXT,
+                chief_complaint TEXT,
+                status TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                scope_chapter TEXT,
+                ranking_mode TEXT,
+                dimensions_json TEXT NOT NULL,
+                transcript TEXT,
+                history_json TEXT,
+                selected_rubrics_json TEXT,
+                muted_rubrics_json TEXT,
+                eliminatory_rubrics_json TEXT,
+                report_json TEXT,
+                clinical_notes TEXT,
+                clinical_summary TEXT
+            )
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO clinical_cases (
+                case_id, patient_name, status, created_at, updated_at, dimensions_json
+            ) VALUES ('LEGACY-001', 'Old Patient', 'intake', '2026-01-01', '2026-01-01', '{}')
+            """
+        )
+        conn.commit()
+
+    # Loading legacy case triggers automatic migration
+    loaded = get_case("LEGACY-001", db_path=db_path)
+    assert loaded is not None
+    assert loaded.case_id == "LEGACY-001"
+    assert loaded.extraction_meta == {}
+
+    # Verify column was added to schema
+    with sqlite3.connect(db_path) as conn:
+        cur = conn.cursor()
+        cur.execute("PRAGMA table_info(clinical_cases)")
+        cols = [r[1] for r in cur.fetchall()]
+        assert "extraction_meta_json" in cols
+
+
+def test_re_extract_keeps_manual_and_chat_items():
+    """Verify re-extraction replaces origin=='text' items while preserving 'manual' and 'chat' items."""
+    case = ClinicalCase()
+    case.extraction_meta = {
+        "source": "paste",
+        "items": {
+            "location": [
+                {"text": "forehead", "origin": "text"},
+                {"text": "temples", "origin": "manual"},
+            ],
+            "sensation": [
+                {"text": "burning", "origin": "chat"},
+            ],
+        },
+        "negated": [],
+        "red_flags": [],
+    }
+    case.dimensions = {
+        "location": ["forehead", "temples"],
+        "sensation": ["burning"],
+    }
+
+    # Re-extract with new text items
+    new_text = {
+        "location": [{"text": "vertex", "origin": "text"}],
+        "sensation": [{"text": "throbbing", "origin": "text"}],
+    }
+    case.replace_text_extracted_items(new_text, source="paste")
+
+    # "forehead" (old text) is replaced by "vertex" (new text), while "temples" (manual) is kept
+    loc_items = case.extraction_meta["items"]["location"]
+    loc_texts = [it["text"] for it in loc_items]
+    assert "vertex" in loc_texts
+    assert "temples" in loc_texts
+    assert "forehead" not in loc_texts
+    assert case.dimensions["location"] == ["temples", "vertex"]
+
+    # "burning" (chat) is kept, "throbbing" (new text) is added
+    sens_items = case.extraction_meta["items"]["sensation"]
+    sens_texts = [it["text"] for it in sens_items]
+    assert "burning" in sens_texts
+    assert "throbbing" in sens_texts
+    assert "burning" in case.dimensions["sensation"]
+    assert "throbbing" in case.dimensions["sensation"]
+
+
+def test_is_blank_false_once_transcript_set():
+    """Verify is_blank transitions to False once transcript narrative is populated."""
+    case = ClinicalCase()
+    assert case.is_blank is True
+
+    case.transcript = "Patient complains of constant anxiety and morning nausea."
+    assert case.is_blank is False
+
+    case.transcript = ""
+    assert case.is_blank is True
+
+

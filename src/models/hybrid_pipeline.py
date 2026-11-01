@@ -128,17 +128,20 @@ class HybridPipelineOrchestrator:
             arbitration_mode="mock" if self.mock_mode else "heuristic_consensus",
         )
 
-    def process_transcript(
+    def extract_profile(
         self,
         transcript: str,
-        patient_id: Optional[str] = None,
-        top_rubrics_per_query: int = 3,
-        top_remedies: int = 10,
         section_id: Optional[int] = None,
-    ) -> PatientReport:
-        """Execute end-to-end Hybrid repertorization (Paradigm 2)."""
-        pid = patient_id or "PT-HYBRID"
+    ) -> SymptomProfile:
+        """Stage 1 + Stage 2: Mine candidate entities and arbitrate 7-dim profile without vector search or ranking.
 
+        Args:
+            transcript: Patient symptom description or dialogue transcript.
+            section_id: Optional Kent chapter filter (unused in extraction, kept for parity).
+
+        Returns:
+            SymptomProfile with extracted 7-dim slots, negated items, and raw entity spans.
+        """
         # Stage 1: Mine candidate entities using Encoder Ensemble (< 40ms)
         candidates = self.ensemble.extract_entities(transcript, min_votes=1)
 
@@ -146,8 +149,7 @@ class HybridPipelineOrchestrator:
         arbitration = self.arbitrate_candidates(transcript, candidates)
         profile_dict = arbitration.arbitrated_profile
 
-        # Format into SymptomProfile for search query generation
-        symptom_profile = SymptomProfile(
+        return SymptomProfile(
             chief_complaint=transcript[:100],
             location=profile_dict.get("LOC", []),
             sensation=profile_dict.get("SEN", []),
@@ -159,6 +161,30 @@ class HybridPipelineOrchestrator:
             negated=arbitration.negated_entities,
             raw_entities=candidates,
         )
+
+    def process_transcript(
+        self,
+        transcript: str,
+        patient_id: Optional[str] = None,
+        top_rubrics_per_query: int = 3,
+        top_remedies: int = 10,
+        section_id: Optional[int] = None,
+    ) -> PatientReport:
+        """Execute end-to-end Hybrid repertorization (Paradigm 2)."""
+        pid = patient_id or "PT-HYBRID"
+
+        # Stage 1 & 2: Extract profile
+        symptom_profile = self.extract_profile(transcript, section_id=section_id)
+        profile_dict = {
+            "LOC": symptom_profile.location,
+            "SEN": symptom_profile.sensation,
+            "MOD_AGG": symptom_profile.modality_agg,
+            "MOD_AMEL": symptom_profile.modality_amel,
+            "CONC": symptom_profile.concomitant,
+            "TEMP": symptom_profile.temporal,
+            "MENT": symptom_profile.mental,
+        }
+        candidates = symptom_profile.raw_entities
 
         search_queries = symptom_profile.get_search_queries()
         if not search_queries:

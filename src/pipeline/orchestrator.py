@@ -74,6 +74,31 @@ class PipelineOrchestrator:
         self.ranker = ranker or RemedyRanker()
         self.summarizer = CaseSummarizer()
 
+    def extract_profile(
+        self,
+        transcript: str,
+        section_id: Optional[int] = None,
+    ) -> SymptomProfile:
+        """Extract structured 7-dimensional clinical symptom profile without vector search or ranking.
+
+        Args:
+            transcript: Patient symptom description or dialogue transcript.
+            section_id: Optional Kent chapter filter (unused in extraction, kept for parity).
+
+        Returns:
+            SymptomProfile with extracted 7-dim slots, negated items, and raw entity spans.
+        """
+        raw_entities: List[Dict[str, Any]] = []
+        if self.ner is not None:
+            try:
+                raw_entities = self.ner.extract_entities(transcript)
+            except Exception as err:
+                logger.warning("NER extraction failed (%s), proceeding with empty entities.", err)
+                raw_entities = []
+
+        profile: SymptomProfile = self.resolver.resolve(transcript, raw_entities=raw_entities)
+        return profile
+
     def process_transcript(
         self,
         transcript: str,
@@ -96,17 +121,8 @@ class PipelineOrchestrator:
         """
         pid = patient_id or f"PT-{uuid.uuid4().hex[:8].upper()}"
 
-        # 1. Extract clinical entity spans using Bio_ClinicalBERT
-        raw_entities: List[Dict[str, Any]] = []
-        if self.ner is not None:
-            try:
-                raw_entities = self.ner.extract_entities(transcript)
-            except Exception as err:
-                logger.warning("NER extraction failed (%s), proceeding with empty entities.", err)
-                raw_entities = []
-
-        # 2. Resolve symptoms and 7 dimensions with negation & coreference handling
-        profile: SymptomProfile = self.resolver.resolve(transcript, raw_entities=raw_entities)
+        # 1 & 2. Extract profile (NER + resolver)
+        profile: SymptomProfile = self.extract_profile(transcript, section_id=section_id)
         queries = profile.get_search_queries()
 
         # 3. Retrieve candidate rubrics across generated queries
@@ -146,7 +162,7 @@ class PipelineOrchestrator:
             matched_rubrics=matched_rubrics,
             ranked_remedies=ranked_remedies,
             search_queries=queries,
-            entities=raw_entities,
+            entities=profile.raw_entities,
         )
 
     def repertorize_case(

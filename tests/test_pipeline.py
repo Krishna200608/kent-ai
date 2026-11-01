@@ -192,3 +192,34 @@ def test_pipeline_real_ner_inference_if_available():
     assert len(report.entities) > 0
     assert report.patient_id.startswith("PT-")
     assert any(e.get("label") == "MENT" for e in report.entities)
+
+
+def test_extract_profile_matches_first_stage_and_never_touches_vector_store(mock_pipeline):
+    """Verify extract_profile extracts dimensions matching process_transcript without vector-store queries."""
+    transcript = "Doctor, I feel terribly abandoned and absent-minded every morning, but no fever."
+
+    # 1. extract_profile extracts the profile
+    profile = mock_pipeline.extract_profile(transcript)
+    assert profile is not None
+    assert len(profile.mental) > 0
+
+    # 2. process_transcript uses extract_profile so dimensions match exactly
+    report = mock_pipeline.process_transcript(transcript)
+    assert report.dimensions.get("mental") == profile.mental
+    assert report.dimensions.get("temporal") == profile.temporal
+    assert report.dimensions.get("negated") == profile.negated
+
+    # 3. Prove extract_profile never touches vector store
+    class ForbiddenVectorStore:
+        def query(self, *args, **kwargs):
+            raise AssertionError("extract_profile must never call vector_store.query!")
+
+    spy_orchestrator = PipelineOrchestrator(
+        resolver=mock_pipeline.resolver,
+        vector_store=ForbiddenVectorStore(),
+        ranker=mock_pipeline.ranker,
+        mock_mode=True,
+    )
+    # This must succeed without raising AssertionError
+    spy_profile = spy_orchestrator.extract_profile(transcript)
+    assert spy_profile.mental == profile.mental

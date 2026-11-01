@@ -29,7 +29,7 @@ def render_slot_badges_html(slots: Dict[str, List[str]], dm: Optional[DialogueMa
                 f'</div>'
             )
         else:
-            rec_tag = " <span style='font-size:9px; color:#F59E0B;'>(Recommended)</span>" if dim.key in ("modality_amel", "temporal") else ""
+            rec_tag = " <span style='font-size:9px; color:#F59E0B;'>(Recommended)</span>" if dim.is_recommended else ""
             title_text = esc(f"{dim.label} ({dim.code}): {dim.captures}\nStatus: Not recorded yet")
             segments_html.append(
                 f'<div class="hud-segment hud-segment-unfilled" title="{title_text}" data-code="{dim.code}">'

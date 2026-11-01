@@ -27,7 +27,26 @@ CANONICAL_DIMENSIONS = [
 
 @dataclass
 class ClinicalCase:
-    """Canonical patient consultation and homeopathic repertorization case."""
+    """Canonical patient consultation and homeopathic repertorization case.
+
+    extraction_meta schema:
+    {
+        "source": "paste" | "chat" | "manual",
+        "negated": [str],
+        "items": {
+            dim_key: [
+                {
+                    "text": str,
+                    "confidence": float | None,
+                    "start": int | None,
+                    "end": int | None,
+                    "origin": "text" | "chat" | "manual",
+                }
+            ]
+        },
+        "red_flags": [{"category": str, "snippet": str}],
+    }
+    """
 
     case_id: str = field(
         default_factory=lambda: f"CASE-{datetime.date.today().year}-{uuid.uuid4().hex[:4].upper()}"
@@ -67,6 +86,9 @@ class ClinicalCase:
     clinical_notes: str = ""
     clinical_summary: str = ""
 
+    # Extraction provenance metadata (WP1)
+    extraction_meta: Dict[str, Any] = field(default_factory=dict)
+
     def __post_init__(self) -> None:
         # Guarantee all 7 dimensions exist as lists
         if not self.dimensions:
@@ -76,6 +98,8 @@ class ClinicalCase:
                 self.dimensions[k] = list(self.dimensions.get(k, []))
         if not hasattr(self, "clinical_summary"):
             self.clinical_summary = ""
+        if not hasattr(self, "extraction_meta") or self.extraction_meta is None:
+            self.extraction_meta = {}
 
     def __getattr__(self, name: str) -> Any:
         if name == "clinical_summary":
@@ -212,6 +236,47 @@ class ClinicalCase:
 
         return unique_queries[:12]
 
+    def replace_text_extracted_items(
+        self,
+        new_text_items: Dict[str, List[Dict[str, Any]]],
+        source: str = "paste",
+        negated: Optional[List[str]] = None,
+        red_flags: Optional[List[Dict[str, str]]] = None,
+    ) -> None:
+        """Replace only origin=='text' items in extraction_meta and dimensions, keeping 'manual' and 'chat' items intact."""
+        if not hasattr(self, "extraction_meta") or self.extraction_meta is None:
+            self.extraction_meta = {}
+
+        current_items = self.extraction_meta.get("items", {})
+        merged_items: Dict[str, List[Dict[str, Any]]] = {}
+
+        for k in CANONICAL_DIMENSIONS:
+            # Preserve existing non-text items (manual, chat)
+            preserved = [it for it in current_items.get(k, []) if it.get("origin") != "text"]
+            # Add incoming text items (tagging origin='text' if omitted)
+            incoming = []
+            for it in new_text_items.get(k, []):
+                item_dict = dict(it)
+                item_dict.setdefault("origin", "text")
+                incoming.append(item_dict)
+            merged_items[k] = preserved + incoming
+
+            # Rebuild self.dimensions[k] from merged_items preserving order and uniqueness
+            seen = set()
+            dim_values: List[str] = []
+            for it in merged_items[k]:
+                t = str(it.get("text", "")).strip()
+                if t and t.lower() not in seen:
+                    seen.add(t.lower())
+                    dim_values.append(t)
+            self.dimensions[k] = dim_values
+
+        self.extraction_meta["source"] = source
+        self.extraction_meta["items"] = merged_items
+        self.extraction_meta["negated"] = list(negated or [])
+        self.extraction_meta["red_flags"] = list(red_flags or [])
+        self.updated_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to JSON-serializable dictionary."""
         return asdict(self)
@@ -222,9 +287,13 @@ class ClinicalCase:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> ClinicalCase:
-        """Instantiate ClinicalCase from dictionary."""
+        """Instantiate ClinicalCase from dictionary, tolerating missing extraction_meta or extra keys."""
         clean_data = dict(data)
-        return cls(**clean_data)
+        if "extraction_meta" not in clean_data or clean_data["extraction_meta"] is None:
+            clean_data["extraction_meta"] = {}
+        field_names = {f.name for f in cls.__dataclass_fields__.values()}
+        filtered = {k: v for k, v in clean_data.items() if k in field_names}
+        return cls(**filtered)
 
     @classmethod
     def from_json(cls, json_str: str) -> ClinicalCase:

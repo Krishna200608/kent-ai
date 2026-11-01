@@ -21,6 +21,7 @@ class DimensionMeta:
     example: str
     badge_class: str
     canonical: str = ""
+    is_recommended: bool = False
 
     @property
     def tooltip(self) -> str:
@@ -65,6 +66,7 @@ DIMENSION_MAP: Dict[str, DimensionMeta] = {
         example="Better by pressure, better fresh open air",
         badge_class="badge-amel",
         canonical="Modality",
+        is_recommended=True,
     ),
     "concomitant": DimensionMeta(
         key="concomitant",
@@ -83,6 +85,7 @@ DIMENSION_MAP: Dict[str, DimensionMeta] = {
         example="Worse at midnight, periodic",
         badge_class="badge-temp",
         canonical="Temporality",
+        is_recommended=True,
     ),
     "mental": DimensionMeta(
         key="mental",
@@ -97,6 +100,7 @@ DIMENSION_MAP: Dict[str, DimensionMeta] = {
 
 # Ordered tuple representation for sequential HUD and list rendering
 KENT_DIMENSIONS_ORDERED: List[DimensionMeta] = list(DIMENSION_MAP.values())
+RECOMMENDED_DIMENSIONS: List[str] = [d.key for d in KENT_DIMENSIONS_ORDERED if d.is_recommended]
 
 
 def get_dimension(key: str) -> Optional[DimensionMeta]:
