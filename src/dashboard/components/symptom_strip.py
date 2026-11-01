@@ -23,7 +23,7 @@ def render_slot_badges_html(slots: Dict[str, List[str]], dm: Optional[DialogueMa
             val_str = ", ".join(esc(it) for it in items) if items else "Recorded"
             title_text = esc(f"{dim.label} ({dim.code}): {dim.captures}\nCaptured: {', '.join(items)}")
             segments_html.append(
-                f'<div class="hud-segment hud-segment-filled {dim.badge_class}" title="{title_text}" data-code="{dim.code}">'
+                f'<div class="hud-segment hud-segment-filled {dim.badge_class}" tabindex="0" aria-label="{title_text}" data-tip="{title_text}" title="{title_text}" data-code="{dim.code}">'
                 f'<div class="hud-dim-title"><span class="status-dot" style="width:6px;height:6px;display:inline-block;margin-right:4px;"></span>{esc(dim.label)}</div>'
                 f'<div class="hud-dim-sub" style="white-space: normal; line-height: 1.25;">{val_str}</div>'
                 f'</div>'
@@ -32,7 +32,7 @@ def render_slot_badges_html(slots: Dict[str, List[str]], dm: Optional[DialogueMa
             rec_tag = " <span style='font-size:9px; color:#F59E0B;'>(Recommended)</span>" if dim.is_recommended else ""
             title_text = esc(f"{dim.label} ({dim.code}): {dim.captures}\nStatus: Not recorded yet")
             segments_html.append(
-                f'<div class="hud-segment hud-segment-unfilled" title="{title_text}" data-code="{dim.code}">'
+                f'<div class="hud-segment hud-segment-unfilled" tabindex="0" aria-label="{title_text}" data-tip="{title_text}" title="{title_text}" data-code="{dim.code}">'
                 f'<div class="hud-dim-title">{esc(dim.label)}{rec_tag}</div>'
                 f'<div class="hud-dim-sub" style="color: #9CA3AF;">Not recorded yet</div>'
                 f'</div>'

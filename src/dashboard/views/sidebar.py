@@ -181,7 +181,7 @@ def render_sidebar():
 
         st.html(
             """
-            <div style='font-size: 11px; color: #6B7280; text-align: justify; margin-top: 14px;'>
+            <div style='font-size: 11px; color: #8492A6; text-align: justify; margin-top: 14px;'>
                 <b>Investigational Tool:</b> Kent-AI is an academic clinical decision-support and repertorization research system. It does not replace qualified homeopathic or medical evaluation.
             </div>
             """

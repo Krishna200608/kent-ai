@@ -41,7 +41,7 @@ def render_header():
                 </div>
             </div>
             <div class="brand-pills">
-                <div class="session-badge-wrapper" title="{tooltip_text}">
+                <div class="session-badge-wrapper" tabindex="0" aria-label="{tooltip_text}" data-tip="{tooltip_text}" title="{tooltip_text}">
                     <span class="status-pill status-pill-focus session-compact-pill">
                         <span class="status-dot"></span>
                         {get_icon('psychology' if is_mind else 'database', size=14, color='#10B981' if is_mind else '#06B6D4')}

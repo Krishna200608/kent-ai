@@ -77,16 +77,16 @@ def render_rubric_card(
         pct = int(round(sim * 100))
         if sim >= 0.78:
             match_label = f"Direct Match ({pct}%)"
-            match_html = f"<span class='status-pill match-strong' title='Semantic similarity score: {sim:.3f}'>Direct Match ({pct}%)</span>"
+            match_html = f"<span class='status-pill match-strong' tabindex='0' aria-label='Semantic similarity score: {sim:.3f}' data-tip='Semantic similarity score: {sim:.3f}' title='Semantic similarity score: {sim:.3f}'>Direct Match ({pct}%)</span>"
         elif sim >= 0.68:
             match_label = f"Moderate Match ({pct}%)"
-            match_html = f"<span class='status-pill match-good' title='Semantic similarity score: {sim:.3f}'>Moderate Match ({pct}%)</span>"
+            match_html = f"<span class='status-pill match-good' tabindex='0' aria-label='Semantic similarity score: {sim:.3f}' data-tip='Semantic similarity score: {sim:.3f}' title='Semantic similarity score: {sim:.3f}'>Moderate Match ({pct}%)</span>"
         elif sim >= 0.58:
             match_label = f"Partial Match ({pct}%)"
-            match_html = f"<span class='status-pill match-fair' title='Semantic similarity score: {sim:.3f}'>Partial Match ({pct}%)</span>"
+            match_html = f"<span class='status-pill match-fair' tabindex='0' aria-label='Semantic similarity score: {sim:.3f}' data-tip='Semantic similarity score: {sim:.3f}' title='Semantic similarity score: {sim:.3f}'>Partial Match ({pct}%)</span>"
         else:
             match_label = f"Distant Match ({pct}%)"
-            match_html = f"<span class='status-pill match-weak' title='Semantic similarity score: {sim:.3f}'>Distant Match ({pct}%)</span>"
+            match_html = f"<span class='status-pill match-weak' tabindex='0' aria-label='Semantic similarity score: {sim:.3f}' data-tip='Semantic similarity score: {sim:.3f}' title='Semantic similarity score: {sim:.3f}'>Distant Match ({pct}%)</span>"
 
     # Expander title (Task 6)
     if disp_prefix:
@@ -104,7 +104,7 @@ def render_rubric_card(
     if is_mind:
         disp_style = "display: inline-flex;" if show_dev else "display: none;"
         mind_badge = (
-            f"<span class='badge badge-mind' title='MIND CHAPTER' style='{disp_style} margin-left: 6px; vertical-align: middle;'>"
+            f"<span class='badge badge-mind' tabindex='0' aria-label='MIND CHAPTER' data-tip='MIND CHAPTER' title='MIND CHAPTER' style='{disp_style} margin-left: 6px; vertical-align: middle;'>"
             f"{get_icon('psychology', size=12, color='#10B981')} MIND CHAPTER"
             f"</span>"
         )
@@ -181,19 +181,19 @@ def render_rubric_card(
                 for r in g3[:15]:
                     name = r.get("full_name") or r.get("abbreviation")
                     abbr = r.get("abbreviation") or ""
-                    st.html(f"<span class='grade-3'>{name}</span> <span style='color:#6B7280; font-size:11px;'>({abbr})</span>")
+                    st.html(f"<span class='grade-3'>{name}</span> <span style='color:#8492A6; font-size:11px;'>({abbr})</span>")
             with col2:
                 g2 = [r for r in remedies if r.get("grade") == 2]
                 st.markdown(f"**Grade 2 (Italics / Qualified):** ({len(g2)})")
                 for r in g2[:15]:
                     name = r.get("full_name") or r.get("abbreviation")
                     abbr = r.get("abbreviation") or ""
-                    st.html(f"<span class='grade-2'>{name}</span> <span style='color:#6B7280; font-size:11px;'>({abbr})</span>")
+                    st.html(f"<span class='grade-2'>{name}</span> <span style='color:#8492A6; font-size:11px;'>({abbr})</span>")
             with col3:
                 g1 = [r for r in remedies if r.get("grade") == 1]
                 st.markdown(f"**Grade 1 (Plain):** ({len(g1)})")
                 for r in g1[:15]:
                     name = r.get("full_name") or r.get("abbreviation")
                     abbr = r.get("abbreviation") or ""
-                    st.html(f"<span class='grade-1'>{name}</span> <span style='color:#6B7280; font-size:11px;'>({abbr})</span>")
+                    st.html(f"<span class='grade-1'>{name}</span> <span style='color:#8492A6; font-size:11px;'>({abbr})</span>")
 

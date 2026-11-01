@@ -47,6 +47,44 @@ select:focus-visible,
     border: 0;
 }
 
+/* Accessible CSS Tooltips (WCAG 2.1 AA hover and keyboard focus) */
+[data-tip] {
+    position: relative;
+    cursor: help;
+}
+
+[data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: #0F172A;
+    color: #F8FAFC;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.35;
+    padding: 5px 9px;
+    border-radius: 5px;
+    border: 1px solid #334155;
+    white-space: pre-wrap;
+    max-width: 280px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+    z-index: 1000;
+}
+
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after,
+[data-tip]:focus::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
 html, body, [class*="css"], .stApp {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
     background-color: #0A0F1D !important;
@@ -274,6 +312,12 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.st-key-report_card):hover {
 @media (max-width: 900px) {
     .hud-segments-grid {
         grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .hud-segments-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
     }
 }
 
@@ -815,7 +859,7 @@ section[data-testid="stSidebar"][aria-expanded="false"] {
 /* Make buttons look sleek instead of generic Streamlit ones */
 button[kind="primary"] {
     background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
-    color: white !important;
+    color: #0A0F1D !important;
     border: none !important;
     box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
     font-weight: 700 !important;
@@ -826,7 +870,7 @@ button[kind="primary"] {
 button[kind="primary"]:hover {
     transform: translateY(-1px) !important;
     box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
-    color: white !important;
+    color: #0A0F1D !important;
 }
 
 button[kind="secondary"] {
@@ -1016,6 +1060,18 @@ footer {
         min-width: 100% !important;
         flex: 1 1 100% !important;
     }
+
+    /* Stepper navigation bar: keep 2x2 grid instead of 4 vertical rows */
+    .st-key-stepper_nav [data-testid="stHorizontalBlock"] {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+    .st-key-stepper_nav [data-testid="column"] {
+        width: calc(50% - 6px) !important;
+        min-width: calc(50% - 6px) !important;
+        flex: 0 0 calc(50% - 6px) !important;
+    }
 }
 
 .case-tray-card {
@@ -1115,10 +1171,10 @@ button[disabled],
 .stButton > button:disabled,
 [data-testid="baseButton-primary"]:disabled,
 [data-testid="baseButton-secondary"]:disabled {
-    opacity: 0.35 !important;
+    opacity: 0.75 !important;
     cursor: not-allowed !important;
     background: rgba(255, 255, 255, 0.04) !important;
-    color: var(--text-3) !important;
+    color: #8492A6 !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
     box-shadow: none !important;
     transform: none !important;

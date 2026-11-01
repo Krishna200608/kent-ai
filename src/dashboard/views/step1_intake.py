@@ -39,7 +39,7 @@ def render_bedside_dialogue_panel(dm: DialogueManager, current_case: ClinicalCas
 
             if filled_items:
                 for d_label, d_val, b_cls, d_tip in filled_items:
-                    st.markdown(f"<div style='font-size: 12px; margin-bottom: 4px;' title='{d_tip}'><span class='badge {b_cls}' style='font-size:11px; padding:2px 6px;'>{d_label}</span> <span style='color:#F9FAFB;'>{d_val}</span></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size: 12px; margin-bottom: 4px;' tabindex='0' aria-label='{d_tip}' data-tip='{d_tip}' title='{d_tip}'><span class='badge {b_cls}' style='font-size:11px; padding:2px 6px;'>{d_label}</span> <span style='color:#F9FAFB;'>{d_val}</span></div>", unsafe_allow_html=True)
             else:
                 st.markdown("<div style='font-size: 12px; color: #8492A6; margin-bottom: 8px; font-style: italic;'>No symptoms captured yet. Converse in the dialogue console to extract dimensions.</div>", unsafe_allow_html=True)
 

@@ -128,7 +128,7 @@ def render_remedy_comparison(db: KentDB) -> None:
                     sec_badge = "<span class='badge badge-mind' style='font-size:9px;'>MIND</span>" if is_mind else f"<span style='font-size:9.5px; color:#06B6D4;'>{kn.get('section_name')}</span>"
                     st.html(
                         f"""
-                        <div style="font-size: 11.5px; margin-bottom: 5px; line-height: 1.3;" title="{p}">
+                        <div style="font-size: 11.5px; margin-bottom: 5px; line-height: 1.3;" tabindex="0" aria-label="{p}" data-tip="{p}" title="{p}">
                             <span class="grade-3" style="font-size: 10px;">3</span>
                             <span style="color: #F9FAFB;">{clean_leaf}</span>
                             {sec_badge}

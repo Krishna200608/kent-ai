@@ -153,7 +153,7 @@ def render_classical_totality_matrix(
         score = rem.get("score", 0.0)
         rank = rem.get("rank", 1)
         th_cells.append(
-            f'<th scope="col" style="min-width: 58px; text-align: center;" title="#{rank} {esc(name)}&#10;Score: {score:.2f}">'
+            f'<th scope="col" style="min-width: 58px; text-align: center;" tabindex="0" aria-label="#{rank} {esc(name)} (Score: {score:.2f})" data-tip="#{rank} {esc(name)}&#10;Score: {score:.2f}" title="#{rank} {esc(name)}&#10;Score: {score:.2f}">'
             f'<div style="font-size: 13px; font-weight: 800; color: #10B981;">{esc(abbr)}</div>'
             f'<div style="font-size: 11px; color: #9CA3AF; font-weight: normal;">#{rank}</div>'
             f'</th>'
@@ -202,11 +202,11 @@ def render_classical_totality_matrix(
             grade = rubric_remedy_map.get(r_id, {}).get(abbr_clean)
 
             if grade == 3:
-                row_tds.append('<td style="text-align: center;"><span class="grade-3" title="Grade 3 (Characteristic Keynote)">3</span></td>')
+                row_tds.append('<td style="text-align: center;"><span class="grade-3" tabindex="0" aria-label="Grade 3 (Characteristic Keynote)" data-tip="Grade 3 (Characteristic Keynote)" title="Grade 3 (Characteristic Keynote)">3</span></td>')
             elif grade == 2:
-                row_tds.append('<td style="text-align: center;"><span class="grade-2" title="Grade 2 (Well-Verified)">2</span></td>')
+                row_tds.append('<td style="text-align: center;"><span class="grade-2" tabindex="0" aria-label="Grade 2 (Well-Verified)" data-tip="Grade 2 (Well-Verified)" title="Grade 2 (Well-Verified)">2</span></td>')
             elif grade == 1:
-                row_tds.append('<td style="text-align: center;"><span class="grade-1" title="Grade 1 (Clinical)">1</span></td>')
+                row_tds.append('<td style="text-align: center;"><span class="grade-1" tabindex="0" aria-label="Grade 1 (Clinical)" data-tip="Grade 1 (Clinical)" title="Grade 1 (Clinical)">1</span></td>')
             else:
                 row_tds.append('<td style="text-align: center; color: #9CA3AF;">&middot;</td>')
 
@@ -215,11 +215,11 @@ def render_classical_totality_matrix(
 
     # Summary Rows: Totality Score & Rubric Count
     score_tds = [
-        '<td style="position: sticky; left: 0; background: #0F172A; font-weight: 700; color: #F9FAFB;">Total Weighted Score</td>',
+        '<th scope="row" style="position: sticky; left: 0; background: #0F172A; font-weight: 700; color: #F9FAFB; text-align: left;">Total Weighted Score</th>',
         '<td></td>',
     ]
     count_tds = [
-        '<td style="position: sticky; left: 0; background: #0F172A; font-weight: 700; color: #F9FAFB;">Rubric Coverage (Hits)</td>',
+        '<th scope="row" style="position: sticky; left: 0; background: #0F172A; font-weight: 700; color: #F9FAFB; text-align: left;">Rubric Coverage (Hits)</th>',
         '<td></td>',
     ]
 

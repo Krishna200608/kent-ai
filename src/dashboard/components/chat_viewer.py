@@ -219,13 +219,13 @@ def render_chat_interface(dm: DialogueManager) -> None:
         dm.api_base = "http://127.0.0.1:11434"
     if is_llm_online:
         engine_badge_html = """
-        <span style="font-size: 12px; color: #10B981; display: inline-flex; align-items: center; gap: 5px; font-weight: 600;" title="LLaMA 3:8B is online on 127.0.0.1:11434 and providing dynamic empathetic clinical reasoning.">
+        <span style="font-size: 12px; color: #10B981; display: inline-flex; align-items: center; gap: 5px; font-weight: 600;" tabindex="0" aria-label="LLaMA 3:8B is online on 127.0.0.1:11434 and providing dynamic empathetic clinical reasoning." data-tip="LLaMA 3:8B is online on 127.0.0.1:11434 and providing dynamic empathetic clinical reasoning." title="LLaMA 3:8B is online on 127.0.0.1:11434 and providing dynamic empathetic clinical reasoning.">
             <span class="status-dot"></span> LLaMA 3:8B Online
         </span>
         """
     else:
         engine_badge_html = """
-        <span style="font-size: 12px; color: #F59E0B; display: inline-flex; align-items: center; gap: 5px; font-weight: 600;" title="Ollama daemon is offline on 127.0.0.1:11434. Running on deterministic FSM templates. Run 'ollama serve' in your terminal to activate LLaMA 3.">
+        <span style="font-size: 12px; color: #F59E0B; display: inline-flex; align-items: center; gap: 5px; font-weight: 600;" tabindex="0" aria-label="Ollama daemon is offline on 127.0.0.1:11434. Running on deterministic FSM templates. Run 'ollama serve' in your terminal to activate LLaMA 3." data-tip="Ollama daemon is offline on 127.0.0.1:11434. Running on deterministic FSM templates. Run 'ollama serve' in your terminal to activate LLaMA 3." title="Ollama daemon is offline on 127.0.0.1:11434. Running on deterministic FSM templates. Run 'ollama serve' in your terminal to activate LLaMA 3.">
             <span class="status-dot-amber"></span> Offline Fallback (ollama serve)
         </span>
         """
@@ -311,6 +311,8 @@ def render_chat_interface(dm: DialogueManager) -> None:
     with st.container(border=True):
         scroll_area = st.container(height=450)
         with scroll_area:
+            # Active empty state: reachable on initial consultation launch when a new case
+            # is initialized and case.dialogue_history is empty ([]), before user enters first utterance.
             if not dm.history:
                 empty_title = (
                     "Kent-AI Clinical Workstation (Practitioner-Led)"

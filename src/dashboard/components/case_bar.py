@@ -38,7 +38,7 @@ def render_case_bar(case: ClinicalCase) -> None:
                     <div class="case-demographics">
                         <b>{esc(case.patient_name)}</b> &middot; {esc(case.patient_age or '—')} {esc(case.patient_sex or '')}
                     </div>
-                    <div class="case-totality-pill" title="{filled_dims} of 7 Kentian symptom dimensions recorded">
+                    <div class="case-totality-pill" tabindex="0" aria-label="{filled_dims} of 7 Kentian symptom dimensions recorded" data-tip="{filled_dims} of 7 Kentian symptom dimensions recorded" title="{filled_dims} of 7 Kentian symptom dimensions recorded">
                         <span class="status-dot"></span> Totality: <b>{filled_dims}/7</b>
                     </div>
                     {f'<div class="case-rubrics-pill">{rubrics_count} Rubrics</div>' if rubrics_count else ''}
@@ -84,20 +84,25 @@ def render_case_bar(case: ClinicalCase) -> None:
         (4, "4. Report", has_report, "Step 4: Comprehensive clinical decision-support report" if has_report else "Run repertorization analysis to generate report"),
     ]
 
-    st_cols = st.columns(4)
-    for idx, (step_num, step_label, is_enabled, tooltip) in enumerate(STEPS):
-        with st_cols[idx]:
-            is_active = (current_step == step_num)
-            btn_type = "primary" if is_active else "secondary"
-            if st.button(
-                step_label,
-                type=btn_type,
-                disabled=not is_enabled,
-                width="stretch",
-                key=f"stepper_btn_{step_num}",
-                help=tooltip,
-            ):
-                st.session_state.workspace_step = step_num
-                st.rerun()
+    with st.container(key="stepper_nav"):
+        st_cols = st.columns(4)
+        for idx, (step_num, step_label, is_enabled, tooltip) in enumerate(STEPS):
+            with st_cols[idx]:
+                is_active = (current_step == step_num)
+                btn_type = "primary" if is_active else "secondary"
+                display_label = step_label if is_enabled else f"{step_label} [Locked]"
+                if st.button(
+                    display_label,
+                    type=btn_type,
+                    disabled=not is_enabled,
+                    width="stretch",
+                    key=f"stepper_btn_{step_num}",
+                    help=tooltip,
+                ):
+                    st.session_state.workspace_step = step_num
+                    st.rerun()
+
+    if not ready_for_repertorization:
+        st.caption("Complete Review to unlock Analysis.")
 
     st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
