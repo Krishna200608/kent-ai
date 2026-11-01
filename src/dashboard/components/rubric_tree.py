@@ -1,4 +1,10 @@
-"""Rubric card and remedy inspector component (Phase 4 & 7)."""
+"""Rubric card and remedy inspector component (Phase 6 & UI Overhaul).
+
+Renders:
+- Collapsed rubric row with breadcrumbs in --font-rubric, specificity tag, similarity bar, and + Add action.
+- Expanded row showing remedies grouped by non-empty grades with (3)/(2)/(1) badges and Materia Medica dialog chips.
+- Safe ID handling and query keyword highlighting.
+"""
 
 from __future__ import annotations
 
@@ -7,9 +13,15 @@ import re
 from typing import Any, Dict, List, Optional
 import streamlit as st
 
+from src.dashboard.components.case_dialogs import show_remedy_dialog
 from src.dashboard.components.icons import get_icon
-from src.dashboard.constants import format_rubric_path
+from src.dashboard.constants import (
+    GRADE_LABELS,
+    format_rubric_path,
+    get_rubric_specificity,
+)
 from src.dashboard.dimensions import pluralize
+from src.data.case_store import save_case
 from src.data.kent_db import KentDB
 
 
@@ -33,8 +45,14 @@ def render_rubric_card(
     query: Optional[str] = None,
     allow_add_to_case: bool = True,
     omit_chapter_prefix: bool = True,
-) -> None:
-    """Render an individual rubric as a single unified expandable card with remedy breakdown."""
+    selectable: bool = False,
+    is_selected: bool = False,
+) -> bool:
+    """Render an individual rubric card with collapsed breadcrumb row and expanded remedy groups.
+    
+    Returns:
+        bool: True if the multi-select checkbox is checked, False otherwise.
+    """
     raw_id = rubric.get("rubric_id") if rubric.get("rubric_id") is not None else rubric.get("id")
     r_id: Optional[int] = None
     if raw_id is not None:
@@ -49,7 +67,7 @@ def render_rubric_card(
     sim = rubric.get("similarity")
     remedy_count = rubric.get("remedy_count", 0)
 
-    # Format hierarchy path into prefix and leaf symptom with ' › ' breadcrumbs
+    # 1. Format hierarchy path into prefix and leaf symptom with ' › ' breadcrumbs
     formatted_path = format_rubric_path(path)
     if " › " in formatted_path:
         parts = formatted_path.split(" › ")
@@ -68,81 +86,87 @@ def render_rubric_card(
     high_prefix = highlight_query_words(disp_prefix, query) if disp_prefix else ""
     high_leaf = highlight_query_words(leaf, query)
 
-    # Pluralized count display
-    count_label = pluralize(remedy_count, "remedy", "remedies") if remedy_count > 0 else "0 remedies"
+    # 2. Specificity and remedy count badge
+    specificity = get_rubric_specificity(remedy_count)
+    spec_css = f"badge-{specificity.lower()}"
+    count_noun = pluralize(remedy_count, "remedy", "remedies")
+    spec_html = (
+        f"<span class='badge-specificity {spec_css}'>{specificity} · {count_noun}</span>"
+        if remedy_count > 0
+        else "<span class='badge-specificity badge-broad'>No remedies listed</span>"
+    )
 
-    # Calibrated match tiers based on empirical clinical similarity distribution
-    match_label = ""
-    match_html = ""
+    # 3. Thin similarity bar + %
+    sim_html = ""
+    sim_pct_label = ""
     if sim is not None:
         pct = int(round(sim * 100))
-        if sim >= 0.78:
-            match_label = f"Direct Match ({pct}%)"
-            match_html = f"<span class='status-pill match-strong' tabindex='0' aria-label='Semantic similarity score: {sim:.3f}' data-tip='Semantic similarity score: {sim:.3f}' title='Semantic similarity score: {sim:.3f}'>Direct Match ({pct}%)</span>"
-        elif sim >= 0.68:
-            match_label = f"Moderate Match ({pct}%)"
-            match_html = f"<span class='status-pill match-good' tabindex='0' aria-label='Semantic similarity score: {sim:.3f}' data-tip='Semantic similarity score: {sim:.3f}' title='Semantic similarity score: {sim:.3f}'>Moderate Match ({pct}%)</span>"
-        elif sim >= 0.58:
-            match_label = f"Partial Match ({pct}%)"
-            match_html = f"<span class='status-pill match-fair' tabindex='0' aria-label='Semantic similarity score: {sim:.3f}' data-tip='Semantic similarity score: {sim:.3f}' title='Semantic similarity score: {sim:.3f}'>Partial Match ({pct}%)</span>"
-        else:
-            match_label = f"Distant Match ({pct}%)"
-            match_html = f"<span class='status-pill match-weak' tabindex='0' aria-label='Semantic similarity score: {sim:.3f}' data-tip='Semantic similarity score: {sim:.3f}' title='Semantic similarity score: {sim:.3f}'>Distant Match ({pct}%)</span>"
+        sim_pct_label = f"{pct}%"
+        sim_html = (
+            f"<div class='sim-metric' tabindex='0' aria-label='Semantic similarity to your query, not clinical relevance' "
+            f"title='Semantic similarity to your query, not clinical relevance'>"
+            f"<div class='sim-track'><div class='sim-fill' style='width: {pct}%;'></div></div>"
+            f"<span class='sim-pct'>{pct}%</span>"
+            f"</div>"
+        )
 
-    # Expander title (Task 6)
-    if disp_prefix:
-        expander_title = f"{disp_prefix} › {leaf}  ({count_label})"
-    else:
-        expander_title = f"{leaf}  ({count_label})"
-    if match_label:
-        expander_title += f"  ·  {match_label}"
-
+    # 4. MIND chapter badge
     is_mind = str(path).startswith("MIND") or rubric.get("section_id") == 1
     show_dev = st.session_state.get("show_dev_details", False) if hasattr(st, "session_state") else False
-
-    # MIND badge / tooltip: visible if developer details active, hidden from default UI but present for test verification
-    mind_badge = ""
-    if is_mind:
-        disp_style = "display: inline-flex;" if show_dev else "display: none;"
-        mind_badge = (
-            f"<span class='badge badge-mind' tabindex='0' aria-label='MIND CHAPTER' data-tip='MIND CHAPTER' title='MIND CHAPTER' style='{disp_style} margin-left: 6px; vertical-align: middle;'>"
-            f"{get_icon('psychology', size=12, color='#10B981')} MIND CHAPTER"
-            f"</span>"
-        )
+    disp_style = "display: inline-flex;" if show_dev else "display: none;"
+    mind_badge = (
+        f"<span class='badge badge-mind' tabindex='0' aria-label='MIND CHAPTER' data-tip='MIND CHAPTER' title='MIND CHAPTER' style='{disp_style} margin-left: 6px; vertical-align: middle;'>"
+        f"{get_icon('psychology', size=12, color='#10B981')} MIND CHAPTER"
+        f"</span>"
+    ) if is_mind else ""
 
     dev_id_badge = f"<span class='rubric-dev-id'>#{display_id}</span>" if (show_dev and display_id != 'N/A') else ""
 
-    remedy_noun = pluralize(remedy_count, "remedy", "remedies", include_count=False)
-    remedy_count_html = (
-        f"<span style='font-size: 12.5px; color: #06B6D4;'><b>{remedy_count}</b> {remedy_noun} in Repertory</span>"
-        if remedy_count > 0
-        else "<span class='badge' style='background:rgba(239,68,68,0.12); color:#F87171; border:1px solid rgba(239,68,68,0.3);'>No remedies listed</span>"
+    # Path breadcrumb HTML
+    path_hierarchy_html = (
+        f"<span class='rubric-path-breadcrumb'><span class='rubric-ancestors'>{high_prefix} › </span><strong class='rubric-leaf'>{high_leaf}</strong></span>"
+        if high_prefix
+        else f"<span class='rubric-path-breadcrumb'><strong class='rubric-leaf'>{high_leaf}</strong></span>"
     )
 
-    path_hierarchy_html = (
-        f"<span style='color: #8492A6; font-size: 13px;'>{high_prefix} › </span><b style='color: #F9FAFB; font-size: 14px;'>{high_leaf}</b>"
-        if high_prefix
-        else f"<b style='color: #F9FAFB; font-size: 14px;'>{high_leaf}</b>"
-    )
+    # Expander header title
+    if disp_prefix:
+        expander_title = f"{disp_prefix} › {leaf}  ({specificity} · {count_noun})"
+    else:
+        expander_title = f"{leaf}  ({specificity} · {count_noun})"
+    if sim_pct_label:
+        expander_title += f"  ·  {sim_pct_label} match"
+
+    checked = is_selected
+    if selectable and r_id is not None:
+        checked = st.checkbox(
+            f"Select {leaf}",
+            value=is_selected,
+            key=f"chk_rubric_{r_id}_{abs(hash(str(path))) % 10000}",
+            label_visibility="collapsed",
+        )
 
     with st.expander(expander_title, expanded=False):
         col_hdr, col_act = st.columns(2)
+
         with col_hdr:
+            # Render card header for accessibility, badges, and test compatibility
             st.html(
                 f"""
-                <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                     <div>
                         {path_hierarchy_html}
                         {dev_id_badge}
                         {mind_badge}
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
-                        {match_html}
-                        {remedy_count_html}
+                    <div style="display: flex; align-items: center; gap: 10px; margin-left: auto;">
+                        {spec_html}
+                        {sim_html}
                     </div>
                 </div>
                 """
             )
+
         with col_act:
             if allow_add_to_case and r_id is not None:
                 tray = st.session_state.get("case_tray", {"rubrics": [], "remedies": []}) if hasattr(st, "session_state") else {"rubrics": []}
@@ -151,7 +175,7 @@ def render_rubric_card(
                 if is_in_tray:
                     st.button("✓ Added", key=card_key, disabled=True, width="stretch")
                 else:
-                    if st.button("+ Add to case", key=card_key, width="stretch"):
+                    if st.button("+ Add to case", key=card_key, type="primary", width="stretch", help="Add this rubric to case tray"):
                         if "case_tray" not in st.session_state:
                             st.session_state.case_tray = {"rubrics": [], "remedies": []}
                         st.session_state.case_tray["rubrics"].append({
@@ -159,7 +183,7 @@ def render_rubric_card(
                             "rubric_id": r_id,
                             "path": path,
                             "name": leaf,
-                            "similarity": sim,
+                            "similarity": sim or 1.0,
                             "remedy_count": remedy_count,
                         })
                         cur_c = st.session_state.get("current_case")
@@ -167,14 +191,13 @@ def render_rubric_card(
                             if r_id not in cur_c.selected_rubric_ids:
                                 cur_c.selected_rubric_ids.append(r_id)
                             try:
-                                from src.data.case_store import save_case
                                 save_case(cur_c)
                             except Exception:
                                 pass
                         st.toast(f"Added '{leaf}' to case tray.")
                         st.rerun()
 
-        # Remedies breakdown inside the same card
+        # Expanded row: remedies only grouped by non-empty grades with ③/②/① badges
         remedies: List[Dict[str, Any]] = []
         if r_id is not None and db is not None:
             try:
@@ -185,26 +208,63 @@ def render_rubric_card(
         if not remedies:
             st.write("No remedies cataloged under this rubric.")
         else:
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                g3 = [r for r in remedies if r.get("grade") == 3]
-                st.markdown(f"**Grade 3 (Bold / Confirmed):** ({len(g3)})")
-                for r in g3[:15]:
-                    name = r.get("full_name") or r.get("abbreviation")
-                    abbr = r.get("abbreviation") or ""
-                    st.html(f"<span class='grade-3'>{name}</span> <span style='color:#8492A6; font-size:11px;'>({abbr})</span>")
-            with col2:
-                g2 = [r for r in remedies if r.get("grade") == 2]
-                st.markdown(f"**Grade 2 (Italics / Qualified):** ({len(g2)})")
-                for r in g2[:15]:
-                    name = r.get("full_name") or r.get("abbreviation")
-                    abbr = r.get("abbreviation") or ""
-                    st.html(f"<span class='grade-2'>{name}</span> <span style='color:#8492A6; font-size:11px;'>({abbr})</span>")
-            with col3:
-                g1 = [r for r in remedies if r.get("grade") == 1]
-                st.markdown(f"**Grade 1 (Plain):** ({len(g1)})")
-                for r in g1[:15]:
-                    name = r.get("full_name") or r.get("abbreviation")
-                    abbr = r.get("abbreviation") or ""
-                    st.html(f"<span class='grade-1'>{name}</span> <span style='color:#8492A6; font-size:11px;'>({abbr})</span>")
+            for grade in [3, 2, 1]:
+                grade_rems = [r for r in remedies if r.get("grade") == grade]
+                if not grade_rems:
+                    continue  # Hide empty grades entirely
+
+                badge_sym = "③" if grade == 3 else ("②" if grade == 2 else "①")
+                grade_name = (
+                    "Bold · Confirmed" if grade == 3
+                    else ("Italic · Qualified" if grade == 2 else "Roman · Observed")
+                )
+                badge_css = f"badge-g{grade}"
+                font_style = (
+                    "font-weight: 800;" if grade == 3
+                    else ("font-style: italic; font-weight: 600;" if grade == 2 else "font-weight: 400;")
+                )
+
+                st.html(
+                    f"""
+                    <div class="badge-grade-header {badge_css}">
+                        <span>{badge_sym}</span>
+                        <span style="{font_style}">{grade_name}</span>
+                        <span style="color: var(--text-muted, #A3B0C2); font-size: 11px; margin-left: 4px;">({len(grade_rems)})</span>
+                    </div>
+                    """
+                )
+
+                # Interactive chips opening Materia Medica dialog
+                num_chips = min(max(len(grade_rems), 1), 6)
+                chip_cols = st.columns(num_chips)
+                for idx, rem in enumerate(grade_rems[:24]):
+                    with chip_cols[idx % num_chips]:
+                        abbr = rem.get("abbreviation") or rem.get("name") or "rem"
+                        full = rem.get("full_name") or abbr
+                        rem_id = rem.get("id") or rem.get("remedy_id")
+                        if st.button(
+                            abbr,
+                            key=f"chip_rem_{r_id}_{rem_id}_{grade}_{idx}",
+                            help=f"{full} ({abbr}) · Grade {grade} · Click for Materia Medica",
+                            width="stretch",
+                        ):
+                            show_remedy_dialog(rem_id or abbr, db)
+
+                if len(grade_rems) > 24:
+                    with st.expander(f"+ Show {len(grade_rems) - 24} more Grade {grade} remedies", expanded=False):
+                        more_cols = st.columns(6)
+                        for idx, rem in enumerate(grade_rems[24:], start=24):
+                            with more_cols[idx % 6]:
+                                abbr = rem.get("abbreviation") or rem.get("name") or "rem"
+                                full = rem.get("full_name") or abbr
+                                rem_id = rem.get("id") or rem.get("remedy_id")
+                                if st.button(
+                                    abbr,
+                                    key=f"chip_more_{r_id}_{rem_id}_{grade}_{idx}",
+                                    help=f"{full} ({abbr}) · Grade {grade} · Click for Materia Medica",
+                                    width="stretch",
+                                ):
+                                    show_remedy_dialog(rem_id or abbr, db)
+
+    return checked
 

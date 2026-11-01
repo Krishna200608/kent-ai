@@ -513,7 +513,8 @@ def search_rubrics(
         if fts_expression:
             try:
                 fts_query = f"""
-                    SELECT d.*, s.name AS section_name
+                    SELECT d.*, s.name AS section_name,
+                           (SELECT COUNT(*) FROM rubric_remedies WHERE rubric_id = d.id) AS remedy_count
                     FROM rubric_search
                     JOIN rubrics d ON d.id = rubric_search.rowid
                     LEFT JOIN sections s ON s.id = d.section_id
@@ -529,7 +530,8 @@ def search_rubrics(
         # Fallback LIKE search
         like_term = "%" + query_clean.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
         like_query = f"""
-            SELECT d.*, s.name AS section_name
+            SELECT d.*, s.name AS section_name,
+                   (SELECT COUNT(*) FROM rubric_remedies WHERE rubric_id = d.id) AS remedy_count
             FROM rubrics d
             LEFT JOIN sections s ON s.id = d.section_id
             WHERE (d.path LIKE ? ESCAPE '\\' OR d.label LIKE ? ESCAPE '\\'){section_sql}

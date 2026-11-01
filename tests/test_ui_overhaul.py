@@ -228,4 +228,46 @@ def test_phase5_case_library_exports_and_helpers():
     assert "4d ago" == format_relative_time(t_days_ago)
 
 
+def test_phase6_rubric_specificity_and_hybrid_search():
+    """Verify Rubric specificity classification and hybrid search blending."""
+    from src.dashboard.constants import get_rubric_specificity
+    from src.dashboard.views.explorer import hybrid_rubric_search
+    from src.data.kent_db import KentDB
+
+    # Test specificity thresholds: <=20 specific, >=80 broad
+    assert get_rubric_specificity(5) == "Specific"
+    assert get_rubric_specificity(20) == "Specific"
+    assert get_rubric_specificity(35) == "Moderate"
+    assert get_rubric_specificity(80) == "Broad"
+    assert get_rubric_specificity(150) == "Broad"
+
+    # Test hybrid rubric search blending
+    class MockVectorStore:
+        def query(self, query_text, top_k, section_id):
+            return [
+                {"id": 2351, "path": "MIND > FEAR > dark", "similarity": 0.85, "remedy_count": 22},
+                {"id": 9999, "path": "MIND > ANXIETY > alone", "similarity": 0.70, "remedy_count": 15},
+            ]
+
+    db = KentDB()
+    vs = MockVectorStore()
+    results = hybrid_rubric_search(query="fear dark", db=db, vector_store=vs, section_id=1, limit=10)
+
+    assert len(results) >= 1
+    # Check that top result is blended with similarity score
+    top = results[0]
+    assert "similarity" in top
+    assert top["similarity"] > 0.0
+
+
+def test_phase6_remedy_dialog_and_explorer_callable():
+    """Verify show_remedy_dialog and render_rubric_explorer are properly defined and callable."""
+    from src.dashboard.components.case_dialogs import show_remedy_dialog
+    from src.dashboard.views.explorer import render_rubric_explorer
+
+    assert callable(show_remedy_dialog)
+    assert callable(render_rubric_explorer)
+
+
+
 

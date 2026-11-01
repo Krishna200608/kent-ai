@@ -183,5 +183,45 @@ This document records architectural decisions, assumptions, backend changes, and
   - `test_phase5_case_library_exports_and_helpers` in `tests/test_ui_overhaul.py`.
   - Full smoke test suite (`test_app_smoke.py`), overhaul suite, and dashboard suite all passing 100%.
 
+---
+
+### Phase 6: Rubric Explorer, Remedy Grouping & Materia Medica Dialog (Complete)
+- **Single-Row Search Form (`src/dashboard/views/explorer.py`)**:
+  - Wrapped in `st.form(key="rubric_search_form")` for Enter key submission.
+  - Query input with clearable field and clinical placeholder (`"e.g. fear of dark, anxiety in the evening"`).
+  - Search mode via `st.segmented_control`: `Meaning` (BioLinkBERT vector similarity) | `Exact` (direct SQLite keyword match) | `Hybrid` (blended lexical + semantic score), with descriptive tooltips.
+  - Result count via `st.segmented_control`: `10` / `15` / `25` / `50` (replaces slider).
+  - Compact primary "Search" button.
+- **Scope Caption & Conditional Section Filter**:
+  - Scope caption: `"Searching MIND · 4,933 rubrics"` when in MIND scope; `"Searching All chapters · 74,513 rubrics"` when in All chapters scope.
+  - Section/Chapter selector dropdown rendered only when scope is set to All chapters.
+- **Advanced Filters Expander**:
+  - Minimum similarity slider (0.0 to 1.0, default 0.35).
+  - Remedy count range slider (1 to 300).
+  - Multi-sort: Relevance (Similarity), Remedy count (High to Low), Remedy count (Low to High - Specific), Alphabetical (A–Z).
+- **Hybrid Search Engine (`hybrid_rubric_search`)**:
+  - Blends dense vector search scores (0.65 weight) with exact FTS5/LIKE keyword token overlap and reciprocal rank (0.35 weight).
+  - Fixed SQLite FTS and fallback LIKE query in `src/data/kent_db.py` to calculate `(SELECT COUNT(*) FROM rubric_remedies WHERE rubric_id = d.id) AS remedy_count`.
+- **Collapsed Result Card (`src/dashboard/components/rubric_tree.py`)**:
+  - Multi-select checkbox.
+  - Breadcrumbs formatted in `--font-rubric` (`"Source Serif 4"`) with ` › ` separators, muted ancestors, bold leaf, and query keyword `<mark>` highlighting.
+  - Specificity badge via `get_rubric_specificity(remedy_count)`: `Specific` (≤20 remedies), `Broad` (≥80 remedies), or `Moderate`.
+  - Thin similarity bar + % with tooltip: `"Semantic similarity to your query, not clinical relevance"`.
+  - Instant `+ Add` button toggling to `✓ Added` when already present in `case_tray`, with `st.toast` and persistence in `current_case.selected_rubric_ids`.
+- **Expanded Row & Grade Grouping**:
+  - Shows only remedies without repeating path, match %, or remedy count.
+  - Grouped by non-empty grades only (hides empty grades entirely).
+  - Grade headers: ③ Bold · Confirmed, ② Italic · Qualified, ① Roman · Observed.
+  - Interactive remedy chips displaying abbreviation with full Latin name in tooltip.
+  - Clicking a remedy chip opens the new Materia Medica modal dialog.
+- **Materia Medica Modal Dialog (`src/dashboard/components/case_dialogs.py`)**:
+  - `show_remedy_dialog(remedy_id_or_abbr, db)`: displays remedy name, abbreviation badge, cataloged rubrics count, MIND rubrics count, and top Grade 3 confirmed keynotes with one-click `+ Add` to tray.
+- **Sticky Multi-Select Action Bar**:
+  - When ≥1 rubric is checked, renders sticky bottom action bar: `"Add {n} to Case Tray"`.
+- **Tests Added**:
+  - `test_phase6_rubric_specificity_and_hybrid_search` and `test_phase6_remedy_dialog_and_explorer_callable` in `tests/test_ui_overhaul.py`.
+  - Full smoke test suite (`test_app_smoke.py`), overhaul suite (14 tests), and dashboard suite (10 tests) all passing 100%.
+
+
 
 

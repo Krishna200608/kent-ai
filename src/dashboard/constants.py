@@ -126,6 +126,16 @@ SPECIFICITY_SPECIFIC_MAX = 20
 SPECIFICITY_BROAD_MIN = 80
 
 
+def get_rubric_specificity(remedy_count: int) -> str:
+    """Classify rubric specificity based on cataloged remedy count."""
+    if remedy_count <= SPECIFICITY_SPECIFIC_MAX:
+        return "Specific"
+    elif remedy_count >= SPECIFICITY_BROAD_MIN:
+        return "Broad"
+    return "Moderate"
+
+
+
 # -----------------------------------------------------------------------------
 # 7 Canonical Symptom Dimensions
 # -----------------------------------------------------------------------------
