@@ -269,5 +269,28 @@ def test_phase6_remedy_dialog_and_explorer_callable():
     assert callable(render_rubric_explorer)
 
 
+def test_phase7_split_methodology_and_settings():
+    """Verify split Methodology and Settings views and single source of truth evaluation metrics."""
+    from src.dashboard.constants import EVALUATION_METRICS
+    from src.dashboard.views.methodology import render_methodology_view
+    from src.dashboard.views.settings import render_settings_view
+
+    assert callable(render_methodology_view)
+    assert callable(render_settings_view)
+
+    # Check that evaluation metrics contain required benchmark metrics with plain-language explanations
+    assert "token_f1" in EVALUATION_METRICS
+    assert "recall_at_20" in EVALUATION_METRICS
+    assert "mrr" in EVALUATION_METRICS
+
+    for m_key in ["token_f1", "recall_at_20", "mrr"]:
+        info = EVALUATION_METRICS[m_key]
+        assert "label" in info
+        assert "value" in info
+        assert "plain_explanation" in info
+        assert len(info["plain_explanation"]) > 10
+
+
+
 
 

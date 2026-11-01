@@ -46,6 +46,7 @@ from src.dashboard.views import (
     render_step4_report,
     render_rubric_explorer,
     render_materia_medica_view,
+    render_methodology_view,
     render_settings_view,
 )
 from src.models.case import ClinicalCase
@@ -83,12 +84,13 @@ def main():
     dm: DialogueManager = st.session_state.dialogue_manager
     current_case: ClinicalCase = st.session_state.current_case
 
-    tab_workspace, tab_library, tab_explorer, tab_mm, tab_settings = st.tabs([
+    tab_workspace, tab_library, tab_explorer, tab_mm, tab_methodology, tab_settings = st.tabs([
         "Case Workspace",
         "Case Library",
         "Rubric Explorer",
         "Materia Medica",
-        "Settings & Methodology",
+        "Methodology",
+        "Settings",
     ])
 
     # =========================================================================
@@ -129,6 +131,9 @@ def main():
     # =========================================================================
     # TAB 5: Settings & Methodology
     # =========================================================================
+    with tab_methodology:
+        render_methodology_view()
+
     with tab_settings:
         render_settings_view()
 

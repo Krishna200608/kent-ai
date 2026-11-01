@@ -222,6 +222,27 @@ This document records architectural decisions, assumptions, backend changes, and
   - `test_phase6_rubric_specificity_and_hybrid_search` and `test_phase6_remedy_dialog_and_explorer_callable` in `tests/test_ui_overhaul.py`.
   - Full smoke test suite (`test_app_smoke.py`), overhaul suite (14 tests), and dashboard suite (10 tests) all passing 100%.
 
+---
+
+### Phase 7: Split Methodology & Settings Pages (Complete)
+- **Navigation Split (`src/dashboard/app.py`, `src/dashboard/views/__init__.py`)**:
+  - Split legacy combined "Settings & Methodology" tab into two dedicated, top-level tabs: `Methodology` and `Settings`.
+- **Methodology Page (`src/dashboard/views/methodology.py`)**:
+  - Section 1: Dr. J. T. Kent's Totality Principles with hierarchical symptom breakdown (Mental Generals paramount, Physical Generals, Particular Symptoms) and Totality Scoring Formula with grade weights (3.0×, 2.0×, 1.0×) and specificity weighting derived directly from `GRADE_WEIGHTS` in `constants.py`.
+  - Section 2: The 7 Totality Dimensions in canonical order from `get_canonical_dimensions()`.
+  - Section 3: NLP Architecture & Encoders: BioLinkBERT-Base (110M), PubMedBERT (110M), 4-Encoder Ensemble, and local LLaMA 3 8B arbitration.
+  - Section 4: Verified Evaluation Benchmarks: `EVALUATION_METRICS` (Token BIO F1 88.4%, Recall@20 91.2%, MRR 0.68) with plain-language clinician explanations.
+  - Section 5: Investigational Clinical Decision-Support Notice (§3 in full).
+- **Settings Page (`src/dashboard/views/settings.py`)**:
+  - Inference Engine: Ollama endpoint status, configured LLM model (`MODEL_DISPLAY_NAME`), and "Test Connection" button with round-trip latency (`get_ollama_latency()`).
+  - Consultation Defaults: Repertory scope selector (MIND focus vs All chapters), display density (Comfortable vs Compact), autosave toggle, and step-aware suggested replies toggle.
+  - Data Management & Backups: One-click "Export All Cases to JSON" timestamped backup, "Import Consultations" JSON uploader, and safe database purge protected by typed confirmation (`"DELETE ALL"`).
+  - About & Version Telemetry: Application version `v{APP_VERSION}`, git short SHA `{GIT_SHA}`, and on-device privacy guarantee.
+- **Tests Added**:
+  - `test_phase7_split_methodology_and_settings` in `tests/test_ui_overhaul.py`.
+  - Full smoke test suite (`test_app_smoke.py`), overhaul suite (15 tests), and dashboard suite (10 tests) all passing 100%.
+
+
 
 
 

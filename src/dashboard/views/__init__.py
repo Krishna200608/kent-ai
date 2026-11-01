@@ -13,6 +13,7 @@ from src.dashboard.views.step4_report import (
 )
 from src.dashboard.views.explorer import render_rubric_explorer
 from src.dashboard.views.materia_medica import render_materia_medica_view
+from src.dashboard.views.methodology import render_methodology_view
 from src.dashboard.views.settings import render_settings_view
 
 __all__ = [
@@ -29,5 +30,6 @@ __all__ = [
     "render_step4_report",
     "render_rubric_explorer",
     "render_materia_medica_view",
+    "render_methodology_view",
     "render_settings_view",
 ]

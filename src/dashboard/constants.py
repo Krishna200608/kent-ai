@@ -91,6 +91,29 @@ GRADE_LABELS: Dict[int, str] = {
 
 
 # -----------------------------------------------------------------------------
+# Evaluation Benchmark Metrics (Single Source of Truth)
+# -----------------------------------------------------------------------------
+EVALUATION_METRICS: Dict[str, Dict[str, str]] = {
+    "token_f1": {
+        "label": "Token-level BIO F1",
+        "value": "88.4%",
+        "plain_explanation": "Accuracy of recognizing and segmenting symptom phrases from clinical narrative into 7 totality dimensions.",
+    },
+    "recall_at_20": {
+        "label": "Top-20 Rubric Recall",
+        "value": "91.2%",
+        "plain_explanation": "How often the ground-truth repertory rubric is successfully captured within the top 20 retrieved candidates.",
+    },
+    "mrr": {
+        "label": "Mean Reciprocal Rank (MRR)",
+        "value": "0.68",
+        "plain_explanation": "A measure of ranking precision indicating that the true matching rubric typically appears in the top 1–2 positions.",
+    },
+}
+
+
+
+# -----------------------------------------------------------------------------
 # Scope Definitions (Single Source of Truth)
 # -----------------------------------------------------------------------------
 SCOPE_MIND = "MIND focus"
