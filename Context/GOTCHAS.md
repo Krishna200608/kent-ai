@@ -224,6 +224,21 @@ The assistant chat bubble appeared completely blank with no loading indicator wh
 - **Root Cause**: `dm.prepare_turn()` executed heavy multi-second slot extraction (Tier 3 LLM calls) synchronously *before* entering `with scroll_area:` and mounting the assistant message container.
 - **Verified Workaround**: Mount `thinking_box.markdown(skeleton_html)` inside `with st.chat_message("assistant"):` *prior* to running `dm.prepare_turn()` and `dm.stream_reply()`. The shimmering bars animate during the entire reflection window and clear the exact millisecond the first visible chunk is yielded.
 
+### 8.9 Streamlit Widget State Mutation in Callbacks Only
+Attempting to update an `st.text_area` widget value via `st.session_state["paste_text"] = new_val` during the main script pass fails with `StreamlitAPIException` or is silently overwritten by the widget's previous frontend state.
+- **Root Cause**: Streamlit locks widget keys during script execution. Once a widget has been instantiated, direct script assignment to its session_state key cannot override the frontend widget instance.
+- **Verified Workaround**: Mutate widget state strictly inside an `on_change` callback (e.g. `_on_example_pill_change` on `st.pills`). Callbacks run before widget instantiation, allowing clean pre-render state mutation.
+
+### 8.10 Streamlit Forms (`st.form`) & Keyboard Submission
+Using an un-nested `st.text_area` triggers full-page reruns on every blur event, causing laggy typing in long narratives.
+- **Root Cause**: Individual Streamlit inputs without a form boundary communicate back to the server on every value change.
+- **Verified Workaround**: Wrap narrative intake inside `with st.form("paste_intake"):` and `st.form_submit_button("Extract & review")`. This enables standard Ctrl/Cmd+Enter keyboard submission and defers all execution until explicit form submission.
+
+### 8.11 Idempotent SQLite Column Migration Pattern
+Adding new columns like `extraction_meta_json TEXT` to `clinical_cases` in SQLite without dropping or recreating tables.
+- **Root Cause**: SQLite `CREATE TABLE IF NOT EXISTS` ignores schema evolution when the table already exists.
+- **Verified Workaround**: Query `PRAGMA table_info(clinical_cases)` in `init_case_db(db_path)` to inspect existing column names, and execute `ALTER TABLE clinical_cases ADD COLUMN extraction_meta_json TEXT` conditionally. Fallback gracefully in `get_case` with `json.loads(row["extraction_meta_json"] or "{}")`.
+
 ---
 
 ## 9. Multi-Model GPU Training & HuggingFace Gotchas

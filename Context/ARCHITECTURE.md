@@ -70,18 +70,30 @@ kent-ai/
 │   │   └── prompts.py             # Prompt templates (case gen, resolver, chatbot bedside persona) — active
 │   │
 │   ├── pipeline/
-│   │   ├── orchestrator.py        # ★ CORE: End-to-end transcript→report orchestrator & rescore_report (Phase 5 & 11) — implemented
+│   │   ├── orchestrator.py        # ★ CORE: End-to-end transcript→report orchestrator, extract_profile & rescore_report (Phase 5, 11, 13) — implemented
+│   │   ├── narrative.py           # ★ CORE: Chief complaint derivation & missing recommended dimensions (Phase 13) — implemented
+│   │   ├── safety.py              # ★ CORE: Red flag clinical safety regex screening with negation awareness (Phase 13) — implemented
+│   │   ├── case_summarizer.py     # ★ CORE: Local LLM physician brief & patient narrative summarizer (Phase 12) — implemented
 │   │   └── report_generator.py    # ★ CORE: JSON + Markdown reports (Phase 5) — implemented
 │   │
 │   └── dashboard/
 │       ├── app.py                 # ★ CORE: Streamlit 4-workspace clinical portal with 4-step stepper (Phase 7 & 11) — implemented
 │       ├── dimensions.py          # ★ CORE: Canonical DIMENSION_MAP & pluralization helpers — implemented
+│       ├── examples.py            # ★ CORE: Clinical vignettes typed catalog for intake demonstrations (Phase 13) — implemented
 │       ├── pdf_exporter.py        # ★ CORE: Multi-page clinical consultation PDF export via ReportLab 5.1 — implemented (Phase 11)
 │       ├── styles.py              # ★ CORE: Google Stitch CSS injection, pulse glow, cards (Phase 7 & 11) — implemented
 │       ├── styles.css             # ★ CORE: Google Stitch CSS styles (midnight canvas #0A0F1D, full-screen collapse, shimmer skeleton) — implemented
+│       ├── views/
+│       │   ├── step1_intake.py    # ★ CORE: Step 1 router & bedside dialogue console (Phase 7 & 13) — implemented
+│       │   ├── step1_paste.py     # ★ CORE: Step 1 paste clinical narrative intake with form & preview (Phase 13) — implemented
+│       │   ├── step2_review.py    # ★ CORE: Step 2 clinical review & dimension validation — implemented
+│       │   ├── step3_analysis.py  # ★ CORE: Step 3 repertorization analysis & matrix — implemented
+│       │   └── step4_report.py    # ★ CORE: Step 4 consolidated report & differential analysis — implemented
 │       └── components/
 │           ├── case_bar.py        # ★ CORE: Persistent top case status bar with quick save & patient demographics popover — implemented (Phase 11)
 │           ├── totality_grid.py   # ★ CORE: Classical Repertory Totality Matrix (rubrics×remedies, grades 3/2/1, Mute/Elim toggles) — implemented (Phase 11)
+│           ├── extraction_preview.py # ★ CORE: Two-column highlighted narrative preview with overlap resolution (Phase 13) — implemented
+│           ├── intake_guide.py    # ★ CORE: 6-item dynamic intake checklist & privacy guidance (Phase 13) — implemented
 │           ├── case_library.py    # ★ CORE: Saved patient consultation library & management — implemented (Phase 11)
 │           ├── remedy_comparison.py # ★ CORE: Differential Materia Medica side-by-side keynotes comparison — implemented (Phase 11)
 │           ├── rubric_tree.py     # ★ CORE: Rubric cards with expandable 3-grade remedy inspector (Phase 7) — implemented
@@ -108,9 +120,9 @@ kent-ai/
 │   ├── 01_eda_repertory.ipynb     # EDA: sections, MIND depths, grades, search demo
 │   └── 02_case_generation_demo.ipynb # Interactive case generation & BIO inspection
 │
-├── tests/                         # ★ 108 passing unit tests across 15 test modules (0 warnings)
+├── tests/                         # ★ 133 passing unit & integration tests across 17 test modules (0 warnings)
 │   ├── test_kent_db.py            # SQLite reader, views, FTS5 queries (13 tests)
-│   ├── test_case.py               # ClinicalCase model, serialization & case_store SQLite operations (10 tests)
+│   ├── test_case.py               # ClinicalCase model, extraction_meta, serialization & case_store SQLite CRUD (17 tests)
 │   ├── test_bio_tagger.py         # Subword alignment & character offset repair (6 tests)
 │   ├── test_case_generator.py     # LLaMA 3 prompting & JSON parsing (3 tests)
 │   ├── test_splitter.py           # 80/10/10 deficit-balancing split algorithm (4 tests)
@@ -118,13 +130,15 @@ kent-ai/
 │   ├── test_vector_store.py       # ChromaDB HNSW cosine retrieval & section filter (6 tests)
 │   ├── test_resolver.py           # SymptomProfile, negation & search queries (4 tests)
 │   ├── test_ranker.py             # Remedy totality scoring & grade weighting (5 tests)
-│   ├── test_pipeline.py           # End-to-end transcript-to-report pipeline & two-stage flow (5 tests)
+│   ├── test_pipeline.py           # End-to-end transcript-to-report pipeline, extract_profile & two-stage flow (7 tests)
 │   ├── test_evaluation.py         # Academic evaluation suite, BIO metrics & report export (3 tests)
 │   ├── test_state_machine.py      # 10-state intake FSM & slot transitions (6 tests)
 │   ├── test_dialogue_manager.py   # Multi-turn context, unbracketed quick replies, streaming filter & slot sanitization (13 tests)
 │   ├── test_dashboard.py          # Slot badges, Totality Matrix, report export & transcript formatter (7 tests)
-│   ├── test_app_smoke.py          # AppTest headless UI smoke tests, stepper navigation & case persistence (5 tests)
-│   └── test_llm_dataset.py        # Generative instruction dataset formatting & schema adherence (8 tests)
+│   ├── test_app_smoke.py          # AppTest headless UI smoke tests, stepper navigation, paste mode & example pills (8 tests)
+│   ├── test_llm_dataset.py        # Generative instruction dataset formatting & schema adherence (8 tests)
+│   ├── test_narrative.py          # Chief complaint derivation, recommended dimensions & highlight builder (8 tests)
+│   └── test_safety.py             # Red flag safety regex screening with negation awareness (3 tests)
 │
 ├── docs/
 │   ├── Next_Steps.md              # Supervisor meeting briefing & roadmap (Dr. Arya)
@@ -262,6 +276,42 @@ Patient utterance
 | `get_mind_rubrics(limit, offset)` | `list[dict]` | Shortcut for `section_id=1` |
 | `search_rubrics(query, section_id, limit, offset)` | `list[dict]` | FTS5 prefix → LIKE fallback |
 | `KentDB` class | OOP wrapper | Delegates to module-level functions |
+
+---
+
+## Intake Extraction Architecture & Metadata Schema (Phase 13)
+
+### `ClinicalCase.extraction_meta` Schema
+Stored as JSON in `clinical_cases.extraction_meta_json`:
+```json
+{
+  "source": "paste" | "chat" | "manual",
+  "negated": ["string"],
+  "items": {
+    "location": [
+      {
+        "text": "forehead and temples",
+        "confidence": 0.94,
+        "start": 12,
+        "end": 32,
+        "origin": "text" | "chat" | "manual"
+      }
+    ]
+  },
+  "red_flags": [
+    {
+      "category": "chest pain",
+      "snippet": "severe chest pain"
+    }
+  ]
+}
+```
+
+### Selective Re-Extraction
+`ClinicalCase.replace_text_extracted_items(new_items, source)` replaces only entries with `origin == "text"`, permanently preserving physician manual overrides (`origin == "manual"`) and conversational slot updates (`origin == "chat"`).
+
+### Zero Vector-Store Extraction (`extract_profile`)
+Both `PipelineOrchestrator.extract_profile(transcript, section_id=None)` and `HybridPipelineOrchestrator.extract_profile(transcript, section_id=None)` execute clinical entity extraction (NER + resolver) without touching embeddings or ChromaDB vector indices. Full vector search and ranking are strictly deferred to Step 3 (Analysis).
 
 ---
 

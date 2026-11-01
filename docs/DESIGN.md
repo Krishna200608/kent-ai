@@ -125,5 +125,56 @@ All 7 dimension badges evaluated against `--bg-surface` (`#111827`) blended with
 
 ---
 
+## 6. Step 1 Intake Redesign: Paste Clinical Narrative Flow (Phase 13)
+
+### 6.1 Mode Selector & Intake Router
+Step 1 features a top-level `st.segmented_control` with three distinct operational modalities:
+1. **"Guided conversation"**: Interactive bedside dialogue agent with live slot extraction (patient present, ~5-8 min).
+2. **"Paste notes"**: Unstructured clinical narrative intake with NLP dimension extraction and preview (~30 s).
+3. **"Enter manually"**: Direct transition to Step 2 (Review) with a clean blank case for rapid physician entry.
+
+### 6.2 Paste Layout Wireframe (ASCII)
+```
++--------------------------------------------------------------------------------------------------+
+| Case Bar: [CASE-2026-045] Anonymous Patient · Totality: 3/7 [Patient Info v] [Save]              |
+| Stepper:  [1. Intake (Active)] [2. Review] [3. Analysis [Locked]] [4. Report [Locked]]           |
++--------------------------------------------------------------------------------------------------+
+| Mode: ( ) Guided conversation   (*) Paste notes   ( ) Enter manually                             |
+| Instruction: Describe the patient in their own words. Kent-AI extracts the 7 Kentian dimensions.  |
+|                                                                                                  |
+| [ LOC: Forehead ] [ SEN: Throbbing ] [ AGG: Morning ] [ AMEL: Rest ] [ CONC ] [ TEMP ] [ MENT ]  |
++----------------------------------------------------------------+---------------------------------+
+| Form (Left Column, max 960px):                                 | Right Rail (Guidance):          |
+|                                                                |                                 |
+| Try an example: [Severe anxiety] [Forgetful] [Fear] [Anger]   | What to include:                |
+|                                                                | [x] Location: Captured          |
+| +------------------------------------------------------------+ | [x] Sensation: Captured         |
+| | Clinical Narrative Text Area (220px height)                | | [x] Worse from: Captured        |
+| | "Patient presents with persistent morning anxiety and      | | [ ] Better from: Not captured   |
+| | throbbing forehead pain worse from light and noise..."     | | [ ] Concomitant: Not captured   |
+| +------------------------------------------------------------+ | [ ] Time pattern: Not captured  |
+|                                                                | [ ] Mental/Emotional: Not cap.  |
+| [ Extract & review (Primary, Ctrl+Enter) ]                     |                                 |
+|                                                                | Local Privacy Notice:           |
+| v Patient details (Optional Expander)                         | Extracted on local device.      |
+|   Name/Ref: [ Jane Doe ] Age: [ 42 ] Sex: [ Female ]           | Never sent to external servers. |
+|   Chief Complaint: [ Persistent morning anxiety and throbbing] |                                 |
++----------------------------------------------------------------+---------------------------------+
+| Extraction Preview (Two-Column Layout):                                                          |
+| +-----------------------------------------------+----------------------------------------------+ |
+| | Annotated Narrative:                          | Extracted Dimensions:                        | |
+| | Patient presents with <mark class="badge-ment"| [MENT] Persistent morning anxiety [0.94]     | |
+| | >persistent morning anxiety</mark> and        | [LOC]  Forehead [0.91]                       | |
+| | <mark class="badge-loc">forehead</mark> pain  | [SEN]  Throbbing pain [0.88]                 | |
+| | <mark class="badge-agg">worse from light      |                                              | |
+| | and noise</mark>...                           | Denied / Ruled Out:                          | |
+| |                                               | [NEG]  No chest pain                         | |
+| +-----------------------------------------------+----------------------------------------------+ |
+| [ Fill gaps with dialogue ]   [ Continue to Review -> (Primary) ]   [ Edit text ]                |
++--------------------------------------------------------------------------------------------------+
+```
+
+---
+
 _End of file._
 

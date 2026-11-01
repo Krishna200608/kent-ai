@@ -226,4 +226,27 @@ def get_rubric_path(rubric_id: int, db_path: Optional[Union[str, Path]] = None) 
 
 ---
 
+## 18. Streamlit Form & Narrative Intake Conventions
+
+- **Form Boundary**: Wrap clinical narrative intake in `with st.form("paste_intake"):` and `st.form_submit_button("Extract & review")`. This enables standard Ctrl/Cmd+Enter keyboard submission and avoids expensive server reruns on every keystroke.
+- **Widget State in Callbacks**: Never assign to widget keys in the main script pass (`st.session_state["paste_text"] = ...`). Always update widget state via an `on_change` callback (e.g. `_on_example_pill_change` on `st.pills`).
+
+---
+
+## 19. HTML Escaping (`esc()`) Security Enforcement
+
+- **Mandatory Sanitization**: Every string variable interpolated into HTML (`f"<div>{esc(var)}</div>"`) MUST pass through `src.dashboard.utils.esc()`.
+- **Zero Unescaped Interpolation**: Never render raw patient text or LLM output with `unsafe_allow_html=True` without escaping.
+- **Span Bounds Clamping**: When rendering highlight `<mark>` spans, always clamp character offsets (`max(0, start)`, `min(len(text), end)`), resolve overlapping spans deterministically, and escape both highlighted and intervening text.
+
+---
+
+## 20. Accessible Tooltip & Color Independence Conventions
+
+- **Interactive Tooltips**: Tooltips must never rely solely on native browser mouse hover `title=`. Always pair with `tabindex="0" aria-label="..." data-tip="..." title="..."` so tooltips work via keyboard focus, screen readers, and CSS hover/focus-visible.
+- **Color Independence**: Never use color as the sole indicator of state (e.g., green for ready, grey for locked). Always pair color with explicit text labels (e.g., `[Locked]`, `(Recommended)`, `Captured` / `Not captured`) or an accessible icon.
+- **Contrast Ratios**: All foreground text must achieve at least WCAG AA contrast against its background (≥ 4.5:1 for normal text, ≥ 3:1 for large text and UI components). Primary buttons use `#0A0F1D` text on `#10B981` (6.83:1).
+
+---
+
 _End of file._

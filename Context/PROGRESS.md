@@ -1,7 +1,7 @@
 # Kent-AI — Progress Tracker
 
-> Last updated: 2026-10-31 by Antigravity
-> Phase: Complete through Phase 12 (Clinician-Centric Stepper, SQLite Case Store, Classical Totality Matrix, Bedside Streaming Dialogue, Shimmer Reflection Animation & Full-Screen Responsive Viewport; 108 Unit & Integration Tests Passing, 0 Warnings)
+> Last updated: 2026-11-01 by Antigravity
+> Phase: Complete through Phase 13 (Step 1 Clinical Narrative Intake Redesign, Accessibility & Consistency Polish; 133 Unit & Integration Tests Passing, 0 Warnings)
 
 ---
 
@@ -461,6 +461,20 @@ pytest tests/ -v
 
 ---
 
+## Phase 13 — Step 1 Clinical Narrative Intake Redesign, Accessibility & Consistency Polish ✅
+
+**Status**: Complete (Segmented Control Mode Switching, Two-Column Highlighted Narrative Extraction Preview, Red Flag Safety Screening, WCAG AA Contrast, 133/133 Tests Passing) 🎯  
+**Date**: 2026-11-01  
+**Agent**: Antigravity (Gemini 3.8 Flash)  
+**Deliverables**:
+- **Data & Pipeline Layer (`feat(intake)`)**: Added typed `extraction_meta: Dict[str, Any]` to `ClinicalCase` with backward-compatible SQLite migration (`PRAGMA table_info`), `replace_text_extracted_items()` selective re-extraction helper, `extract_profile()` on both `PipelineOrchestrator` and `HybridPipelineOrchestrator` (NER + resolver only, zero vector-store access), `derive_chief_complaint()` and `missing_recommended_dimensions()` in `src/pipeline/narrative.py`, and `screen_red_flags()` with negation-aware lookback in `src/pipeline/safety.py`.
+- **Paste Intake View (`feat(intake)`)**: Redesigned Step 1 intake with segmented control modes ("Guided conversation", "Paste notes", "Enter manually"), 960px max-width intake form with Ctrl/Cmd+Enter support, example vignette pills, live stage progress indicator, non-blocking safety notices, two-column `<mark>` highlighted extraction preview with overlap resolution, and 6-item "What to include" checklist.
+- **Accessibility & Contrast Polish (`fix(a11y)`)**: Upgraded primary button contrast from 2.53:1 (white on `#10B981`) to 6.83:1 (`#0A0F1D` on `#10B981`), raised disabled button text contrast from 1.23:1 to 4.43:1 (`#8492A6` at 0.75 opacity on `#111827`) with explicit `[Locked]` indicators and explanatory caption, replaced legacy `#6B7280` with `#8492A6`, added `[data-tip]` accessible CSS tooltips, and added `scope="row"` headers to Totality Matrix summary rows.
+- **UI & Responsive Improvements (`fix(ui)`)**: Enforced 2x2 grid layout for 4-step stepper at `max-width: 1100px`, 2-column symptom strip at `max-width: 640px`, consolidated Step 4 remedy ranking with expandable breakdown table, and bumped `pyproject.toml` Streamlit dependency to `>=1.42.0`.
+- **Test Suite Expansion (`test(intake)`)**: Added comprehensive unit tests for narrative derivation, safety red flags, extraction meta migration, and AppTest smoke tests, expanding suite to **133 passing tests**.
+
+---
+
 ## Changelog
 
 | Date | Phase | Agent | Change |
@@ -494,6 +508,7 @@ pytest tests/ -v
 | 2026-10-31 | 16 / Stream | Antigravity | Shimmer Reflection & Quick Replies Parser: mounted immediate skeleton thinking bubble during preparation/generation; hardened visible_only and _parse_and_strip_quick_replies for unbracketed QUICK_REPLIES syntax; added importlib.reload safeguards in app.py; 108/108 passing tests (12b0e81, 4078612). |
 | 2026-10-31 | 17 / PDF | Antigravity | Publication-Grade PDF Clinical Report Redesign: modernized src/dashboard/pdf_exporter.py with executive midnight/emerald hero header, Primary Clinical Simillimum Feature Box (Rank #1 highlight, Kent Grade breakdown G3/G2/G1, lead margin over #2), OCR artifact cleaner (_clean_rubric_path), calibrated 540pt table widths with repeatRows=1, and two-pass NumberedCanvas with running clinical headers and dynamic 'Page X of Y' footers (a86b27f). |
 | 2026-10-31 | 18 / Summary | Antigravity | Dynamic Physician Brief & Patient Case Summarizer: implemented src/pipeline/case_summarizer.py using local LLaMA 3 8B via Ollama with robust clinical extractive fallback; integrated clinical_summary into ClinicalCase model, SQLite schema, Step 2 (Review) with AI regeneration & physician adjustment, Step 4 (Report) narrative hero card, Markdown export, and Page 1 PDF clinical summary box; 109 passing tests. |
+| 2026-11-01 | 19 / Intake | Antigravity | Step 1 Clinical Narrative Intake Redesign & A11y Polish: segmented control mode switching, extraction_meta schema with backward-compatible SQLite migration, extract_profile method (zero vector-store calls), safety red-flag screening, two-column highlighted narrative extraction preview, 7.53:1 primary button contrast, 4.43:1 disabled stepper contrast with [Locked] label and caption, accessible CSS tooltips, 2x2 responsive stepper, consolidated report ranking, and pyproject.toml pin to Streamlit >=1.42.0; 133/133 passing tests (1b87a37, 60e7145, 16e95d5, 9eba5ab, 89b0a94). |
 
 ---
 
