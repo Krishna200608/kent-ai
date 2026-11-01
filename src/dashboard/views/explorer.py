@@ -251,6 +251,11 @@ def render_rubric_explorer(db: KentDB, pipeline: Any) -> None:
         st.session_state["explorer_query"] = query_clean
         st.session_state["explorer_results"] = None  # invalidate cache
         with st.spinner("Searching Repertory rubrics..."):
+            skel_exp = st.empty()
+            with skel_exp.container():
+                st.skeleton(height=45, width="stretch")
+                st.skeleton(height=120, width="stretch")
+                st.skeleton(height=120, width="stretch")
             if search_mode == "Meaning":
                 if pipeline and hasattr(pipeline, "vector_store") and pipeline.vector_store:
                     raw_results = pipeline.vector_store.query(
@@ -305,6 +310,7 @@ def render_rubric_explorer(db: KentDB, pipeline: Any) -> None:
             filtered_results.sort(key=lambda r: r.get("similarity", 0.0) or 0.0, reverse=True)
 
         display_results = filtered_results[:int(limit)]
+        skel_exp.empty()
         st.session_state["explorer_results"] = display_results
         st.session_state["explorer_query_display"] = query_clean
 

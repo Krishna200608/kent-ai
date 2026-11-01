@@ -51,7 +51,13 @@ def render_step3_analysis(
         if slot_empty.button("Run Repertorization Analysis", type="primary", key="btn_run_analysis_empty"):
             with busy_slot(slot_empty, "Analyzing rubrics...", key="btn_run_analysis_empty", type="primary"):
                 with st.spinner("Searching Kent's Repertory and computing totality scores...", show_time=True):
+                    skel = st.empty()
+                    with skel.container():
+                        st.skeleton(height=40, width="stretch")
+                        st.skeleton(height=220, width="stretch")
+                        st.skeleton(height=120, width="stretch")
                     report = pipeline.repertorize_case(current_case)
+                    skel.empty()
                     st.session_state.current_report = report
                     current_case.report_data = report.to_dict()
                     save_case(current_case)
@@ -157,6 +163,9 @@ def render_step3_analysis(
         if slot_recomp.button("Recompute Totality Scores", type="secondary", width="stretch", key="btn_recompute_scores"):
             with busy_slot(slot_recomp, "Recomputing...", key="btn_recompute_scores", type="secondary"):
                 with st.spinner("Re-ranking remedies with active rubric filters...", show_time=True):
+                    skel = st.empty()
+                    with skel.container():
+                        st.skeleton(height=180, width="stretch")
                     if report and hasattr(pipeline, "ranker"):
                         rescored = rescore_report(pipeline.ranker, report, current_case)
                         st.session_state.current_report = rescored
@@ -165,6 +174,7 @@ def render_step3_analysis(
                         report = pipeline.repertorize_case(current_case)
                         st.session_state.current_report = report
                         current_case.report_data = report.to_dict()
+                    skel.empty()
                     save_case(current_case)
                     st.toast("Totality scores recomputed.")
                     st.rerun()

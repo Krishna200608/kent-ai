@@ -225,7 +225,13 @@ def render_step2_review(current_case: ClinicalCase, pipeline: Any) -> None:
         ):
             with busy_slot(slot_rep, "Analyzing rubrics...", key="btn_run_rep", type="primary"):
                 with st.spinner("Searching Kent's Repertory and computing totality scores...", show_time=True):
+                    skel = st.empty()
+                    with skel.container():
+                        st.skeleton(height=35, width="stretch")
+                        st.skeleton(height=180, width="stretch")
+                        st.skeleton(height=100, width="stretch")
                     report = pipeline.repertorize_case(current_case)
+                    skel.empty()
                     st.session_state.current_report = report
                     current_case.report_data = report.to_dict()
                     save_case(current_case)

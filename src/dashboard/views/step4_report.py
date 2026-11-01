@@ -180,7 +180,11 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
                     if slot_pdf.button("Prepare PDF Export", key="btn_prep_rep_pdf", width="stretch"):
                         with busy_slot(slot_pdf, "Compiling PDF...", key="btn_prep_rep_pdf", type="secondary"):
                             with st.spinner("Compiling PDF report...", show_time=True):
+                                skel = st.empty()
+                                with skel.container():
+                                    st.skeleton(height=45, width="stretch")
                                 st.session_state[pdf_key] = generate_case_pdf(case)
+                                skel.empty()
                                 st.rerun()
                 else:
                     st.download_button(
