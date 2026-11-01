@@ -55,7 +55,7 @@ def render_dimensions_grid(dims: Dict[str, Any], report: Optional[PatientReport]
             badge_extra = f' <span style="font-size: 9.5px; background: rgba(147,51,234,0.22); color: #D8B4FE; border: 1px solid rgba(147,51,234,0.4); border-radius: 3px; padding: 1px 4px; margin-left: 4px; font-weight: 600;">{conf_pct}%</span>'
 
         return (
-            f'<span class="badge {badge_cls}" title="Dimension: {dim_label} ({dim_code}) | Finding: {val}&#10;Provenance: {prov_hint}">'
+            f'<span class="badge {badge_cls}" tabindex="0" aria-label="Dimension: {dim_label} ({dim_code}) | Finding: {val}" data-tip="Dimension: {dim_label} ({dim_code}) | Finding: {val}&#10;Provenance: {prov_hint}" title="Dimension: {dim_label} ({dim_code}) | Finding: {val}&#10;Provenance: {prov_hint}">'
             f'{val}{badge_extra}</span>'
         )
 
@@ -259,37 +259,27 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
             """
         )
 
-        col1, col2 = st.columns([3, 2])
-        with col1:
-            st.html(
-                f"""
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        {get_icon('bar_chart', size=20, color='#10B981')}
-                        <h4 style="margin: 0;">2. Remedy Totality Ranking</h4>
-                    </div>
+        st.html(
+            f"""
+            <div style="display: flex; align-items: center; justify-content: space-between; margin: 16px 0 8px 0;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    {get_icon('bar_chart', size=20, color='#10B981')}
+                    <h4 style="margin: 0;">2. Remedy Totality Ranking</h4>
                 </div>
-                """
-            )
-            render_repertorization_chart(remedies)
-            st.markdown(
-                "<div style='font-size: 11.5px; color: #9CA3AF; margin-top: 4px;'>"
-                "<b>Ranking Method:</b> Classical Totality prioritizes candidate remedies covering the highest number of patient rubrics, then sorts by grade-weighted score."
-                "</div>",
-                unsafe_allow_html=True,
-            )
+            </div>
+            """
+        )
+        render_repertorization_chart(remedies)
+        st.markdown(
+            "<div style='font-size: 11.5px; color: #9CA3AF; margin-top: 4px; margin-bottom: 8px;'>"
+            "<b>Ranking Method:</b> Classical Totality prioritizes candidate remedies covering the highest number of patient rubrics, then sorts by grade-weighted score."
+            "</div>",
+            unsafe_allow_html=True,
+        )
 
-        with col2:
-            st.html(
-                f"""
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                    {get_icon('table_chart', size=20, color='#A78BFA')}
-                    <h4 style="margin: 0;">3. Top Candidate Breakdown</h4>
-                </div>
-                """
-            )
+        with st.expander("View Candidate Breakdown Table", expanded=False):
             table_data = []
-            for idx, r in enumerate(remedies[:8], start=1):
+            for idx, r in enumerate(remedies[:10], start=1):
                 cov_pct = f"{r.get('coverage_ratio', 0)*100:.0f}%"
                 table_data.append({
                     "Rank": f"#{idx}",
@@ -304,7 +294,7 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
             f"""
             <div style="display: flex; align-items: center; gap: 8px; margin: 20px 0 8px 0;">
                 {get_icon('grid_on', size=20, color='#FBBF24')}
-                <h4 style="margin: 0;">4. Classical Repertorization Matrix (Remedies &times; Rubrics)</h4>
+                <h4 style="margin: 0;">3. Classical Repertorization Matrix (Remedies &times; Rubrics)</h4>
             </div>
             """
         )
@@ -314,7 +304,7 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
         f"""
         <div style="display: flex; align-items: center; gap: 8px; margin: 20px 0 8px 0;">
             {get_icon('format_list_bulleted', size=20, color='#34D399')}
-            <h4 style="margin: 0;">5. Matched Kent Repertory Rubrics ({len(active_rubrics)})</h4>
+            <h4 style="margin: 0;">4. Matched Kent Repertory Rubrics ({len(active_rubrics)})</h4>
         </div>
         """
     )
