@@ -442,6 +442,26 @@ def test_resume_from_case_moves_fsm_to_first_gap_and_seeds_opener(mock_dialogue_
     assert "Sensation - throbbing" in dm.history[0]["content"]
 
 
+def test_resume_from_fresh_case_starts_at_greeting(mock_dialogue_manager):
+    """Fresh case with no dimensions starts at GREETING (Step 1/10), NOT Location (3/10)."""
+    from src.dashboard.components.chat_header import get_current_step_label
+
+    fresh_case = ClinicalCase(case_id="CASE-FRESH-1")
+    dm = mock_dialogue_manager
+    dm.reset()
+    dm.resume_from_case(fresh_case)
+
+    # State machine must start at GREETING
+    assert dm.state_machine.current_state == IntakeState.GREETING
+    assert len(dm.history) == 1
+    assert "Hello, I am Kent-AI" in dm.history[0]["content"]
+
+    # Header step label must be Step 1 of 10: Greeting
+    step_label = get_current_step_label(dm)
+    assert step_label == "Step 1 of 10: Greeting"
+
+
+
 def test_resume_from_case_idempotent(mock_dialogue_manager):
     """Calling resume_from_case repeatedly does not duplicate the seeded opener."""
     c = ClinicalCase(case_id="CASE-RESUME-2")

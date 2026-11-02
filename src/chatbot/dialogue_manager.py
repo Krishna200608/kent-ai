@@ -169,8 +169,13 @@ class DialogueManager:
         if isinstance(case.extraction_meta, dict) and "intake_mode" in case.extraction_meta:
             self.intake_mode = str(case.extraction_meta["intake_mode"]).lower()
 
-        # Advance state machine to first gap
-        self.state_machine.advance_to_next_gap()
+        # Only advance to the first gap if the case has existing captured dimensions or conversation turns;
+        # fresh consultations remain at IntakeState.GREETING (Step 1 of 10)
+        has_existing_data = any(self.extracted_slots.values()) or bool(self.history)
+        if has_existing_data:
+            self.state_machine.advance_to_next_gap()
+        else:
+            self.state_machine.current_state = IntakeState.GREETING
 
         # If history is empty, seed ONE deterministic assistant opener (no LLM call)
         if not self.history:
@@ -524,7 +529,10 @@ class DialogueManager:
             filled_slots=self.state_machine.filled_slots,
             case=self.case,
         )
-        self.state_machine.advance_to_next_gap()
+        if any(self.extracted_slots.values()) or len(self.history) > 1:
+            self.state_machine.advance_to_next_gap()
+        else:
+            self.state_machine.current_state = IntakeState.GREETING
         self.sync_to_case()
         if self.history:
             last_bot = next((t["content"] for t in reversed(self.history) if t.get("role") == "assistant"), "")
