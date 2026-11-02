@@ -303,11 +303,27 @@ This document records architectural decisions, assumptions, backend changes, and
   - Strict HTML escaping: all user and LLM interpolated strings pass through `src.dashboard.utils.esc()`.
   - Design tokens used exclusively via `:root` CSS variables; zero hard-coded brand colors or duplicate inline styles.
   - Contrast compliance: text on surfaces meets or exceeds WCAG AA (≥4.5:1 ratio).
-  - All existing ~81 saved consultations in SQLite load seamlessly with complete backward compatibility.
+  - All existing ~81 saved consultations in SQLite load seamlessly with complete backward compatibility.---
 
+### Chat Suggestion Chips Synchronization Overhaul (Complete)
+- **Root Cause Resolution**:
+  - Eliminated UI-layer override in `src/dashboard/components/chat_chips.py` where static `NEUTRAL_STEP_SUGGESTIONS` shadowed `dm.get_current_suggestions()`.
+  - Corrected semantic misalignment where `CHIEF_COMPLAINT` contained duration/onset phrases instead of clinical complaints.
+  - Prioritized LLaMA-generated `QUICK_REPLIES` directly for interactive conversational questions.
+  - Enhanced linguistic intent classification in `src/chatbot/suggestions.py` covering chief complaint (`"main health concern"`, `"discomfort that brought you in"`, `"what you've been experiencing"`), location, sensation, modality, time patterns, concomitants, and review.
+  - Fixed Streamlit widget key freshness on skips and cancellations by including both `turn_count` and `len(history)`.
+- **Tests Added**:
+  - 14 comprehensive synchronization tests in `tests/test_chat_suggestions_sync.py` verifying prompt-to-chip harmony across all Kentian dimensions.
+  - Full suite verified: 193/193 tests passing 100%.---
 
-
-
-
-
+### Chat Suggestion Chips Synchronization Overhaul (Complete)
+- **Root Cause Resolution**:
+  - Eliminated UI-layer override in `src/dashboard/components/chat_chips.py` where static `NEUTRAL_STEP_SUGGESTIONS` shadowed `dm.get_current_suggestions()`.
+  - Corrected semantic misalignment where `CHIEF_COMPLAINT` contained duration/onset phrases instead of clinical complaints.
+  - Prioritized LLaMA-generated `QUICK_REPLIES` directly for interactive conversational questions.
+  - Enhanced linguistic intent classification in `src/chatbot/suggestions.py` covering chief complaint (`"main health concern"`, `"discomfort that brought you in"`, `"what you've been experiencing"`), location, sensation, modality, time patterns, concomitants, and review.
+  - Fixed Streamlit widget key freshness on skips and cancellations by including both `turn_count` and `len(history)`.
+- **Tests Added**:
+  - 14 comprehensive synchronization tests in `tests/test_chat_suggestions_sync.py` verifying prompt-to-chip harmony across all Kentian dimensions.
+  - Full suite verified: 193/193 tests passing 100%.
 

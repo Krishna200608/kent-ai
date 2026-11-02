@@ -339,12 +339,10 @@ class DialogueManager:
     def get_current_suggestions(self) -> List[str]:
         """Return the current dynamic instant-reply suggestions for the active question."""
         if not self.current_suggestions and self.history:
-            last_bot_msg = self.history[-1]["content"] if self.history[-1].get("role") == "assistant" else ""
+            last_bot_msg = next((t["content"] for t in reversed(self.history) if t.get("role") == "assistant"), "")
             if last_bot_msg:
                 self.current_suggestions = self.generate_dynamic_suggestions(last_bot_msg)
-        return self.current_suggestions or self.generate_dynamic_suggestions(
-            self.history[-1]["content"] if self.history else ""
-        )
+        return self.current_suggestions or get_state_fallback(self.state_machine.current_state)
 
     # Core Turn Processing
     def prepare_turn(self, user_utterance: str) -> str:
@@ -370,6 +368,7 @@ class DialogueManager:
         # 2. Handle 'Skip'
         cleaned_input = user_utterance.strip().lower()
         if cleaned_input == "skip":
+            self.state_machine.turn_count += 1
             self.state_machine.skip_current_slot()
             self.history.append({
                 "role": "user",
@@ -382,6 +381,7 @@ class DialogueManager:
 
         # 3. Handle 'None of these' / denial
         if cleaned_input in ("none of these", "none"):
+            self.state_machine.turn_count += 1
             curr_state = self.state_machine.current_state
             dim_map = {
                 IntakeState.LOCATION: "location",

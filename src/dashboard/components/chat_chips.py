@@ -11,28 +11,31 @@ if TYPE_CHECKING:
     from src.chatbot.dialogue_manager import DialogueManager
 
 
-# Step-aware neutral suggestion templates (Phase 4 UI Overhaul)
+# Step-aware neutral suggestion templates (Phase 4 UI Overhaul & clinical fallback)
 NEUTRAL_STEP_SUGGESTIONS: Dict[str, List[str]] = {
     "GREETING": [
         "I'd like to describe how I feel",
         "I have a physical complaint",
         "It's mostly emotional",
+        "Severe recurring headache",
     ],
     "CHIEF_COMPLAINT": [
-        "It started recently",
-        "It has been ongoing for a while",
-        "It comes and goes in episodes",
+        "Severe throbbing headache",
+        "Stomach pain & acid reflux",
+        "Aching joints & stiffness",
+        "Anxiety & trouble sleeping",
     ],
     "LOCATION": [
-        "It affects a specific area",
-        "It spreads across multiple places",
-        "It feels deep inside",
+        "Forehead and temples",
+        "Stomach & abdomen",
+        "Chest and throat",
+        "Lower back & joints",
     ],
     "SENSATION": [
-        "It is sharp or intense",
-        "It feels dull and aching",
-        "It feels throbbing or pulsing",
-        "It is a burning or tingling sensation",
+        "Throbbing and pulsating",
+        "Sharp stabbing pain",
+        "Dull heavy ache",
+        "Burning sensation",
     ],
     "MODALITY": [
         "Worse from warmth or heat",
@@ -41,30 +44,33 @@ NEUTRAL_STEP_SUGGESTIONS: Dict[str, List[str]] = {
         "Better from gentle motion",
     ],
     "CONCOMITANT": [
-        "I feel tired or nauseous with it",
-        "There are no other symptoms",
-        "It comes with sweating or chills",
+        "Accompanied by nausea",
+        "Dizziness and lightheadedness",
+        "Chills and cold sweat",
+        "No other symptoms",
     ],
     "TEMPORAL": [
         "Worse in the morning",
         "Worse in the evening or night",
-        "Worse at a specific time of day",
+        "Worse after midnight (2-3 AM)",
         "No particular time pattern",
     ],
     "MENTAL": [
         "I feel anxious or restless",
         "I feel irritable and impatient",
         "I prefer to be left alone",
-        "My mood is unaffected",
+        "My mood is relatively calm",
     ],
     "REVIEW": [
-        "Everything looks accurate",
+        "Yes, that covers all my symptoms!",
         "I'd like to clarify something",
-        "No further symptoms to add",
+        "Please proceed to repertorization",
+        "Ready to view my remedies",
     ],
     "DONE": [
         "Proceed to Review",
         "Check my captured totality",
+        "Start New Consultation",
     ],
 }
 
@@ -85,16 +91,16 @@ def render_quick_reply_chips(dm: DialogueManager, in_container: bool = False) ->
     if is_practitioner:
         return None
 
-    # 3. Determine current state and fetch neutral suggestions
-    curr_state = dm.state_machine.current_state.value if hasattr(dm.state_machine.current_state, "value") else str(dm.state_machine.current_state)
-    suggestions = NEUTRAL_STEP_SUGGESTIONS.get(curr_state)
+    # 3. Fetch suggestions from dialogue manager (intent-first or LLaMA quick replies)
+    suggestions = dm.get_current_suggestions()
     if not suggestions:
-        suggestions = dm.get_current_suggestions()
+        curr_state = dm.state_machine.current_state.value if hasattr(dm.state_machine.current_state, "value") else str(dm.state_machine.current_state)
+        suggestions = NEUTRAL_STEP_SUGGESTIONS.get(curr_state, [])
 
     if not suggestions:
         return None
 
-    display_chips = list(suggestions[:4])
+    display_chips = list(suggestions[:5])
 
     title_margin = "6px 0 4px 2px" if in_container else "8px 0 4px 2px"
     st.html(
@@ -108,10 +114,12 @@ def render_quick_reply_chips(dm: DialogueManager, in_container: bool = False) ->
         """
     )
 
+    hist_len = len(getattr(dm, "history", []))
+    turn_cnt = getattr(dm.state_machine, "turn_count", 0)
     selected = st.pills(
         "Suggested Responses:",
         display_chips,
-        key=f"pills_turn_{dm.state_machine.turn_count}_{'box' if in_container else 'dock'}",
+        key=f"pills_t{turn_cnt}_h{hist_len}_{'box' if in_container else 'dock'}",
         label_visibility="collapsed",
     )
     if selected:

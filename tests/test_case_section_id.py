@@ -71,3 +71,4 @@ def test_repertorize_case_with_int_and_str_scopes() -> None:
     case_none.add_symptom("mental", "anxiety")
     report_none = pipeline.repertorize_case(case_none)
     assert report_none is not None
+

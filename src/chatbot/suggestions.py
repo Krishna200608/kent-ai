@@ -166,16 +166,70 @@ def parse_and_strip_slot_update(text: str) -> Tuple[str, Dict[str, List[str]]]:
 def get_state_fallback(state: IntakeState) -> List[str]:
     """Adaptive state-based fallback options for instant replies."""
     state_fallback = {
-        IntakeState.GREETING: ["Severe recurring headache", "Stomach pain and burning", "Severe anxiety and fatigue"],
-        IntakeState.CHIEF_COMPLAINT: ["Headache in temples", "Stomach ache after food", "Anxious and sleepless"],
-        IntakeState.LOCATION: ["Forehead and temples", "Stomach & abdomen", "Chest and throat", "Lower back & joints"],
-        IntakeState.SENSATION: ["Throbbing and pulsating", "Sharp stabbing pain", "Dull heavy ache", "Burning sensation"],
-        IntakeState.MODALITY: ["Worse in heat and sun", "Worse from motion", "Better with cold compress", "Better in quiet dark"],
-        IntakeState.CONCOMITANT: ["Nausea and dizziness", "Chills and perspiration", "Extreme fatigue", "No other symptoms"],
-        IntakeState.TEMPORAL: ["Worse in morning on waking", "Worse after midnight (2-3 AM)", "Worse in afternoon / evening", "No specific time pattern"],
-        IntakeState.MENTAL: ["Restless and anxious", "Irritable and frustrated", "Down and tearful", "Calm and peaceful"],
-        IntakeState.REVIEW: ["Yes, that covers all my symptoms!", "I want to add another symptom", "Please proceed to repertorization"],
-        IntakeState.DONE: ["Everything looks accurate", "I'd like to check my answers", "No other symptoms"],
+        IntakeState.GREETING: [
+            "Severe recurring headache",
+            "Stomach pain and burning",
+            "Severe anxiety and fatigue",
+            "Joint pain and stiffness",
+        ],
+        IntakeState.CHIEF_COMPLAINT: [
+            "Severe throbbing headache",
+            "Stomach pain & acid reflux",
+            "Aching joints & stiffness",
+            "Anxiety & trouble sleeping",
+        ],
+        IntakeState.LOCATION: [
+            "Forehead and temples",
+            "Stomach & abdomen",
+            "Chest and throat",
+            "Lower back & joints",
+        ],
+        IntakeState.SENSATION: [
+            "Throbbing and pulsating",
+            "Sharp stabbing pain",
+            "Dull heavy ache",
+            "Burning sensation",
+        ],
+        IntakeState.MODALITY: [
+            "Worse in heat and sun",
+            "Worse from motion",
+            "Better with cold compress",
+            "Better in quiet dark",
+        ],
+        IntakeState.CONCOMITANT: [
+            "Nausea and dizziness",
+            "Chills and perspiration",
+            "Extreme fatigue",
+            "No other symptoms",
+        ],
+        IntakeState.TEMPORAL: [
+            "Worse in morning on waking",
+            "Worse after midnight (2-3 AM)",
+            "Worse in afternoon / evening",
+            "No specific time pattern",
+        ],
+        IntakeState.MENTAL: [
+            "Restless and anxious",
+            "Irritable and frustrated",
+            "Down and tearful",
+            "Calm and peaceful",
+        ],
+        IntakeState.REVIEW: [
+            "Yes, that covers all my symptoms!",
+            "I want to add another symptom",
+            "Please proceed to repertorization",
+            "Ready to view my remedies",
+        ],
+        IntakeState.CLARIFICATION: [
+            "I want to add another symptom",
+            "Change a detail I mentioned earlier",
+            "Ready to proceed to review",
+        ],
+        IntakeState.DONE: [
+            "Everything looks accurate",
+            "I'd like to check my answers",
+            "No other symptoms",
+        ],
     }
     return state_fallback.get(state, [
         "Yes, exactly like that",
@@ -184,8 +238,8 @@ def get_state_fallback(state: IntakeState) -> List[str]:
     ])
 
 
-def _format_chips(options: List[str], current_state: Optional[IntakeState]) -> List[str]:
-    """Format chips: for slot states, provide up to 3 contextual chips + 'Skip' + 'None of these'."""
+def _format_chips(options: List[str], current_state: Optional[IntakeState], is_slot: bool = False) -> List[str]:
+    """Format chips: for slot states or slot questions, provide up to 3 contextual chips + 'Skip' + 'None of these'."""
     slot_states = {
         IntakeState.LOCATION,
         IntakeState.SENSATION,
@@ -194,7 +248,7 @@ def _format_chips(options: List[str], current_state: Optional[IntakeState]) -> L
         IntakeState.TEMPORAL,
         IntakeState.MENTAL,
     }
-    if current_state in slot_states:
+    if is_slot or (current_state in slot_states):
         filtered = [opt for opt in options if opt.lower() not in ("skip", "none of these", "none")]
         contextual = filtered[:3]
         if "Skip" not in contextual:
@@ -222,7 +276,15 @@ def generate_dynamic_suggestions(
     raw_options: List[str] = []
 
     # Opening / Chief Complaint (Kentian anatomical location first)
-    if not text or any(p in text for p in ["troubling you", "primary symptoms", "bring you in", "bothers you", "what brings", "how are you", "practitioner mode", "chief complaint"]):
+    if not text or any(p in text for p in [
+        "troubling you", "primary symptoms", "bring you in", "bothers you",
+        "what brings you in", "what brings you here", "what brings you today",
+        "how are you", "practitioner mode", "chief complaint",
+        "health concern", "discomfort that brought", "what you've been experiencing",
+        "what you are experiencing", "main concern", "main problem",
+        "reason for your visit", "describe how you feel", "what would you like help with",
+        "describe the main", "experiencing today",
+    ]):
         if is_practitioner:
             raw_options = [
                 "Headache / Migraine (Frontal/Temporal)",
@@ -240,7 +302,11 @@ def generate_dynamic_suggestions(
         return _format_chips(raw_options, current_state)
 
     # Concomitants
-    if any(w in text for w in ["alongside", "other symptom", "at the same time", "also notice", "nausea, dizziness", "concomitant"]):
+    if any(w in text for w in [
+        "alongside", "other symptom", "at the same time", "also notice",
+        "nausea, dizziness", "concomitant", "accompanied by", "together with",
+        "in addition to", "associated with", "sweating or chills",
+    ]):
         if is_practitioner:
             raw_options = [
                 "Concomitant nausea & vertigo",
@@ -255,10 +321,13 @@ def generate_dynamic_suggestions(
                 "Chills and cold sweat",
                 "No other physical symptoms",
             ]
-        return _format_chips(raw_options, current_state)
+        return _format_chips(raw_options, current_state, is_slot=True)
 
     # Location
-    if any(w in text for w in ["where", "location", "part of your", "which side", "whereabouts", "where in"]):
+    if any(w in text for w in [
+        "where", "location", "part of your", "which side", "whereabouts",
+        "where in", "which area", "affected region", "where in your body",
+    ]):
         known_locs = " ".join(slots.get("location", [])).lower()
         if "head" in known_locs or "head" in text or "migraine" in text or "temple" in text:
             raw_options = ["Forehead and temples", "Top of head (vertex)", "Back of head (occiput)", "Behind my eyes"]
@@ -274,10 +343,14 @@ def generate_dynamic_suggestions(
             raw_options = ["Knees and ankles", "Hands and wrists", "Shoulders and elbows", "Small finger joints"]
         else:
             raw_options = ["In my head and temples", "In my stomach and abdomen", "In my chest and throat", "In my lower back and joints"]
-        return _format_chips(raw_options, current_state)
+        return _format_chips(raw_options, current_state, is_slot=True)
 
     # Sensation
-    if any(w in text for w in ["sensation", "feel like", "kind of pain", "type of", "throbbing", "burning", "stabbing", "describe the", "how does it"]):
+    if any(w in text for w in [
+        "sensation", "feel like", "kind of pain", "type of", "throbbing",
+        "burning", "stabbing", "describe the", "how does it", "stitching",
+        "dull ache", "heavy pressure", "shooting pain", "cramping",
+    ]):
         if is_practitioner:
             raw_options = [
                 "Throbbing / Pulsating rhythm",
@@ -292,10 +365,17 @@ def generate_dynamic_suggestions(
                 "Burning heat and soreness",
                 "Pulsating, throbbing rhythm",
             ]
-        return _format_chips(raw_options, current_state)
+        return _format_chips(raw_options, current_state, is_slot=True)
 
     # Modality
-    if any(w in text for w in ["makes it worse", "make it worse", "aggravat", "flare", "trigger", "worse from", "bring relief", "brings relief", "comfort", "soothe", "better from", "relieved by", "modality", "modalities"]):
+    if any(w in text for w in [
+        "made this worse", "made it worse", "makes this worse", "makes it worse",
+        "make it worse", "aggravat", "flare", "trigger", "worse from",
+        "bring relief", "brings relief", "brings you any relief", "relief",
+        "relieve", "relieved", "comfort", "soothe", "better from",
+        "relieved by", "modality", "modalities", "improves", "ameliorat",
+        "cold compress", "warmth", "motion or rest",
+    ]):
         if is_practitioner:
             raw_options = [
                 "Worse: Motion & physical exertion",
@@ -310,10 +390,14 @@ def generate_dynamic_suggestions(
                 "Better with cold compresses",
                 "Better resting in a dark room",
             ]
-        return _format_chips(raw_options, current_state)
+        return _format_chips(raw_options, current_state, is_slot=True)
 
     # Temporal
-    if any(w in text for w in ["what time", "time of day", "time pattern", "when does", "morning or night", "day or night", "waking up", "periodicity", "hour", "clock", "midnight", "temporal"]):
+    if any(w in text for w in [
+        "what time", "time of day", "time pattern", "when does", "morning or night",
+        "day or night", "waking up", "periodicity", "hour", "clock", "midnight",
+        "temporal", "when did it start", "how long has this", "specific time",
+    ]):
         if is_practitioner:
             raw_options = [
                 "Aggravation: Morning on waking",
@@ -328,10 +412,14 @@ def generate_dynamic_suggestions(
                 "Worse in afternoon (around 3-4 PM)",
                 "No specific time pattern",
             ]
-        return _format_chips(raw_options, current_state)
+        return _format_chips(raw_options, current_state, is_slot=True)
 
     # Mental/Emotional
-    if any(w in text for w in ["mood", "stress", "emotion", "feeling mentally", "anxious", "mind", "irritab", "peace of mind", "emotional", "mental"]):
+    if any(w in text for w in [
+        "mood", "stress", "emotion", "feeling mentally", "anxious", "anxiety",
+        "mind", "irritab", "peace of mind", "emotional", "mental", "restless",
+        "depress", "tearful", "fears",
+    ]):
         if is_practitioner:
             raw_options = [
                 "Restless, anxious, pacing",
@@ -346,10 +434,14 @@ def generate_dynamic_suggestions(
                 "Depressed, tired, and quiet",
                 "My mood is relatively calm",
             ]
-        return _format_chips(raw_options, current_state)
+        return _format_chips(raw_options, current_state, is_slot=True)
 
     # Review / Confirmation / Clarification / Readiness
-    if any(w in text for w in ["accurate", "summarize", "anything else", "sound right", "add anything", "confirm", "covers it", "got it right", "proceed", "repertoriz", "ready"]):
+    if any(w in text for w in [
+        "accurate", "summarize", "anything else", "sound right", "add anything",
+        "confirm", "covers it", "covers all", "got it right", "proceed",
+        "repertoriz", "ready to review", "reflect your symptoms", "ready",
+    ]):
         if is_practitioner:
             return [
                 "Totality accurate as recorded",
