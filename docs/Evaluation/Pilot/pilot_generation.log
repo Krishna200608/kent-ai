@@ -1,0 +1,139 @@
+2026-09-28 19:17:28,644 [INFO] =================================================================
+2026-09-28 19:17:28,644 [INFO]   KENT-AI: STRATIFIED PILOT GENERATION (100 CLINICAL CASES)
+2026-09-28 19:17:28,644 [INFO] =================================================================
+2026-09-28 19:17:28,644 [INFO] Backend          : ollama (llama3:8b)
+2026-09-28 19:17:28,644 [INFO] Output File      : D:\Research Project\kent-ai\data\processed\pilot_100_cases.jsonl
+2026-09-28 19:17:28,644 [INFO] Checkpoint File  : D:\Research Project\kent-ai\data\processed\pilot_checkpoint.json
+2026-09-28 19:17:28,644 [INFO] Cases per Rubric : 4
+2026-09-28 19:17:28,644 [INFO] Inter-Case Pause : 1.0s (thermal guard)
+2026-09-28 19:17:28,645 [INFO] =================================================================
+2026-09-28 19:17:28,744 [INFO] Selected 25 Stratified Rubrics (25 Pending | ~100 Total Cases Target)
+2026-09-28 19:17:28,747 [INFO] [1/25] Generating Rubric ID 3778 [1. Anxiety & Fear]: 'MIND > RESTLESSNESS, nervousness > night'
+2026-09-28 19:18:21,738 [INFO]    -> Variation 1/4 generated (78 tokens, 5 entities) in 53.0s
+2026-09-28 19:19:07,632 [INFO]    -> Variation 2/4 generated (89 tokens, 6 entities) in 44.9s
+2026-09-28 19:19:55,611 [INFO]    -> Variation 3/4 generated (59 tokens, 5 entities) in 47.0s
+2026-09-28 19:20:46,818 [INFO]    -> Variation 4/4 generated (53 tokens, 8 entities) in 50.2s
+2026-09-28 19:20:47,822 [INFO] [2/25] Generating Rubric ID 2270 [1. Anxiety & Fear]: 'MIND > FEAR'
+2026-09-28 19:21:49,033 [INFO]    -> Variation 1/4 generated (92 tokens, 9 entities) in 61.2s
+2026-09-28 19:22:36,315 [INFO]    -> Variation 2/4 generated (131 tokens, 5 entities) in 46.3s
+2026-09-28 19:23:10,464 [INFO]    -> Variation 3/4 generated (53 tokens, 4 entities) in 33.1s
+2026-09-28 19:23:58,778 [INFO]    -> Variation 4/4 generated (76 tokens, 7 entities) in 47.3s
+2026-09-28 19:23:59,782 [INFO] [3/25] Generating Rubric ID 2353 [1. Anxiety & Fear]: 'MIND > FEAR > death, of'
+2026-09-28 19:24:58,407 [INFO]    -> Variation 1/4 generated (84 tokens, 8 entities) in 58.6s
+2026-09-28 19:25:34,590 [INFO]    -> Variation 2/4 generated (47 tokens, 5 entities) in 35.2s
+2026-09-28 19:26:09,714 [INFO]    -> Variation 3/4 generated (40 tokens, 5 entities) in 34.1s
+2026-09-28 19:27:02,055 [INFO]    -> Variation 4/4 generated (88 tokens, 7 entities) in 51.3s
+2026-09-28 19:27:03,059 [INFO] [4/25] Generating Rubric ID 2344 [1. Anxiety & Fear]: 'MIND > FEAR > crowd, in a'
+2026-09-28 19:27:46,273 [INFO]    -> Variation 1/4 generated (64 tokens, 5 entities) in 43.2s
+2026-09-28 19:28:34,052 [INFO]    -> Variation 2/4 generated (72 tokens, 7 entities) in 46.8s
+2026-09-28 19:29:13,601 [INFO]    -> Variation 3/4 generated (68 tokens, 3 entities) in 38.5s
+2026-09-28 19:29:53,135 [INFO]    -> Variation 4/4 generated (76 tokens, 5 entities) in 38.5s
+2026-09-28 19:29:54,138 [INFO] [5/25] Generating Rubric ID 194 [1. Anxiety & Fear]: 'MIND > ANXIETY > evening > twilight, in the'
+2026-09-28 19:30:46,675 [INFO]    -> Variation 1/4 generated (67 tokens, 8 entities) in 52.5s
+2026-09-28 19:31:41,900 [INFO]    -> Variation 2/4 generated (87 tokens, 8 entities) in 54.2s
+2026-09-28 19:32:27,312 [INFO]    -> Variation 3/4 generated (78 tokens, 6 entities) in 44.4s
+2026-09-28 19:33:18,121 [INFO]    -> Variation 4/4 generated (66 tokens, 6 entities) in 49.8s
+2026-09-28 19:33:19,124 [INFO] [6/25] Generating Rubric ID 187 [2. Affective & Grief]: 'MIND > ANXIETY > evening'
+2026-09-28 19:34:08,891 [INFO]    -> Variation 1/4 generated (72 tokens, 7 entities) in 49.8s
+2026-09-28 19:34:59,048 [INFO]    -> Variation 2/4 generated (89 tokens, 7 entities) in 49.2s
+2026-09-28 19:35:38,348 [INFO]    -> Variation 3/4 generated (61 tokens, 5 entities) in 38.3s
+2026-09-28 19:36:24,236 [INFO]    -> Variation 4/4 generated (60 tokens, 7 entities) in 44.9s
+2026-09-28 19:36:25,239 [INFO] [7/25] Generating Rubric ID 672 [2. Affective & Grief]: 'MIND > CONFUSION of mind > morning'
+2026-09-28 19:37:05,962 [INFO]    -> Variation 1/4 generated (70 tokens, 5 entities) in 40.7s
+2026-09-28 19:37:56,353 [INFO]    -> Variation 2/4 generated (71 tokens, 8 entities) in 49.4s
+2026-09-28 19:38:36,913 [INFO]    -> Variation 3/4 generated (50 tokens, 6 entities) in 39.6s
+2026-09-28 19:39:13,876 [INFO]    -> Variation 4/4 generated (57 tokens, 5 entities) in 36.0s
+2026-09-28 19:39:14,881 [INFO] [8/25] Generating Rubric ID 67 [2. Affective & Grief]: 'MIND > ANGER, irascibility > ailments after, anger, vexation etc'
+2026-09-28 19:39:53,754 [INFO]    -> Variation 1/4 generated (62 tokens, 5 entities) in 38.9s
+2026-09-28 19:40:38,232 [INFO]    -> Variation 2/4 generated (81 tokens, 3 entities) in 43.5s
+2026-09-28 19:41:19,161 [INFO]    -> Variation 3/4 generated (53 tokens, 4 entities) in 39.9s
+2026-09-28 19:42:14,995 [INFO]    -> Variation 4/4 generated (73 tokens, 6 entities) in 54.8s
+2026-09-28 19:42:15,999 [INFO] [9/25] Generating Rubric ID 1941 [2. Affective & Grief]: 'MIND > DESPAIR > recovery'
+2026-09-28 19:42:58,321 [INFO]    -> Variation 1/4 generated (74 tokens, 4 entities) in 42.3s
+2026-09-28 19:43:45,240 [INFO]    -> Variation 2/4 generated (75 tokens, 5 entities) in 45.9s
+2026-09-28 19:44:21,586 [INFO]    -> Variation 3/4 generated (34 tokens, 5 entities) in 35.3s
+2026-09-28 19:45:14,417 [INFO]    -> Variation 4/4 generated (99 tokens, 5 entities) in 51.8s
+2026-09-28 19:45:15,420 [INFO] [10/25] Generating Rubric ID 640 [2. Affective & Grief]: 'MIND > COMPANY aversion to > desire for > agg. alone, when'
+2026-09-28 19:46:01,760 [INFO]    -> Variation 1/4 generated (92 tokens, 6 entities) in 46.3s
+2026-09-28 19:46:42,502 [INFO]    -> Variation 2/4 generated (90 tokens, 5 entities) in 39.7s
+2026-09-28 19:47:22,704 [INFO]    -> Variation 3/4 generated (55 tokens, 5 entities) in 39.2s
+2026-09-28 19:48:19,721 [INFO]    -> Variation 4/4 generated (89 tokens, 7 entities) in 56.0s
+2026-09-28 19:48:20,724 [INFO] [11/25] Generating Rubric ID 3496 [3. Cognitive & Intellect]: 'MIND > MISTAKES in calculating > words, misplacing'
+2026-09-28 19:48:59,053 [INFO]    -> Variation 1/4 generated (58 tokens, 5 entities) in 38.3s
+2026-09-28 19:49:39,863 [INFO]    -> Variation 2/4 generated (61 tokens, 6 entities) in 39.8s
+2026-09-28 19:50:15,456 [INFO]    -> Variation 3/4 generated (66 tokens, 3 entities) in 34.6s
+2026-09-28 19:50:51,620 [INFO]    -> Variation 4/4 generated (78 tokens, 4 entities) in 35.2s
+2026-09-28 19:50:52,622 [INFO] [12/25] Generating Rubric ID 671 [3. Cognitive & Intellect]: 'MIND > CONFUSION of mind'
+2026-09-28 19:51:40,908 [INFO]    -> Variation 1/4 generated (67 tokens, 6 entities) in 48.3s
+2026-09-28 19:52:22,624 [INFO]    -> Variation 2/4 generated (58 tokens, 5 entities) in 40.7s
+2026-09-28 19:53:13,900 [INFO]    -> Variation 3/4 generated (64 tokens, 6 entities) in 50.3s
+2026-09-28 19:54:24,006 [INFO]    -> Variation 4/4 generated (74 tokens, 8 entities) in 69.1s
+2026-09-28 19:54:25,008 [INFO] [13/25] Generating Rubric ID 3482 [3. Cognitive & Intellect]: 'MIND > MISTAKES in calculating > speaking'
+2026-09-28 19:55:06,416 [INFO]    -> Variation 1/4 generated (88 tokens, 4 entities) in 41.4s
+2026-09-28 19:55:54,298 [INFO]    -> Variation 2/4 generated (98 tokens, 4 entities) in 46.9s
+2026-09-28 19:56:31,371 [INFO]    -> Variation 3/4 generated (56 tokens, 3 entities) in 36.1s
+2026-09-28 19:57:16,176 [INFO]    -> Variation 4/4 generated (70 tokens, 6 entities) in 43.8s
+2026-09-28 19:57:17,178 [INFO] [14/25] Generating Rubric ID 3409 [3. Cognitive & Intellect]: 'MIND > MEMORY, weakness of'
+2026-09-28 19:58:15,098 [INFO]    -> Variation 1/4 generated (124 tokens, 6 entities) in 57.9s
+2026-09-28 19:58:50,837 [INFO]    -> Variation 2/4 generated (78 tokens, 4 entities) in 34.7s
+2026-09-28 19:59:29,100 [INFO]    -> Variation 3/4 generated (56 tokens, 5 entities) in 37.3s
+2026-09-28 20:00:20,061 [INFO]    -> Variation 4/4 generated (94 tokens, 6 entities) in 50.0s
+2026-09-28 20:00:21,064 [INFO] [15/25] Generating Rubric ID 3762 [4. Behavioral & Volition]: 'MIND > RESTLESSNESS, nervousness'
+2026-09-28 20:01:13,221 [INFO]    -> Variation 1/4 generated (96 tokens, 7 entities) in 52.2s
+2026-09-28 20:02:01,634 [INFO]    -> Variation 2/4 generated (88 tokens, 6 entities) in 47.4s
+2026-09-28 20:02:37,471 [INFO]    -> Variation 3/4 generated (50 tokens, 4 entities) in 34.8s
+2026-09-28 20:03:25,723 [INFO]    -> Variation 4/4 generated (72 tokens, 7 entities) in 47.3s
+2026-09-28 20:03:26,726 [INFO] [16/25] Generating Rubric ID 3795 [4. Behavioral & Volition]: 'MIND > RESTLESSNESS, nervousness > anxious, etc'
+2026-09-28 20:04:18,325 [INFO]    -> Variation 1/4 generated (68 tokens, 8 entities) in 51.6s
+2026-09-28 20:05:09,609 [INFO]    -> Variation 2/4 generated (101 tokens, 6 entities) in 50.3s
+2026-09-28 20:05:43,275 [INFO]    -> Variation 3/4 generated (56 tokens, 4 entities) in 32.7s
+2026-09-28 20:06:36,758 [INFO]    -> Variation 4/4 generated (79 tokens, 8 entities) in 52.5s
+2026-09-28 20:06:37,760 [INFO] [17/25] Generating Rubric ID 2833 [4. Behavioral & Volition]: 'MIND > HURRY > movements, in'
+2026-09-28 20:07:21,245 [INFO]    -> Variation 1/4 generated (71 tokens, 3 entities) in 43.5s
+2026-09-28 20:08:21,922 [INFO]    -> Variation 2/4 generated (110 tokens, 7 entities) in 59.7s
+2026-09-28 20:08:58,636 [INFO]    -> Variation 3/4 generated (52 tokens, 5 entities) in 35.7s
+2026-09-28 20:09:48,551 [INFO]    -> Variation 4/4 generated (83 tokens, 7 entities) in 48.9s
+2026-09-28 20:09:49,555 [INFO] [18/25] Generating Rubric ID 3094 [4. Behavioral & Volition]: 'MIND > IRRITABILITY'
+2026-09-28 20:10:46,152 [INFO]    -> Variation 1/4 generated (76 tokens, 7 entities) in 56.6s
+2026-09-28 20:11:36,005 [INFO]    -> Variation 2/4 generated (90 tokens, 6 entities) in 48.9s
+2026-09-28 20:12:13,660 [INFO]    -> Variation 3/4 generated (57 tokens, 5 entities) in 36.7s
+2026-09-28 20:13:07,880 [INFO]    -> Variation 4/4 generated (72 tokens, 8 entities) in 53.2s
+2026-09-28 20:13:08,884 [INFO] [19/25] Generating Rubric ID 802 [4. Behavioral & Volition]: 'MIND > CONTRADICTION, is intolerant of'
+2026-09-28 20:13:49,068 [INFO]    -> Variation 1/4 generated (48 tokens, 5 entities) in 40.2s
+2026-09-28 20:14:27,506 [INFO]    -> Variation 2/4 generated (66 tokens, 5 entities) in 37.4s
+2026-09-28 20:15:03,423 [INFO]    -> Variation 3/4 generated (51 tokens, 4 entities) in 34.9s
+2026-09-28 20:15:56,420 [INFO]    -> Variation 4/4 generated (81 tokens, 7 entities) in 52.0s
+2026-09-28 20:15:57,423 [INFO] [20/25] Generating Rubric ID 1450 [5. Perceptual & Somatopsychic]: 'MIND > DELUSIONS, dead, corpse; som © 5 > images, phantoms, sees > men, 29; spectres, 32; visions, 34)'
+2026-09-28 20:16:53,374 [INFO]    -> Variation 1/4 generated (89 tokens, 8 entities) in 55.9s
+2026-09-28 20:17:40,946 [INFO]    -> Variation 2/4 generated (88 tokens, 6 entities) in 46.6s
+2026-09-28 20:18:20,173 [INFO]    -> Variation 3/4 generated (49 tokens, 6 entities) in 38.2s
+2026-09-28 20:19:17,689 [INFO]    -> Variation 4/4 generated (99 tokens, 8 entities) in 56.5s
+2026-09-28 20:19:18,693 [INFO] [21/25] Generating Rubric ID 4077 [5. Perceptual & Somatopsychic]: 'MIND > SENSITIVE, oversensitive > noise, to'
+2026-09-28 20:20:04,701 [INFO]    -> Variation 1/4 generated (69 tokens, 6 entities) in 46.0s
+2026-09-28 20:20:54,551 [INFO]    -> Variation 2/4 generated (65 tokens, 8 entities) in 48.9s
+2026-09-28 20:21:30,897 [INFO]    -> Variation 3/4 generated (59 tokens, 5 entities) in 35.3s
+2026-09-28 20:22:18,002 [INFO]    -> Variation 4/4 generated (66 tokens, 7 entities) in 46.1s
+2026-09-28 20:22:19,005 [INFO] [22/25] Generating Rubric ID 4076 [5. Perceptual & Somatopsychic]: 'MIND > SENSITIVE, oversensitive > music, to'
+2026-09-28 20:23:03,775 [INFO]    -> Variation 1/4 generated (58 tokens, 5 entities) in 44.8s
+2026-09-28 20:23:45,815 [INFO]    -> Variation 2/4 generated (86 tokens, 5 entities) in 41.0s
+2026-09-28 20:24:24,679 [INFO]    -> Variation 3/4 generated (48 tokens, 6 entities) in 37.9s
+2026-09-28 20:25:18,867 [INFO]    -> Variation 4/4 generated (56 tokens, 7 entities) in 53.2s
+2026-09-28 20:25:19,871 [INFO] [23/25] Generating Rubric ID 4417 [5. Perceptual & Somatopsychic]: 'MIND > SUSPICIOUS'
+2026-09-28 20:26:25,763 [INFO]    -> Variation 1/4 generated (97 tokens, 10 entities) in 65.9s
+2026-09-28 20:27:14,284 [INFO]    -> Variation 2/4 generated (99 tokens, 4 entities) in 47.5s
+2026-09-28 20:27:51,688 [INFO]    -> Variation 3/4 generated (54 tokens, 5 entities) in 36.4s
+2026-09-28 20:28:27,109 [INFO]    -> Variation 4/4 generated (70 tokens, 4 entities) in 34.4s
+2026-09-28 20:28:28,111 [INFO] [24/25] Generating Rubric ID 2152 [5. Perceptual & Somatopsychic]: 'MIND > EXCITEMENT, excitable'
+2026-09-28 20:29:08,747 [INFO]    -> Variation 1/4 generated (54 tokens, 6 entities) in 40.6s
+2026-09-28 20:29:59,034 [INFO]    -> Variation 2/4 generated (95 tokens, 5 entities) in 49.3s
+2026-09-28 20:30:40,004 [INFO]    -> Variation 3/4 generated (53 tokens, 6 entities) in 40.0s
+2026-09-28 20:31:25,837 [INFO]    -> Variation 4/4 generated (91 tokens, 6 entities) in 44.8s
+2026-09-28 20:31:26,842 [INFO] [25/25] Generating Rubric ID 42 [General MIND Rubric]: 'MIND > ACTIVITY, desires > mental’'
+2026-09-28 20:32:01,863 [INFO]    -> Variation 1/4 generated (80 tokens, 3 entities) in 35.0s
+2026-09-28 20:32:44,919 [INFO]    -> Variation 2/4 generated (70 tokens, 6 entities) in 42.1s
+2026-09-28 20:33:38,717 [INFO]    -> Variation 3/4 generated (79 tokens, 6 entities) in 52.8s
+2026-09-28 20:34:27,300 [INFO]    -> Variation 4/4 generated (101 tokens, 6 entities) in 47.6s
+2026-09-28 20:34:28,305 [INFO] =================================================================
+2026-09-28 20:34:28,306 [INFO] Pilot run complete! Generated 100 cases in 77.0 minutes (1.30 cases/min).
+2026-09-28 20:34:28,306 [INFO] Output saved to: D:\Research Project\kent-ai\data\processed\pilot_100_cases.jsonl
+2026-09-28 20:34:28,306 [INFO] =================================================================
