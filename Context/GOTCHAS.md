@@ -305,6 +305,12 @@ When evaluating a `@property` (such as `case.section_id`), if any code inside th
 - **Root Cause**: `self.scope_chapter` was set as an integer `1` (in `create_demo_case()` or `settings.py`) or stored as string `'1'`, causing `1.upper()` to throw `AttributeError: 'int' object has no attribute 'upper'`. Python caught this and forwarded to `__getattr__("section_id")`, producing the misleading error `AttributeError: 'ClinicalCase' object has no attribute 'section_id'`.
 - **Verified Workaround**: Inside `@property def section_id(self)`, use safe type checks (`isinstance(scope, int)`, `scope_str.isdigit()`, `getattr(self, "scope_chapter", "MIND")`). Normalize `scope_chapter` across `demo_case.py`, `settings.py`, and `case_store.py` to canonical string values (`"MIND"` or `"ALL"`), and provide default fallbacks in `__getattr__` for backward-compatible models.
 
+### 8.25 Chat Suggestion Chips Shadowing, Substring Collisions, and Widget Keys
+In multi-turn guided clinical intake, suggestion chip pills (`st.pills`) can become completely desynchronized from the bot's question due to three subtle architectural flaws:
+- **UI-Layer Dict Shadowing**: If `render_quick_reply_chips` queries a static state template dictionary `NEUTRAL_STEP_SUGGESTIONS.get(curr_state)` before calling `dm.get_current_suggestions()`, and that dictionary covers all FSM states, `dm.get_current_suggestions()` is never reached. This silently throws away custom-tailored LLaMA `QUICK_REPLIES` and prompt-classified options on every turn. Always make `dm.get_current_suggestions()` the primary source.
+- **Substring Collision in Intent Classification**: Checking bare substring patterns like `"what brings"` in Chief Complaint will match questions like `"And what brings you relief?"` (a modality inquiry). Always use multi-word boundaries (e.g. `"what brings you in"`, `"what brings you to"`) to prevent cross-dimension hijacking.
+- **Streamlit Widget Key Collision on Skips**: If a user selects "Skip" or "None of these", `dm.prepare_turn` skips the slot, but if `turn_count` is not incremented, `st.pills` retains the exact same widget key across reruns (`pills_turn_{turn_count}`). Streamlit preserves the previous widget selection or triggers duplicate click events. Always incorporate both turn count and message history length (`f"pills_t{turn_cnt}_h{hist_len}_{dock}"`) into dynamic widget keys.
+
 ---
 
 ## 9. Multi-Model GPU Training & HuggingFace Gotchas

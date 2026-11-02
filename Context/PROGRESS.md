@@ -1,7 +1,7 @@
 # Kent-AI — Progress Tracker
 
-> Last updated: 2026-11-01 by Antigravity
-> Phase: Complete through Phase 16 (Loading Feedback, Performance Optimization & UX Polish, Phases 1–4; 175 Unit & Smoke Tests Passing, 0 Errors)
+> Last updated: 2026-11-02 by Antigravity
+> Phase: Complete through Phase 17 (Case Section ID Robustness & Conversational Chat Suggestions Intent Synchronization; 193/193 Unit & Smoke Tests Passing, 0 Errors)
 
 ---
 
@@ -539,10 +539,35 @@ pytest tests/ -v
   - **4.h Safe Deletion & Undo**: Replaced plain deletion with modal `st.dialog` confirmation and active 30-second single-case Undo banner restoring consultations atomically from memory.
 
 ---
+
+## Phase 17 — Section ID Robustness & Conversational Chat Suggestions Intent Synchronization ✅
+
+**Status**: Complete (193/193 Unit & Smoke Tests Passing, 0 Warnings) 🎯  
+**Date**: 2026-11-02  
+**Agent**: Antigravity  
+
+### Deliverables:
+- **Case Model `section_id` & `scope_chapter` Hardening**:
+  - Resolved `AttributeError: 'ClinicalCase' object has no attribute 'section_id'` where integer values (e.g. `1`) or numeric strings in `scope_chapter` caused `.upper()` to fail inside property getter, triggering Python fallback to `__getattr__`.
+  - Added robust type normalization across `ClinicalCase.section_id`, `PipelineOrchestrator`, `create_demo_case()`, and SQLite hydration.
+  - Added test suite `tests/test_case_section_id.py` (4 unit tests).
+- **Bedside Chat Suggestions Synchronization Overhaul**:
+  - Eliminated UI-layer override in `src/dashboard/components/chat_chips.py` where static `NEUTRAL_STEP_SUGGESTIONS` shadowed `dm.get_current_suggestions()`.
+  - Fixed semantic corruption in `NEUTRAL_STEP_SUGGESTIONS["CHIEF_COMPLAINT"]` which previously showed temporal onset phrases instead of presenting complaints.
+  - Prioritized LLaMA-generated `QUICK_REPLIES` directly for interactive conversational questions.
+  - Enhanced linguistic intent classification in `src/chatbot/suggestions.py` covering chief complaint (`"main health concern"`, `"discomfort that brought you in"`, `"what you've been experiencing"`), location, sensation, modality, time patterns, concomitants, and review.
+  - Disambiguated bare substring checks (`"what brings"` in Chief Complaint vs `"what brings you relief"` in Modality).
+  - Enforced monotonic widget keys in `st.pills` incorporating both `turn_count` and `len(history)` to prevent widget key collision on slot skips and none-of-these.
+  - Added comprehensive test suite `tests/test_chat_suggestions_sync.py` (14 unit tests).
+
+---
 ## Changelog
 
 | Date | Phase | Agent | Change |
 |---|---|---|---|
+| 2026-11-02 | 17 / Chat | Antigravity | Chat Suggestions Synchronization Overhaul: eliminated UI dict shadowing, resolved chief complaint temporal corruption, broadened prompt intent classification, fixed bare 'what brings' modality collision, monotonic st.pills widget keys, and added 14 sync unit tests (tests/test_chat_suggestions_sync.py); 193/193 tests passing. |
+| 2026-11-02 | 17 / Model | Antigravity | Case Model Section ID & Scope Chapter Hardening: resolved AttributeError on integer scope_chapter=1 in ClinicalCase.section_id property getter and orchestrator; added tests/test_case_section_id.py (4 tests); 179/179 tests passing. |
+
 | 2026-11-01 | 16 / UX-Perf | Antigravity | Loading Feedback, Performance Optimization & UX Polish (Phases 1-4): busy.js runtime, busy_slot twin buttons, lazy tabs (.open), on_click main_tabs navigation, search-on-submit Explorer, on-demand exports (on_click='ignore'), save micro-states, skeleton loaders, warm model startup pill, sticky bottom nav bar, keyboard shortcuts (Ctrl+Enter, Ctrl+S, Alt+N), totality matrix heatmap & Top 5 toggle, hero simillimum explainability, st.dialog deletion with 30s undo, and 175/175 tests passing. |
 | 2026-11-01 | 15 / UI-UX | Antigravity | Clinician UI/UX Overhaul (Phases 1-10): full design token palette in styles.css, single source of truth in constants.py, 7-segment SVG totality ring, compact top bar, slim sidebar with tray persistence, 7:3 Case Workspace with sticky Case Snapshot rail, neutral chat suggestions, Case Library table & cards views with pagination, Rubric Explorer hybrid search and Materia Medica modal dialog, split Methodology & Settings tabs, printable report styles, demo case mode, and verified 168/168 tests passing. |
 | 2026-11-01 | 14 / Bulk | Antigravity | Patient Case Library Bulk Selection & Multi-Action Suite: implemented "Select All" / "Deselect All" toolbar and per-card checkboxes in case_library.py; created src/dashboard/components/case_bulk_actions.py for atomic bulk deletion (with active case reset guard), multi-case JSON bundle export, CSV summary roster export, Markdown clinical digest export, and bulk status updates; added delete_cases, get_cases, and update_cases_status to case_store.py; migrated fitz to pymupdf eliminating all PyMuPDF deprecation warnings; verified 151/151 unit and smoke tests passing with 0 warnings. |
