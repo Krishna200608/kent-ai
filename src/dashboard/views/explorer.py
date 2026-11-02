@@ -123,8 +123,10 @@ def hybrid_rubric_search(
 
 def render_rubric_explorer(db: KentDB, pipeline: Any) -> None:
     """Render Rubric Explorer view with compact single-row search and advanced filtering."""
-    active_scope = st.session_state.get("scope", SCOPE_MIND)
-    is_mind_scope = (active_scope == SCOPE_MIND)
+    # Locked strictly to Chapter 1: MIND (4,933 rubrics)
+    st.session_state.scope = SCOPE_MIND
+    active_scope = SCOPE_MIND
+    is_mind_scope = True
 
     # 1. Search Card Header
     st.html(
@@ -174,39 +176,22 @@ def render_rubric_explorer(db: KentDB, pipeline: Any) -> None:
                 width="stretch",
             )
 
-    # 3. Scope Caption & Conditional Chapter Selector
-    chosen_sec_id: Optional[int] = 1 if is_mind_scope else None
-    if is_mind_scope:
-        st.html(
-            f"""
-            <div style="font-size: 12.5px; color: var(--text-muted, #A3B0C2); margin-top: -6px; margin-bottom: 10px;">
-                Searching <b style="color: var(--accent, #10B981);">MIND · {SCOPE_MIND_COUNT:,} rubrics</b>
-                <span style="color: var(--text-faint, #8A98AE); margin-left: 8px;">(Change scope in sidebar to search all 37 chapters)</span>
+    # 3. Scope Caption & Coming Soon Indicator
+    chosen_sec_id: Optional[int] = 1
+    st.html(
+        f"""
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 12.5px; color: var(--text-muted, #A3B0C2); margin-top: -6px; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+                {get_icon('check_circle', size=14, color='var(--accent, #10B981)')}
+                <span>Searching <b style="color: var(--accent, #10B981);">MIND &middot; {SCOPE_MIND_COUNT:,} rubrics</b> (Validated Chapter 1)</span>
             </div>
-            """
-        )
-    else:
-        c_cap, c_sec = st.columns([1.5, 2.5], vertical_alignment="center")
-        with c_cap:
-            st.html(
-                f"""
-                <div style="font-size: 12.5px; color: var(--text-muted, #A3B0C2);">
-                    Searching <b style="color: var(--text, #E8EDF3);">All chapters · {SCOPE_ALL_COUNT:,} rubrics</b>
-                </div>
-                """
-            )
-        with c_sec:
-            sections = db.get_sections() if db else []
-            sec_options = ["All Chapters (74,513 rubrics)"] + [f"{s['id']}: {s['name']}" for s in sections]
-            selected_sec_str = st.selectbox(
-                "Filter chapter / section:",
-                sec_options,
-                index=0,
-                key="explorer_section_select",
-                label_visibility="collapsed",
-            )
-            if selected_sec_str != "All Chapters (74,513 rubrics)" and ":" in selected_sec_str:
-                chosen_sec_id = int(selected_sec_str.split(":")[0])
+            <div class="scope-tag-coming-soon" tabindex="0" aria-label="All 37 Chapters: Coming soon in v2.0" data-tip="All 37 chapters vector indexing is in progress for the v2.0 release." title="All 37 chapters vector indexing is in progress for the v2.0 release.">
+                {get_icon('lock', size=11, color='var(--text-faint, #8A98AE)')}
+                <span>All 37 Chapters ({SCOPE_ALL_COUNT:,} rubrics) &middot; Coming Soon in v2.0</span>
+            </div>
+        </div>
+        """
+    )
 
     # 4. Advanced Filters Expander
     with st.expander("Advanced filters", expanded=False):

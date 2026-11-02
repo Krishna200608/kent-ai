@@ -132,20 +132,40 @@ def render_settings_view() -> None:
                 """
             )
             # Default Scope
-            curr_scope = st.session_state.get("scope", SCOPE_MIND)
-            new_scope = st.segmented_control(
-                "Default Repertory Scope:",
-                options=[SCOPE_MIND, SCOPE_ALL],
-                default=curr_scope,
-                key="settings_scope_control",
-                help="Scope determines the default chapter focus for Rubric Explorer and Repertorization",
+            st.session_state["scope"] = SCOPE_MIND
+            cur_c = st.session_state.get("current_case")
+            if cur_c is not None and getattr(cur_c, "scope_chapter", None) != "MIND":
+                cur_c.scope_chapter = "MIND"
+
+            st.markdown(
+                "<label style='font-size: 13px; font-weight: 600; color: var(--text, #E8EDF3); margin-bottom: 4px; display: block;'>Default Repertory Scope:</label>",
+                unsafe_allow_html=True,
             )
-            if new_scope and new_scope != curr_scope:
-                st.session_state["scope"] = new_scope
-                cur_c = st.session_state.get("current_case")
-                if cur_c is not None:
-                    cur_c.scope_chapter = "MIND" if new_scope == SCOPE_MIND else "ALL"
-                st.rerun()
+            st.html(
+                f"""
+                <div class="scope-selector-container" style="max-width: 440px;">
+                    <div class="scope-pill-active" tabindex="0" aria-label="Default Scope: MIND focus (Active)" title="MIND Chapter Focus (4,933 rubrics) - Currently Validated">
+                        <div style="display: flex; align-items: center; gap: 7px;">
+                            <span class="status-dot" style="background: var(--accent, #10B981); width: 7px; height: 7px; border-radius: 50%;"></span>
+                            <span>MIND Chapter Focus</span>
+                            <span style="font-size: 11.5px; color: var(--text-muted, #A3B0C2); font-weight: normal;">({SCOPE_MIND_COUNT:,} rubrics)</span>
+                        </div>
+                        <span class="scope-tag-active">Active</span>
+                    </div>
+                    <div class="scope-pill-disabled" tabindex="0" aria-label="All 37 Chapters: Coming soon in v2.0" data-tip="All 37 chapters vector indexing is in progress for the v2.0 release. Kent-AI currently operates in validated Chapter 1: MIND." title="All 37 chapters vector indexing is in progress for the v2.0 release. Kent-AI currently operates in validated Chapter 1: MIND.">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            {get_icon('lock', size=13, color='var(--text-faint, #8A98AE)')}
+                            <span>All 37 Chapters</span>
+                            <span style="font-size: 11px; color: var(--text-faint, #8A98AE);">({SCOPE_ALL_COUNT:,} rubrics)</span>
+                        </div>
+                        <span class="scope-tag-coming-soon">Coming Soon in v2.0</span>
+                    </div>
+                </div>
+                <div style="font-size: 11.5px; color: var(--text-faint, #8A98AE); margin-top: 4px; margin-bottom: 12px; line-height: 1.4;">
+                    Chapter 1 (MIND) is the currently validated clinical repertory scope (4,933 rubrics). Full 37-chapter indexing (74,513 rubrics) is scheduled for the v2.0 milestone.
+                </div>
+                """
+            )
 
             # Display Density
             curr_density = st.session_state.get("ui_density", "Comfortable")

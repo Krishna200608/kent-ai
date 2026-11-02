@@ -316,6 +316,23 @@ def test_phase9_demo_case_creation():
     assert case.extraction_meta.get("is_demo") is True
 
 
+def test_scope_lock_mind_only():
+    """Verify that repertory scope is locked to MIND and 'All Chapters' is coming soon."""
+    import streamlit as st
+    from src.dashboard.constants import SCOPE_MIND, SCOPE_ALL
+    from src.dashboard.views.sidebar import render_sidebar_scope_control
+    from src.models.case import ClinicalCase
+
+    case = ClinicalCase(case_id="TEST-SCOPE-LOCK", patient_name="Scope Test", scope_chapter="ALL")
+    st.session_state["scope"] = SCOPE_ALL
+
+    # render_sidebar_scope_control should enforce MIND on state and case
+    render_sidebar_scope_control(case)
+    assert st.session_state["scope"] == SCOPE_MIND
+    assert case.scope_chapter == "MIND"
+
+
+
 
 
 

@@ -303,18 +303,9 @@ This document records architectural decisions, assumptions, backend changes, and
   - Strict HTML escaping: all user and LLM interpolated strings pass through `src.dashboard.utils.esc()`.
   - Design tokens used exclusively via `:root` CSS variables; zero hard-coded brand colors or duplicate inline styles.
   - Contrast compliance: text on surfaces meets or exceeds WCAG AA (≥4.5:1 ratio).
-  - All existing ~81 saved consultations in SQLite load seamlessly with complete backward compatibility.---
+  - All existing ~81 saved consultations in SQLite load seamlessly with complete backward compatibility.
 
-### Chat Suggestion Chips Synchronization Overhaul (Complete)
-- **Root Cause Resolution**:
-  - Eliminated UI-layer override in `src/dashboard/components/chat_chips.py` where static `NEUTRAL_STEP_SUGGESTIONS` shadowed `dm.get_current_suggestions()`.
-  - Corrected semantic misalignment where `CHIEF_COMPLAINT` contained duration/onset phrases instead of clinical complaints.
-  - Prioritized LLaMA-generated `QUICK_REPLIES` directly for interactive conversational questions.
-  - Enhanced linguistic intent classification in `src/chatbot/suggestions.py` covering chief complaint (`"main health concern"`, `"discomfort that brought you in"`, `"what you've been experiencing"`), location, sensation, modality, time patterns, concomitants, and review.
-  - Fixed Streamlit widget key freshness on skips and cancellations by including both `turn_count` and `len(history)`.
-- **Tests Added**:
-  - 14 comprehensive synchronization tests in `tests/test_chat_suggestions_sync.py` verifying prompt-to-chip harmony across all Kentian dimensions.
-  - Full suite verified: 193/193 tests passing 100%.---
+---
 
 ### Chat Suggestion Chips Synchronization Overhaul (Complete)
 - **Root Cause Resolution**:
@@ -326,4 +317,22 @@ This document records architectural decisions, assumptions, backend changes, and
 - **Tests Added**:
   - 14 comprehensive synchronization tests in `tests/test_chat_suggestions_sync.py` verifying prompt-to-chip harmony across all Kentian dimensions.
   - Full suite verified: 193/193 tests passing 100%.
+
+---
+
+### Repertory Scope Lock: MIND Focus & Coming Soon Badges for All Chapters (Complete)
+- **Design Decision**:
+  - Replaced interactive scope toggling with an active "MIND Focus" indicator and a disabled "All 37 Chapters (Coming Soon in v2.0)" pill across the interface.
+  - Locked active scope to Chapter 1: MIND (`4,933` rubrics) where the Bio_ClinicalBERT NER pipeline and vector index have been validated.
+  - Communicated the v2.0 roadmap for the remaining 36 chapters (`74,513` rubrics) via tooltips and badges with lock icons.
+- **Components Updated**:
+  - `src/dashboard/styles.css`: Added styles for `.scope-selector-container`, `.scope-pill-active`, `.scope-pill-disabled`, `.scope-tag-active`, and `.scope-tag-coming-soon`.
+  - `src/dashboard/views/sidebar.py`: Replaced `st.segmented_control` with active MIND badge and disabled All 37 Chapters pill with lock icon and tooltip. Enforced `case.scope_chapter = "MIND"`.
+  - `src/dashboard/views/settings.py`: Replaced interactive scope control with read-only MIND badge and disabled All Chapters pill explaining the v2.0 milestone.
+  - `src/dashboard/views/explorer.py`: Removed cross-chapter section dropdown (`db.get_sections()`), enforced `sec_id = 1`, and displayed a validated MIND caption alongside a "Coming Soon in v2.0" tag.
+  - `src/dashboard/views/header.py`: Locked header scope pill to `MIND · 4,933` with explanatory tooltip.
+  - `src/dashboard/views/methodology.py`: Clarified that persistent ChromaDB vector indexing is validated over Chapter 1 (MIND), with full 37-chapter indexing scheduled for v2.0.
+- **Tests Added**:
+  - `test_scope_lock_mind_only` in `tests/test_ui_overhaul.py` verifying state enforcement and model attribute consistency.
+
 

@@ -14,9 +14,9 @@ from src.models.case import ClinicalCase
 @st.fragment(run_every="2s")
 def render_header() -> None:
     """Render single-row top brand navigation bar (<=56px) with engine telemetry."""
-    active_scope = st.session_state.get("scope", st.session_state.get("repertory_scope", "MIND focus"))
-    is_mind = "MIND" in str(active_scope)
-    short_scope = "MIND · 4,933" if is_mind else "All · 74,513"
+    active_scope = "MIND focus"
+    is_mind = True
+    short_scope = "MIND · 4,933"
 
     dm = st.session_state.get("dialogue_manager")
     api_base = getattr(dm, "api_base", "http://127.0.0.1:11434") if dm else "http://127.0.0.1:11434"
@@ -31,9 +31,9 @@ def render_header() -> None:
     icon_color = "#10B981" if is_llm_online else "#F59E0B"
 
     tooltip_text = (
-        f"Active Scope: {active_scope} | "
-        f"Dialogue LLM: {llm_desc} | "
-        "Kent Knowledge Base: 74,513 rubrics across 37 chapters"
+        "Active Scope: Chapter 1 (MIND · 4,933 rubrics validated) | "
+        "All 37 Chapters (74,513 rubrics): Coming Soon in v2.0 | "
+        f"Dialogue LLM: {llm_desc}"
     )
 
     models_pill = ""

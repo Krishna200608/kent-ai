@@ -243,45 +243,43 @@ def render_sidebar_case_tray() -> None:
 
 
 def render_sidebar_scope_control(case: Optional[ClinicalCase]) -> None:
-    """Render single source of truth repertory scope segmented control."""
+    """Render single source of truth repertory scope indicator with MIND active and All Chapters coming soon."""
+    # Enforce Chapter 1: MIND as active scope
+    st.session_state.scope = SCOPE_MIND
+    st.session_state.repertory_scope = SCOPE_DEFINITIONS.get(SCOPE_MIND, {}).get("full_label", SCOPE_MIND)
+    if case and getattr(case, "scope_chapter", None) != "MIND":
+        case.scope_chapter = "MIND"
+        try:
+            save_case(case)
+        except Exception:
+            pass
+
     st.html(
         f"""
         <div class="sidebar-section-header">
             {get_icon('tune', size=16, color='var(--accent, #10B981)')}
             <span>Repertory Scope</span>
         </div>
-        """
-    )
-
-    current_scope = st.session_state.get("scope", SCOPE_MIND)
-    options = [SCOPE_MIND, SCOPE_ALL]
-    default_val = current_scope if current_scope in options else SCOPE_MIND
-
-    scope_selection = st.segmented_control(
-        "Repertory Scope Control",
-        options=options,
-        default=default_val,
-        key="sidebar_repertory_scope_seg",
-        label_visibility="collapsed",
-        help="Single source of truth: MIND chapter focus (4,933) vs All 37 chapters (74,513).",
-    )
-
-    if scope_selection and scope_selection != current_scope:
-        st.session_state.scope = scope_selection
-        st.session_state.repertory_scope = SCOPE_DEFINITIONS.get(scope_selection, {}).get("full_label", scope_selection)
-        st.session_state.explorer_results_stale = True
-        if case:
-            case.scope_chapter = "MIND" if scope_selection == SCOPE_MIND else "ALL"
-            try:
-                save_case(case)
-            except Exception:
-                pass
-        st.rerun()
-
-    st.html(
-        f"""
+        <div class="scope-selector-container">
+            <div class="scope-pill-active" tabindex="0" aria-label="Repertory Scope: MIND focus (Active, 4,933 rubrics)" title="Chapter 1: MIND focus (4,933 rubrics) - Validated">
+                <div style="display: flex; align-items: center; gap: 7px;">
+                    <span class="status-dot" style="background: var(--accent, #10B981); width: 7px; height: 7px; border-radius: 50%;"></span>
+                    <span>MIND Focus</span>
+                    <span style="font-size: 11px; color: var(--text-muted, #A3B0C2); font-weight: normal;">({SCOPE_MIND_COUNT:,})</span>
+                </div>
+                <span class="scope-tag-active">Active</span>
+            </div>
+            <div class="scope-pill-disabled" tabindex="0" aria-label="All 37 Chapters: Coming soon in v2.0" data-tip="All 37 chapters vector indexing is in progress for the v2.0 release. Kent-AI currently operates in validated Chapter 1: MIND." title="All 37 chapters vector indexing is in progress for the v2.0 release. Kent-AI currently operates in validated Chapter 1: MIND.">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    {get_icon('lock', size=13, color='var(--text-faint, #8A98AE)')}
+                    <span>All 37 Chapters</span>
+                    <span style="font-size: 11px; color: var(--text-faint, #8A98AE);">({SCOPE_ALL_COUNT:,})</span>
+                </div>
+                <span class="scope-tag-coming-soon">Coming Soon</span>
+            </div>
+        </div>
         <div class="sidebar-scope-caption">
-            MIND: {SCOPE_MIND_COUNT:,} rubrics &bull; All: {SCOPE_ALL_COUNT:,} rubrics
+            Validated on Chapter 1: MIND &bull; 36 chapters planned for v2.0
         </div>
         """
     )

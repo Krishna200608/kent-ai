@@ -990,6 +990,75 @@ section[data-testid="stSidebar"][aria-expanded="false"] {
     margin: 10px 0 6px 0;
 }
 
+
+/* Repertory Scope Pills & Badges (MIND active · All Chapters Coming Soon) */
+.scope-selector-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 6px 0 6px 0;
+}
+
+.scope-pill-active {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    border-radius: var(--radius-sm, 6px);
+    font-size: 12.5px;
+    color: var(--text, #E8EDF3);
+    font-weight: 600;
+}
+
+.scope-pill-disabled {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    background: rgba(24, 35, 48, 0.5);
+    border: 1px dashed var(--line, #243243);
+    border-radius: var(--radius-sm, 6px);
+    font-size: 12px;
+    color: var(--text-faint, #8A98AE);
+    cursor: not-allowed;
+    user-select: none;
+    opacity: 0.82;
+}
+
+.scope-pill-disabled:hover {
+    border-color: rgba(163, 176, 194, 0.35);
+}
+
+.scope-tag-active {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent, #10B981);
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 4px;
+    padding: 1px 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.scope-tag-coming-soon {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-faint, #8A98AE);
+    background: rgba(138, 152, 174, 0.12);
+    border: 1px solid rgba(138, 152, 174, 0.25);
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+
 .sidebar-scope-caption {
     font-size: 11px;
     color: var(--text-faint, #8A98AE);

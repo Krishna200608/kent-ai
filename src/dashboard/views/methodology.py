@@ -114,7 +114,7 @@ def render_methodology_view() -> None:
                 
                 - **BioLinkBERT-Base (110M)**: Pretrained on PubMed citation graphs for high-precision entity span recognition.
                 - **PubMedBERT (110M)**: In-domain clinical vocabulary achieving high rubric retrieval recall.
-                - **Vector Repertory Index**: ChromaDB persistent index over {SCOPE_MIND_COUNT:,} MIND rubrics (expandable to {SCOPE_ALL_COUNT:,} rubrics across all 37 chapters).
+                - **Vector Repertory Index**: ChromaDB persistent index over {SCOPE_MIND_COUNT:,} Chapter 1 (MIND) rubrics. (All 37 chapters with {SCOPE_ALL_COUNT:,} rubrics scheduled for v2.0 release).
                 - **Two-Stage Hybrid Engine**: High-recall dense ensemble mining paired with **{MODEL_DISPLAY_NAME}** running locally via Ollama for zero-leakage clinical intake arbitration.
                 """
             )
