@@ -311,6 +311,24 @@ In multi-turn guided clinical intake, suggestion chip pills (`st.pills`) can bec
 - **Substring Collision in Intent Classification**: Checking bare substring patterns like `"what brings"` in Chief Complaint will match questions like `"And what brings you relief?"` (a modality inquiry). Always use multi-word boundaries (e.g. `"what brings you in"`, `"what brings you to"`) to prevent cross-dimension hijacking.
 - **Streamlit Widget Key Collision on Skips**: If a user selects "Skip" or "None of these", `dm.prepare_turn` skips the slot, but if `turn_count` is not incremented, `st.pills` retains the exact same widget key across reruns (`pills_turn_{turn_count}`). Streamlit preserves the previous widget selection or triggers duplicate click events. Always incorporate both turn count and message history length (`f"pills_t{turn_cnt}_h{hist_len}_{dock}"`) into dynamic widget keys.
 
+### 8.26 Fresh Consultation Startup & `advance_to_next_gap` Premature Jump
+When opening a new case or starting fresh, the chat header progress bar prematurely jumped to **`Location 3/10`** (30% progress) while the assistant was still outputting the initial greeting message.
+- **Root Cause**: `DialogueManager.resume_from_case(case)` unconditionally executed `self.state_machine.advance_to_next_gap()`. On fresh cases with zero captured dimensions (`Totality: 0/7`) and empty history, `_get_next_unfilled_slot()` scanned `SLOT_ORDER = [LOCATION, SENSATION, ...]` and selected `LOCATION` as the first missing gap, advancing `current_state` to `LOCATION` before the patient had said a single word.
+- **Verified Workaround**: Guard `advance_to_next_gap()` by inspecting whether the case actually contains captured dimensions or dialogue history:
+  ```python
+  has_existing_data = any(self.extracted_slots.values()) or bool(self.history)
+  if has_existing_data:
+      self.state_machine.advance_to_next_gap()
+  else:
+      self.state_machine.current_state = IntakeState.GREETING
+  ```
+  Fresh cases start at `IntakeState.GREETING` (`Greeting 1/10`), advancing to `Complaint 2/10` and `Location 3/10` only as conversation unfolds. Similarly, `undo_last_turn()` restores `IntakeState.GREETING` when all turns are rolled back.
+
+### 8.27 Streamlit `st.segmented_control` Option Disabling & Scope Locking
+Streamlit's `st.segmented_control` does not support disabling individual options within a list (e.g. disabling "All chapters" while keeping "MIND focus" selectable).
+- **Root Cause**: The underlying React component renders options as an atomic set; options cannot receive individual disabled attributes or tooltips.
+- **Verified Workaround**: Replace the interactive widget with dedicated semantic CSS containers (`.scope-selector-container`, `.scope-pill-active`, `.scope-pill-disabled`, `.scope-tag-coming-soon`). The active pill renders with emerald accent styling, while the disabled pill renders with a dashed border, muted colors, a lock icon, `cursor: not-allowed`, and an accessible tooltip explaining that All 37 Chapters is scheduled for the v2.0 milestone. Ensure session state and case attributes (`case.scope_chapter = "MIND"`) are strictly enforced.
+
 ---
 
 ## 9. Multi-Model GPU Training & HuggingFace Gotchas

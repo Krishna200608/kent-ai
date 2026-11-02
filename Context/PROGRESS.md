@@ -1,7 +1,7 @@
 # Kent-AI — Progress Tracker
 
 > Last updated: 2026-11-02 by Antigravity
-> Phase: Complete through Phase 17 (Case Section ID Robustness & Conversational Chat Suggestions Intent Synchronization; 193/193 Unit & Smoke Tests Passing, 0 Errors)
+> Phase: Complete through Phase 21 (Repertory Scope Lock to MIND, Fresh Case Startup FSM Greeting Fix; 195/195 Unit & Smoke Tests Passing, 0 Errors)
 
 ---
 
@@ -604,6 +604,7 @@ pytest tests/ -v
 | 2026-10-31 | 18 / Summary | Antigravity | Dynamic Physician Brief & Patient Case Summarizer: implemented src/pipeline/case_summarizer.py using local LLaMA 3 8B via Ollama with robust clinical extractive fallback; integrated clinical_summary into ClinicalCase model, SQLite schema, Step 2 (Review) with AI regeneration & physician adjustment, Step 4 (Report) narrative hero card, Markdown export, and Page 1 PDF clinical summary box; 109 passing tests. |
 | 2026-11-01 | 19 / Intake | Antigravity | Step 1 Clinical Narrative Intake Redesign & A11y Polish: segmented control mode switching, extraction_meta schema with backward-compatible SQLite migration, extract_profile method (zero vector-store calls), safety red-flag screening, two-column highlighted narrative extraction preview, 7.53:1 primary button contrast, 4.43:1 disabled stepper contrast with [Locked] label and caption, accessible CSS tooltips, 2x2 responsive stepper, consolidated report ranking, and pyproject.toml pin to Streamlit >=1.42.0; 133/133 passing tests (1b87a37, 60e7145, 16e95d5, 9eba5ab, 89b0a94). |
 | 2026-11-02 | 20 / UI-UX | Antigravity | UI/UX Overhaul, Chat Suggestions Synchronization & MIND Scope Lock: completed 9-phase UI/UX audit brief, single source of truth canonical dimensions (src/dashboard/constants.py), persistent CSS tokens, busy.js client loading feedback, synchronized conversational prompt suggestions with patient chips (14/14 tests in tests/test_chat_suggestions_sync.py), locked repertory scope strictly to Chapter 1: MIND (4,933 rubrics) with accessible disabled Coming Soon badges for All 37 Chapters across Sidebar, Settings, Explorer, and Header; 193/193 tests passing 100% (cd24515, f54f6e0). |
+| 2026-11-02 | 21 / Chat-FSM | Antigravity | Fresh Consultation FSM Greeting Fix & Context Sync: fixed dialogue manager startup so fresh cases start at IntakeState.GREETING (Step 1 of 10) instead of prematurely jumping to Location (Step 3 of 10) via advance_to_next_gap; added test_resume_from_fresh_case_starts_at_greeting; 195/195 tests passing 100% (335c11c). |
 
 ---
 

@@ -1,7 +1,7 @@
 # Kent-AI — Architecture Context
 
-> Last updated: 2026-11-01 by Antigravity
-> Phase: Complete through Phase 15 (Comprehensive Clinician UI/UX Overhaul, Phases 1–10; 168 Unit & Integration Tests Passing across 18 Test Modules, 0 Errors)
+> Last updated: 2026-11-02 by Antigravity
+> Phase: Complete through Phase 21 (Repertory Scope Lock to MIND, Chat Suggestions Sync, FSM Greeting Fix; 195 Unit & Integration Tests Passing across 22 Test Modules, 0 Errors)
 
 ---
 
@@ -91,6 +91,8 @@ kent-ai/
 │       ├── pdf_exporter.py        # ★ CORE: Multi-page clinical consultation PDF export via ReportLab 5.1 & PyMuPDF — implemented (Phase 11 & 14)
 │       ├── styles.py              # ★ CORE: CSS injection & font definitions (Phase 7 & 15) — implemented
 │       ├── styles.css             # ★ CORE: Ground-truth design tokens palette (:root), 2px focus-visible rings, printable report layout (Phase 15) — implemented
+│       ├── assets/
+│       │   └── busy.js            # ★ CORE: Client loading indicator runtime & aria-busy screen reader feedback — implemented
 │       ├── utils.py               # ★ CORE: Mandatory HTML escaping esc() & safe fragment helpers — implemented
 │       ├── views/
 │       │   ├── step1_intake.py    # ★ CORE: Step 1 router & 7:3 bedside console with Case Snapshot rail (Phase 13 & 15) — implemented
@@ -145,11 +147,14 @@ kent-ai/
 │   ├── 01_eda_repertory.ipynb     # EDA: sections, MIND depths, grades, search demo
 │   └── 02_case_generation_demo.ipynb # Interactive case generation & BIO inspection
 │
-├── tests/                         # ★ 168 passing unit & integration tests across 18 test modules (0 errors, 0 warnings)
+├── tests/                         # ★ 195 passing unit & integration tests across 22 test modules (0 errors, 0 warnings)
 │   ├── test_kent_db.py            # SQLite reader, views, FTS5 queries (13 tests)
-│   ├── test_case.py               # ClinicalCase model, extraction_meta, bulk operations, serialization & case_store SQLite CRUD (17 tests)
+│   ├── test_case.py               # ClinicalCase model, extraction_meta, bulk operations, serialization & case_store SQLite CRUD (21 tests)
+│   ├── test_case_section_id.py    # Robust section_id & scope_chapter normalization, AttributeError resilience (4 tests)
 │   ├── test_bio_tagger.py         # Subword alignment & character offset repair (6 tests)
+│   ├── test_busy.py               # Client busy.js loading indicator, twin slots & CSS selector compliance (6 tests)
 │   ├── test_case_generator.py     # LLaMA 3 prompting & JSON parsing (3 tests)
+│   ├── test_chat_suggestions_sync.py # Dynamic quick-reply chips synchronization & intent classification (14 tests)
 │   ├── test_splitter.py           # 80/10/10 deficit-balancing split algorithm (4 tests)
 │   ├── test_symptom_ner.py        # Tokenizer, subword tags & entity extraction (5 tests)
 │   ├── test_vector_store.py       # ChromaDB HNSW cosine retrieval & section filter (6 tests)
@@ -158,13 +163,13 @@ kent-ai/
 │   ├── test_pipeline.py           # End-to-end transcript-to-report pipeline, extract_profile & two-stage flow (7 tests)
 │   ├── test_evaluation.py         # Academic evaluation suite, BIO metrics & report export (3 tests)
 │   ├── test_state_machine.py      # 10-state intake FSM & slot transitions (8 tests)
-│   ├── test_dialogue_manager.py   # Multi-turn context, resume_from_case, streaming filter & slot sanitization (19 tests)
+│   ├── test_dialogue_manager.py   # Multi-turn context, resume_from_case, fresh case startup & slot sanitization (22 tests)
 │   ├── test_dashboard.py          # Slot badges, Totality Matrix, report export, dynamic badges & transcript formatter (10 tests)
 │   ├── test_app_smoke.py          # AppTest headless UI smoke tests, stepper, bulk selection, ASCII toast guards (11 tests)
-│   ├── test_llm_dataset.py        # Generative instruction dataset formatting & schema adherence (8 tests)
-│   ├── test_narrative.py          # Chief complaint derivation, recommended dimensions & highlight builder (8 tests)
+│   ├── test_llm_dataset.py        # Generative instruction dataset formatting & schema adherence (7 tests)
+│   ├── test_narrative.py          # Chief complaint derivation, recommended dimensions & highlight builder (9 tests)
 │   ├── test_safety.py             # Red flag safety regex screening with negation awareness (3 tests)
-│   └── test_ui_overhaul.py        # Design tokens, breadcrumbs, hybrid search, totality ring, dialogs & demo case (17 tests)
+│   └── test_ui_overhaul.py        # Design tokens, breadcrumbs, hybrid search, totality ring, dialogs, scope lock & demo case (18 tests)
 │
 ├── docs/
 │   ├── Next_Steps.md              # Supervisor meeting briefing & roadmap (Dr. Arya)

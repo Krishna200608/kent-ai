@@ -1,7 +1,7 @@
 # Kent-AI — Project Context
 
-> Last updated: 2026-11-01 by Antigravity
-> Phase: Complete through Phase 15 (Comprehensive Clinician UI/UX Overhaul, Phases 1–10; 168 Unit & Integration Tests Passing across 18 Test Modules, 0 Errors)
+> Last updated: 2026-11-02 by Antigravity
+> Phase: Complete through Phase 21 (Repertory Scope Lock to MIND, Chat Suggestions Intent Sync, Fresh Case FSM Greeting Fix; 195 Unit & Integration Tests Passing across 22 Test Modules, 0 Errors)
 
 ---
 
@@ -81,6 +81,10 @@ It takes a patient's natural-language symptom description, extracts structured c
 | 13 | Step 1 Clinical Narrative Intake Redesign & Accessibility Polish | ✅ Complete (Segmented mode switching, highlighted preview, safety screening, WCAG AA contrast; 133 tests) | 36 |
 | 14 | Guided Conversation Chat Redesign & Case Library Bulk Actions | ✅ Complete (Deterministic openers, per-turn undo, bulk case selection & batch exports, PyMuPDF migration; 151 tests) | 37 |
 | 15 | Comprehensive Clinician UI/UX Overhaul & Design System (Phases 1–10) | ✅ Complete (Single source of truth in constants.py, token palette in styles.css, 7-segment totality ring, Case Snapshot rail, dual-view Case Library with pagination, hybrid Rubric Explorer with Materia Medica dialog, split Methodology/Settings, printable reports, demo case mode; 168 tests) | 38 |
+| 16 | Button Loading Feedback & Client busy.js Runtime | ✅ Complete (Vanilla client busy.js runtime, st.html twin slot, screen reader aria-busy, Streamlit 1.64 selector hardening) | 39 |
+| 17 | Model Section ID Robustness & Suggestion Chip Intent Sync | ✅ Complete (Normalized section_id and scope_chapter handling, dynamic LLaMA quick replies sync, 14 new tests) | 40 |
+| 20 | Repertory Scope Lock to MIND Focus & Coming Soon v2.0 Badges | ✅ Complete (Locked repertory scope strictly to Chapter 1: MIND [4,933 rubrics], disabled All 37 Chapters pills with lock icons and v2.0 roadmap tooltips) | 41 |
+| 21 | Fresh Case Startup FSM Greeting Fix & Context Sync | ✅ Complete (Dialogue manager startup fix ensuring fresh cases start at IntakeState.GREETING 1/10; 195/195 tests passing) | 41 |
 
 Full roadmap & phase tracking details: [`Context/PROGRESS.md`](PROGRESS.md)
 

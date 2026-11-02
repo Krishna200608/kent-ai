@@ -4,7 +4,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![HuggingFace](https://img.shields.io/badge/HuggingFace-Transformers-yellow.svg)](https://huggingface.co/)
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-74%2C513%20Rubrics-blueviolet.svg)](data/embeddings/kent_rubrics/)
-[![Tests Status](https://img.shields.io/badge/tests-112%20passed-success.svg)](tests/)
+[![Tests Status](https://img.shields.io/badge/tests-195%20passed-success.svg)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
 [![Institution](https://img.shields.io/badge/IIIT%20Allahabad-Department%20of%20IT-darkred.svg)](https://www.iiita.ac.in/)
 
@@ -186,7 +186,7 @@ A pilot sample of 100 clinical cases across 25 representative MIND rubrics (4 cl
 
 ### 3. Automated Software Test Suite
 - **Framework**: `pytest 9.1` on Python 3.12
-- **Pass Rate**: **112 / 112 tests passing** (100% pass rate)
+- **Pass Rate**: **195 / 195 tests passing** (100% pass rate across 22 test modules)
 - **Coverage**: Full regression testing covering dialogue FSM transitions, streaming Ollama parsing, slot heuristic extraction, token-level BIO sequence tagging, multi-encoder pipeline orchestration, totality rankers, ReportLab PDF generation, and Streamlit components.
 
 ---
@@ -269,13 +269,16 @@ kent-ai/
 │   │   │   ├── canvas.py       # NumberedCanvas with total page computation
 │   │   │   ├── components.py   # Section Flowables (vitals, rubrics, charts)
 │   │   │   └── styles.py       # ReportLab typography, styles & color palettes
+│   │   ├── assets/             # Client-side JavaScript runtimes
+│   │   │   └── busy.js         # Loading feedback & screen-reader aria-busy runtime
 │   │   └── views/              # Modular tab and step views
-│   │       ├── explorer.py     # Tab 3: Kent's Repertory & Rubric Search
-│   │       ├── header.py       # Brand header bar with status telemetry
+│   │       ├── explorer.py     # Tab 3: Kent's Repertory & Rubric Search (MIND scope locked)
+│   │       ├── header.py       # Brand header bar with status telemetry & scope indicator
 │   │       ├── materia_medica.py # Tab 4: Remedy dictionary & comparison view
-│   │       ├── settings.py     # Tab 5: Methodology & clinical NLP architecture
-│   │       ├── sidebar.py      # Telemetry, engine selector & persistent case tray
-│   │       ├── step1_intake.py # Step 1: Bedside chat & text narrative intake
+│   │       ├── methodology.py  # Tab 5: Repertory methodology & Kentian principles
+│   │       ├── settings.py     # Tab 6: Settings, telemetry console & display preferences
+│   │       ├── sidebar.py      # Telemetry, engine selector, scope badge & case tray
+│   │       ├── step1_intake.py # Step 1: Bedside chat & text narrative intake (10-state FSM)
 │   │       ├── step2_review.py # Step 2: 7-dimension review cards & clinical summary
 │   │       ├── step3_analysis.py # Step 3: Repertory rubric curation & filtering
 │   │       └── step4_report.py # Step 4: Clinical report view, Plotly chart, & grids
@@ -283,7 +286,7 @@ kent-ai/
 │   ├── models/                 # Biomedical NER models, EnsembleNER, HybridPipeline
 │   ├── pipeline/               # Pipeline orchestrator, PatientReport, CaseSummarizer
 │   └── search/                 # RubricEmbedder, RubricVectorStore, RemedyRanker
-└── tests/                      # Automated test suite (112 passed tests)
+└── tests/                      # Automated test suite (195 passed tests across 22 modules)
 ```
 
 ---
@@ -322,7 +325,7 @@ pip install -e ".[dev]"
 python -c "from src.data.kent_db import get_mind_rubrics; print(f'MIND Rubrics Loaded: {len(get_mind_rubrics())}')"
 # Expected output: MIND Rubrics Loaded: 4933
 
-# Execute the automated test suite (112 tests)
+# Execute the automated test suite (195 tests)
 pytest tests/ -v
 ```
 
@@ -379,14 +382,18 @@ The runner verifies GPU availability, starts the Ollama daemon, downloads `llama
 | Phase | Milestone | Status | Key Deliverable |
 | :--- | :--- | :---: | :--- |
 | **Phase 0** | **Scaffolding & Data Layer** | Complete | SQLite DAL, schema models, 74,513 rubrics indexed |
-| **Phase 1** | **Synthetic Case Generation** | Pilot Verified | 100 pilot cases audited (86.9% diversity); GPU scale-up runner ready |
-| **Phase 2** | **ChromaDB Rubric Index** | Complete | 74,513 rubrics embedded with `all-MiniLM-L6-v2` (< 18 ms) |
-| **Phase 3** | **Biomedical NER Encoders** | Complete | BioLinkBERT, PubMedBERT, EnsembleNER (414M), Two-Stage Hybrid |
-| **Phase 4** | **Clinical Reasoning Resolver** | Complete | Negation resolution, subsumption pruning, 7-dim structured profile |
-| **Phase 5** | **Remedy Totality Ranker** | Complete | Grade-weighted scoring with specificity weighting |
-| **Phase 6** | **Conversational Chatbot** | Complete | FSM dialogue manager with dynamic LLaMA 3 quick replies |
-| **Phase 7** | **Doctor Dashboard & PDF** | Complete | Google Stitch Streamlit UI, case library, totality matrix, PDF suite |
-| **Phase 8** | **Evaluation & Defense** | In Progress | Final semester defense, comparative benchmarks, and documentation |
+| **Phase 1** | **Synthetic Case Generation** | Complete | 19,732 MIND cases generated & partitioned 80/10/10 (99,854 entities, 0 drift) |
+| **Phase 2** | **ChromaDB Rubric Index** | Complete | 74,513 rubrics embedded with ll-MiniLM-L6-v2 (< 18 ms latency) |
+| **Phase 3** | **Biomedical NER Encoders** | Complete | BioLinkBERT, PubMedBERT, Bio_ClinicalBERT, DeBERTa-v3 (4-Model Ensemble, 414M) |
+| **Phase 4** | **Clinical Reasoning Resolver** | Complete | Negation resolution, subsumption pruning, 7-dim structured profile assembly |
+| **Phase 5** | **Remedy Totality Ranker** | Complete | Grade-weighted scoring with specificity inverse rubric frequency weighting |
+| **Phase 6** | **Conversational Chatbot** | Complete | 10-state FSM, synchronized quick-reply chips, deterministic openers, per-turn undo |
+| **Phase 7** | **Doctor Dashboard & PDF** | Complete | 6-tab clinical workstation with 4-step stepper, Totality Matrix, ReportLab PDF |
+| **Phase 8** | **Multi-Model Benchmark** | Complete | BioLinkBERT (34.86% BIO F1), PubMedBERT (41.56% Recall@20), comparative study |
+| **Phase 9** | **Generative QLoRA PEFT** | Complete | Qwen 2.5 7B & BioMistral 7B (100% JSON validity, 99.7% grounding, SOTA F1) |
+| **Phase 10** | **Ensemble & Hybrid Pipeline** | Complete | Weighted majority voting & two-stage hybrid encoder-mining + LLM arbitration |
+| **Phases 11–21** | **Clinician UI/UX Overhaul & Scope Lock** | Complete | Single source constants, busy.js runtime, MIND scope lock with Coming Soon badges; 195 tests |
+| **Phase 22** | **Evaluation & Defense** | In Progress | Final semester defense, thesis manuscript, and clinical practitioner validation |
 
 ---
 

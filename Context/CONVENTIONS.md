@@ -282,4 +282,20 @@ def get_rubric_path(rubric_id: int, db_path: Optional[Union[str, Path]] = None) 
 
 ---
 
+## 24. Repertory Scope Discipline (Chapter 1: MIND Focus vs All Chapters)
+
+- **MIND Scope as Single Active Source**: The current validated NLP extraction and ChromaDB dense retrieval pipeline operates on Chapter 1: MIND (`4,933` rubrics). `st.session_state.scope = SCOPE_MIND` (`"MIND focus"`) and `case.scope_chapter = "MIND"` must be enforced across all views.
+- **"All Chapters" Coming Soon Treatment**: Do not provide active or switchable toggles to All 37 Chapters in user-facing UI until v2.0. Instead, render an active "MIND Focus" pill alongside a disabled, dashed-border "All 37 Chapters (Coming Soon in v2.0)" badge with a lock icon (`:material/lock:`) and an explanatory tooltip.
+- **Backend Model Compatibility**: The backend database, models, and ranker must remain backward-compatible with both integer section IDs (`1`), string names (`"MIND"`), and `None` (for all chapters), ensuring test suite stability and seamless transition when full 37-chapter indexing launches in v2.0.
+
+---
+
+## 25. Clinical Intake FSM Startup & Resumption Conventions
+
+- **Fresh Case Dialogue Invariant**: Fresh consultations (zero captured dimensions, empty dialogue history) MUST start at `IntakeState.GREETING` (`Greeting 1/10`), matching the assistant's initial welcome prompt.
+- **Conditional `advance_to_next_gap`**: Never call `self.state_machine.advance_to_next_gap()` unconditionally in `resume_from_case()`. Only advance to the first unfilled gap when the case contains existing symptoms or conversation turns (`has_existing_data = any(self.extracted_slots.values()) or bool(self.history)`).
+- **Undo Restoration**: When rolling back turns via `undo_last_turn()`, if the rollback returns the conversation to the initial turn with zero extracted slots, restore `self.state_machine.current_state = IntakeState.GREETING`.
+
+---
+
 _End of file._
