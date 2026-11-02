@@ -144,7 +144,7 @@ def render_settings_view() -> None:
                 st.session_state["scope"] = new_scope
                 cur_c = st.session_state.get("current_case")
                 if cur_c is not None:
-                    cur_c.scope_chapter = 1 if new_scope == SCOPE_MIND else None
+                    cur_c.scope_chapter = "MIND" if new_scope == SCOPE_MIND else "ALL"
                 st.rerun()
 
             # Display Density

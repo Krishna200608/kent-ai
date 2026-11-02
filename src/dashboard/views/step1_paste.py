@@ -111,7 +111,7 @@ def render_step1_paste_view(current_case: ClinicalCase, dm: DialogueManager, pip
                 try:
                     if is_cold:
                         status_box.write("Loading models (first run only)...")
-                    section_id = 1 if (current_case.scope_chapter and "MIND" in current_case.scope_chapter) else None
+                    section_id = current_case.section_id
                     profile = pipeline.extract_profile(clean_text, section_id=section_id)
                     st.session_state["_models_warmed"] = True
 

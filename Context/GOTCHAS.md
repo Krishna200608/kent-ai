@@ -300,6 +300,11 @@ Attempting to change active tabs programmatically by writing `st.session_state.m
 - **Root Cause**: Streamlit widget values cannot be modified during the same execution run after the widget has already been instantiated.
 - **Verified Workaround**: Place navigation state mutations strictly inside button `on_click` callbacks (e.g. `st.button("Resume", on_click=_load_and_resume_case, args=(cid,))`). Streamlit executes widget callbacks before the script runs, allowing `st.session_state.main_tabs = "Case Workspace"` to be set before `st.tabs(..., key="main_tabs")` is evaluated.
 
+### 8.24 Python Property `AttributeError` Forwarding to `__getattr__`
+When evaluating a `@property` (such as `case.section_id`), if any code inside the property getter raises an `AttributeError` (e.g. calling `self.scope_chapter.upper()` when `scope_chapter` is an integer `1`), Python's property descriptor intercepts the `AttributeError`, assumes the property itself does not exist, and falls back to invoking `__getattr__("section_id")`.
+- **Root Cause**: `self.scope_chapter` was set as an integer `1` (in `create_demo_case()` or `settings.py`) or stored as string `'1'`, causing `1.upper()` to throw `AttributeError: 'int' object has no attribute 'upper'`. Python caught this and forwarded to `__getattr__("section_id")`, producing the misleading error `AttributeError: 'ClinicalCase' object has no attribute 'section_id'`.
+- **Verified Workaround**: Inside `@property def section_id(self)`, use safe type checks (`isinstance(scope, int)`, `scope_str.isdigit()`, `getattr(self, "scope_chapter", "MIND")`). Normalize `scope_chapter` across `demo_case.py`, `settings.py`, and `case_store.py` to canonical string values (`"MIND"` or `"ALL"`), and provide default fallbacks in `__getattr__` for backward-compatible models.
+
 ---
 
 ## 9. Multi-Model GPU Training & HuggingFace Gotchas

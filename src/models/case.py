@@ -96,21 +96,48 @@ class ClinicalCase:
         for k in CANONICAL_DIMENSIONS:
             if k not in self.dimensions or not isinstance(self.dimensions[k], list):
                 self.dimensions[k] = list(self.dimensions.get(k, []))
-        if not hasattr(self, "clinical_summary"):
+        if not hasattr(self, "clinical_summary") or self.clinical_summary is None:
             self.clinical_summary = ""
         if not hasattr(self, "extraction_meta") or self.extraction_meta is None:
             self.extraction_meta = {}
+        if not hasattr(self, "scope_chapter"):
+            self.scope_chapter = "MIND"
+        elif isinstance(self.scope_chapter, int) and self.scope_chapter == 1:
+            self.scope_chapter = "MIND"
+        elif str(self.scope_chapter).strip() == "1":
+            self.scope_chapter = "MIND"
 
     def __getattr__(self, name: str) -> Any:
         if name == "clinical_summary":
             return ""
+        if name == "scope_chapter":
+            return "MIND"
+        if name == "extraction_meta":
+            return {}
+        if name == "selected_rubric_ids":
+            return []
+        if name == "muted_rubric_ids":
+            return []
+        if name == "eliminatory_rubric_ids":
+            return []
+        if name == "ranking_mode":
+            return "totality"
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     @property
     def section_id(self) -> Optional[int]:
         """Return Kent database section ID (1 for MIND, None for all chapters)."""
-        if self.scope_chapter and "MIND" in self.scope_chapter.upper():
+        scope = getattr(self, "scope_chapter", "MIND")
+        if scope is None:
+            return None
+        if isinstance(scope, int):
+            return scope if scope > 0 else None
+        scope_str = str(scope).strip().upper()
+        if "MIND" in scope_str or scope_str == "1":
             return 1
+        if scope_str.isdigit():
+            val = int(scope_str)
+            return val if val > 0 else None
         return None
 
     @property

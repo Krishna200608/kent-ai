@@ -19,7 +19,7 @@ def create_demo_case() -> ClinicalCase:
         patient_sex="Female",
         chief_complaint="Episodic nocturnal panic attacks with violent heart palpitations",
         clinical_summary="38-year-old female presenting with acute nocturnal anxiety and restlessness, worse alone and between 1 AM and 3 AM, ameliorated by moving in cool open air.",
-        scope_chapter=1,
+        scope_chapter="MIND",
     )
     case.add_symptom("mental", "fear of darkness and death, intense restlessness when alone")
     case.add_symptom("location", "precordial chest and head")

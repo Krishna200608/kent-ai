@@ -90,7 +90,18 @@ def build_demographics_card(
         else:
             demographics_disp = "Age & Sex Unspecified"
 
-    scope_disp = case.scope_chapter or "All 37 Repertory Chapters"
+    if getattr(case, "scope_chapter", None):
+        sc_val = case.scope_chapter
+        if isinstance(sc_val, int):
+            scope_disp = "MIND (Chapter 1)" if sc_val == 1 else f"Chapter {sc_val}"
+        elif "MIND" in str(sc_val).upper() or str(sc_val) == "1":
+            scope_disp = "MIND (Chapter 1)"
+        elif str(sc_val).upper() == "ALL":
+            scope_disp = "All 37 Repertory Chapters"
+        else:
+            scope_disp = str(sc_val)
+    else:
+        scope_disp = "All 37 Repertory Chapters"
     filled_dims = case.filled_dimensions_count
     total_syms = case.total_symptoms_count
     status_disp = case.status.upper() if case.status else "INTAKE"
