@@ -209,3 +209,4 @@ def test_settings_toggle_suppresses_chips(clean_dm):
     chips = render_quick_reply_chips(dm)
     assert chips is None
     st.session_state["show_suggested_replies"] = True
+
