@@ -1,0 +1,234 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Masters/Doctoral Thesis
+% LaTeX Template — Adapted for IIIT Allahabad B.Tech Semester Project
+%
+% Original template: http://www.LaTeXTemplates.com
+% Modified by Muneendra Ojha for IIIT Allahabad.
+% Template license: CC BY-NC-SA 3.0
+%
+% Project: Kent-AI Final Report
+% Authors: Krishna Sikheriya, Lokesh Bawariya, Naitik Jain
+% Supervisor: Dr. Nikhilanand Arya
+% Department of Information Technology, IIIT Allahabad
+% Academic Year: 2026-2027
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[
+  12pt,
+  oneside,
+  english,
+  onehalfspacing,
+  liststotoc,
+  parskip,
+  headsepline,
+]{Thesis}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{mathpazo}
+\usepackage[backend=biber,
+  style=numeric,
+  bibencoding=utf8,
+]{biblatex}
+\addbibresource{references.bib}
+\usepackage[autostyle=true]{csquotes}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{subcaption}
+\usepackage{pdfpages}
+\usepackage{url}
+\usepackage{hyperref}
+
+% Code listing style
+\lstdefinestyle{python}{
+  language=Python,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{gray},
+  stringstyle=\color{red!70!black},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  stepnumber=1,
+  numbersep=5pt,
+  frame=single,
+  breaklines=true,
+  captionpos=b,
+}
+
+%----------------------------------------------------------------------------------------
+%	MARGIN SETTINGS
+%----------------------------------------------------------------------------------------
+
+\geometry{
+  paper=a4paper,
+  inner=20mm,
+  outer=20mm,
+  bindingoffset=5mm,
+  top=25mm,
+  bottom=20mm,
+}
+
+%----------------------------------------------------------------------------------------
+%	THESIS INFORMATION
+%----------------------------------------------------------------------------------------
+
+\thesistitle{Kent-AI: An AI-Powered Conversational Clinical Assistant for Homeopathic Case-Taking and Dense Semantic Repertorization}
+\degree{Bachelor of Technology}
+
+\supervisor{Dr. Nikhilanand Arya}
+
+\newcommand{\studentonename}{Krishna Sikheriya}
+\newcommand{\studentoneroll}{IIT2023139}
+
+\newcommand{\studenttwoname}{Lokesh Bawariya}
+\newcommand{\studenttworoll}{IIT2023138}
+
+\newcommand{\studentthreename}{Naitik Jain}
+\newcommand{\studentthreeroll}{IIB2023036}
+
+\department{Department of Information Technology}
+\university{Indian Institute of Information Technology, Allahabad}
+\subject{Information Technology}
+
+%----------------------------------------------------------------------------------------
+%	HELPER COMMANDS
+%----------------------------------------------------------------------------------------
+
+\newcommand{\studentnamesformatted}{%
+\studentonename%
+\ifdefined\studenttwoname%
+\\\studenttwoname%
+\fi%
+\ifdefined\studentthreename%
+\\\studentthreename%
+\fi%
+}
+
+\newcommand{\rollnumbersformatted}{%
+\studentoneroll%
+\ifdefined\studenttworoll%
+\\\studenttworoll%
+\fi%
+\ifdefined\studentthreeroll%
+\\\studentthreeroll%
+\fi%
+}
+
+\newcommand{\studentnamescomma}{%
+\studentonename%
+\ifdefined\studenttwoname%
+, \studenttwoname%
+\fi%
+\ifdefined\studentthreename%
+, \studentthreename%
+\fi%
+}
+
+\newcommand{\studentnamesdeclaration}{%
+\studentonename{} (\studentoneroll)%
+\ifdefined\studenttwoname%
+, \studenttwoname{} (\studenttworoll)%
+\fi%
+\ifdefined\studentthreename%
+, and \studentthreename{} (\studentthreeroll)%
+\fi%
+}
+
+\newcommand{\studentsignatures}{%
+\studentonename{} (\studentoneroll)%
+\ifdefined\studenttwoname%
+\\\studenttwoname{} (\studenttworoll)%
+\fi%
+\ifdefined\studentthreename%
+\\\studentthreename{} (\studentthreeroll)%
+\fi%
+}
+
+\newcommand{\pronounwe}{%
+\ifdefined\studenttwoname%
+We%
+\else%
+I%
+\fi%
+}
+
+\newcommand{\pronounus}{%
+\ifdefined\studenttwoname%
+us%
+\else%
+me%
+\fi%
+}
+
+\firstauthor{\studentnamesformatted}
+\enrollmentnumber{\rollnumbersformatted}
+
+\examiner{}
+\addresses{}
+\keywords{Homeopathic Repertorization, Biomedical NLP, Named Entity Recognition, Dense Retrieval, Clinical Decision Support, Large Language Models, PEFT, QLoRA}
+\faculty{Faculty of Information Technology}
+
+\AtBeginDocument{
+\hypersetup{pdftitle=\ttitle}
+\hypersetup{pdfkeywords=\keywordnames}
+}
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+\begin{sloppypar}
+
+%----------------------------------------------------------------------------------------
+%	FRONT CONTENT
+%----------------------------------------------------------------------------------------
+
+\include{frontmatter}
+
+%----------------------------------------------------------------------------------------
+%	THESIS CONTENT - CHAPTERS
+%----------------------------------------------------------------------------------------
+
+\mainmatter
+\pagestyle{thesis}
+\begin{spacing}{1.5}
+
+\include{Chapters/1_introduction}
+\include{Chapters/2_literature}
+\include{Chapters/3_system_design}
+\include{Chapters/4_implementation}
+\include{Chapters/5_experiments}
+\include{Chapters/6_results}
+\include{Chapters/7_conclusion}
+
+\end{spacing}
+
+%----------------------------------------------------------------------------------------
+%	APPENDICES
+%----------------------------------------------------------------------------------------
+
+\appendix
+
+\include{Appendices/AppendixA}
+\include{Appendices/AppendixB}
+
+%----------------------------------------------------------------------------------------
+%	BIBLIOGRAPHY
+%----------------------------------------------------------------------------------------
+
+\printbibliography[heading=bibintoc]
+
+%----------------------------------------------------------------------------------------
+\end{sloppypar}
+\end{document}

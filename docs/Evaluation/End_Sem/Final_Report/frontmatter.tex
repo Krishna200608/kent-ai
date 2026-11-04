@@ -1,0 +1,231 @@
+\frontmatter
+
+\pagestyle{plain}
+
+%----------------------------------------------------------------------------------------
+%	TITLE PAGE
+%----------------------------------------------------------------------------------------
+
+\begin{titlepage}
+\begin{center}
+\begin{spacing}{1.2}
+
+{\huge \bfseries \ttitle\par}
+
+\vspace{5mm}
+\textit{A project report submitted in partial fulfillment of the requirements\\for the award of the degree of}
+
+\vspace{7mm}
+\textsc{\huge \MakeUppercase{\degreename}}
+
+\vspace{3mm}
+\includegraphics[width=5cm]{Figures/IIITA_Logo.png}
+\vspace{5mm}
+
+\begin{minipage}[t]{0.5\textwidth}
+  \begin{flushleft} \large
+    \textit{By:-} \\
+    \textsc{\studentnamesformatted}
+  \end{flushleft}
+\end{minipage}
+\begin{minipage}[t]{0.45\textwidth}
+  \begin{flushright} \large
+    \textit{Enrollment No.} \\
+    \textsc{\rollnumbersformatted}
+  \end{flushright}
+\end{minipage}\\[1cm]
+
+\textit{Under the Supervision of}\\[2mm]
+\textsc{\Large \supname}\\
+\vspace{7mm}
+\textit{Submitted to the}\\[2mm]
+\textsc{\Large \deptname}\\
+
+\vspace{15mm}
+\begin{hindi}
+  {\Large\textsc{
+      भारतीय सूचना प्रौद्योगिकी संस्थान, इलाहाबाद
+  }}
+\end{hindi} \\[3mm]
+\textsc{\Large \univname}
+
+\vspace{5mm}
+\monthyear
+
+\end{spacing}
+\end{center}
+\end{titlepage}
+
+%----------------------------------------------------------------------------------------
+%	CERTIFICATE
+%----------------------------------------------------------------------------------------
+\checktoopen
+\begin{figure}[htp]
+  \includegraphics[height=3cm,keepaspectratio]{Figures/IIITA_Header.png}
+\end{figure}
+\thispagestyle{empty}
+
+\begin{spacing}{1.5}
+\begin{center}
+  {\centering\large\bfseries CERTIFICATE \par\vspace{10pt}}
+\end{center}
+
+\noindent It is certified that the work contained in the project report titled \enquote{\ttitle} by {\studentnamescomma} has been carried out under my supervision and that this work has not been submitted elsewhere for a degree.
+
+\vspace{3.5cm}
+\hfill\begin{minipage}{7.5cm}
+  \begin{spacing}{1.2}
+    \par
+    \rule{\textwidth}{0.2pt}\\
+    {\supname} \par
+    Assistant Professor \par
+    {\deptname} \par
+    IIIT Allahabad \par
+  \end{spacing}
+\end{minipage}
+
+\end{spacing}
+\cleardoublepage
+
+%----------------------------------------------------------------------------------------
+%	DECLARATION
+%----------------------------------------------------------------------------------------
+\checktoopen
+\begin{figure}[htp]
+  \includegraphics[height=3cm,keepaspectratio]{Figures/IIITA_Header.png}
+\end{figure}
+\thispagestyle{empty}
+\vspace{1mm}
+
+\begin{center}
+  {\large\bfseries CANDIDATE DECLARATION}
+\end{center}
+
+\begin{spacing}{1.2}
+
+\noindent \pronounwe, \studentnamesdeclaration, hereby certify that the project report titled \enquote{\ttitle} has been submitted by \pronounus{} in partial fulfillment of the requirements for the Degree of \degreename{} in the \deptname{} at the \univname.
+
+\par
+\noindent We acknowledge that plagiarism includes:
+\begin{enumerate}
+  \item Reproducing another person's work (fully or partially) or ideas and presenting them as our own.
+  \item Copying or paraphrasing another person's work without appropriate attribution.
+  \item Engaging in literary theft by reproducing a unique literary construct without crediting its source.
+\end{enumerate}
+\par
+We affirm that due credit has been given to all original authors and sources through proper citations for words, ideas, diagrams, graphics, computer programs, experiments, results, and websites that are not our own contributions. Direct quotations have been appropriately marked, and sources have been properly referenced. Furthermore, we declare that no portion of our work is plagiarized. In the event of a plagiarism claim, we accept full responsibility for the contents of this report.
+
+\end{spacing}
+
+\begin{spacing}{2.0}
+\noindent
+\begin{minipage}[t]{0.4\textwidth}
+  \begin{flushleft}
+    Place: Prayagraj\\
+  \end{flushleft}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.4\textwidth}
+  \begin{flushright}
+    Date: November 2026\\
+  \end{flushright}
+\end{minipage}
+\par
+{\studentsignatures}
+\end{spacing}
+
+\cleardoublepage
+
+%----------------------------------------------------------------------------------------
+%	ABSTRACT PAGE
+%----------------------------------------------------------------------------------------
+
+\begin{abstract}
+\begin{spacing}{1.5}
+
+\addchaptertocentry{\abstractname}
+
+Classical homeopathic prescribing requires the physician to match a patient's complete symptom totality --- comprising mental, emotional, physical sensation, anatomical location, modality, concomitant, and temporal dimensions --- against over 74,000 hierarchical rubrics indexed in Dr. James Tyler Kent's Repertory. This process is cognitively demanding, time-consuming, and subject to practitioner recall bias. Kent-AI is an AI-powered conversational clinical decision support system designed to automate and augment this workflow using state-of-the-art Natural Language Processing, dense semantic retrieval, and large language model reasoning.
+
+The system integrates four fine-tuned biomedical transformer encoders (BioLinkBERT-Base, PubMedBERT, Bio\_ClinicalBERT, and DeBERTa-v3) totalling 414 million parameters, trained on a bespoke synthetic dataset of 19,732 clinical cases annotated with 99,854 entities across 15 BIO token labels spanning 7 Kentian symptom dimensions. A ChromaDB HNSW vector index encodes all 74,513 rubrics using \texttt{all-MiniLM-L6-v2} sentence embeddings, enabling sub-18 millisecond semantic retrieval. A QLoRA-fine-tuned BioMistral 7B large language model serves as a clinical reasoning arbiter in a two-stage hybrid extraction pipeline, achieving 47.59\% Micro F1, 100\% JSON schema validity, and 99.73\% clinical grounding on the held-out test set.
+
+A doctor-in-the-loop Streamlit clinical workstation implements a 4-step consultation stepper (Intake, Review, Analysis, Report), an interactive Totality Matrix, a persistent Case Library, and a multi-page ReportLab PDF exporter. The system is validated by 195 automated tests across 22 test modules. BioLinkBERT achieves the highest Token-Level BIO F1 of 34.86\%, PubMedBERT achieves the highest Dense Rubric Recall@20 of 41.56\%, and DeBERTa-v3 achieves the highest Top-5 Simillimum Remedy Accuracy of 42.16\% under narrative-embedding mode. Kent-AI represents the first systematic application of large-scale biomedical NLP ensembling to classical homeopathic repertorization, with a fully open-source, clinically verifiable implementation.
+
+\textbf{Keywords:} Homeopathic Repertorization, Biomedical Named Entity Recognition, Dense Retrieval, Clinical Decision Support, Large Language Models, Parameter-Efficient Fine-Tuning, QLoRA, ChromaDB.
+
+\end{spacing}
+\end{abstract}
+
+%----------------------------------------------------------------------------------------
+%	ACKNOWLEDGEMENTS
+%----------------------------------------------------------------------------------------
+
+\begin{acknowledgements}
+\begin{spacing}{1.5}
+\addchaptertocentry{\acknowledgementname}
+
+We express our deepest gratitude to our project supervisor, \textbf{Dr. Nikhilanand Arya}, Assistant Professor, Department of Information Technology, IIIT Allahabad, for his invaluable guidance, constructive feedback, and unwavering encouragement throughout the duration of this project. His directive to pursue a rigorous multi-model comparative benchmark study significantly elevated the academic depth and publication viability of this work.
+
+We are grateful to the \textbf{Department of Information Technology, IIIT Allahabad} for providing access to the high-performance computing infrastructure --- specifically the \textbf{NVIDIA RTX 5000 Ada Generation GPU (32GB VRAM)} --- which made the large-scale model fine-tuning experiments possible. Without this hardware access, training four biomedical transformers and two large language models simultaneously would not have been feasible within the project timeline.
+
+We acknowledge the open-source community whose foundations we build upon: the HuggingFace Transformers and PEFT libraries, ChromaDB, Ollama, Streamlit, and the ReportLab PDF toolkit. Special recognition goes to the creators of Kent's digitized Repertory dataset which serves as the foundational knowledge base of this entire system.
+
+Finally, we thank our families and friends for their patience, support, and encouragement throughout this intensive research endeavour.
+
+\end{spacing}
+\end{acknowledgements}
+
+%----------------------------------------------------------------------------------------
+%	TABLE OF CONTENTS / FIGURES / TABLES
+%----------------------------------------------------------------------------------------
+
+\tableofcontents
+
+\listoffigures
+
+\listoftables
+
+%----------------------------------------------------------------------------------------
+%	ABBREVIATIONS
+%----------------------------------------------------------------------------------------
+
+\begin{abbreviations}{ll}
+
+\textbf{AI} & \textbf{A}rtificial \textbf{I}ntelligence \\
+\textbf{NLP} & \textbf{N}atural \textbf{L}anguage \textbf{P}rocessing \\
+\textbf{NER} & \textbf{N}amed \textbf{E}ntity \textbf{R}ecognition \\
+\textbf{BIO} & \textbf{B}eginning-\textbf{I}nside-\textbf{O}utside (tagging scheme) \\
+\textbf{LLM} & \textbf{L}arge \textbf{L}anguage \textbf{M}odel \\
+\textbf{PEFT} & \textbf{P}arameter-\textbf{E}fficient \textbf{F}ine-\textbf{T}uning \\
+\textbf{QLoRA} & \textbf{Q}uantized \textbf{Lo}w-\textbf{R}ank \textbf{A}daptation \\
+\textbf{HNSW} & \textbf{H}ierarchical \textbf{N}avigable \textbf{S}mall \textbf{W}orld \\
+\textbf{FSM} & \textbf{F}inite \textbf{S}tate \textbf{M}achine \\
+\textbf{MIND} & Kent's Repertory Chapter 1: Mental and Emotional Symptoms \\
+\textbf{MENT} & \textbf{Ment}al / Emotional Dimension (BIO label) \\
+\textbf{LOC} & \textbf{Loc}ation Dimension (BIO label) \\
+\textbf{SEN} & \textbf{Sen}sation Dimension (BIO label) \\
+\textbf{MOD\_AGG} & \textbf{Mod}ality \textbf{Agg}ravation Dimension (worse from) \\
+\textbf{MOD\_AMEL} & \textbf{Mod}ality \textbf{Amel}ioration Dimension (better from) \\
+\textbf{CONC} & \textbf{Conc}omitant Symptoms Dimension \\
+\textbf{TEMP} & \textbf{Temp}oral / Time Pattern Dimension \\
+\textbf{F1} & F1-Score (Harmonic Mean of Precision and Recall) \\
+\textbf{MRR} & \textbf{M}ean \textbf{R}eciprocal \textbf{R}ank \\
+\textbf{ChromaDB} & Open-source vector database with HNSW cosine indexing \\
+\textbf{VRAM} & \textbf{V}ideo \textbf{R}andom \textbf{A}ccess \textbf{M}emory \\
+\textbf{IIITA} & \textbf{I}ndian \textbf{I}nstitute of \textbf{I}nformation \textbf{T}echnology, \textbf{A}llahabad \\
+\textbf{UI} & \textbf{U}ser \textbf{I}nterface \\
+\textbf{UX} & \textbf{U}ser e\textbf{X}perience \\
+\textbf{PDF} & \textbf{P}ortable \textbf{D}ocument \textbf{F}ormat \\
+\textbf{API} & \textbf{A}pplication \textbf{P}rogramming \textbf{I}nterface \\
+\textbf{REST} & \textbf{Re}presentational \textbf{S}tate \textbf{T}ransfer \\
+\textbf{CUDA} & \textbf{C}ompute \textbf{U}nified \textbf{D}evice \textbf{A}rchitecture (NVIDIA GPU Framework) \\
+\textbf{RTD} & \textbf{R}eplaced \textbf{T}oken \textbf{D}etection (pre-training objective) \\
+\textbf{MIMIC} & \textbf{M}edical \textbf{I}nformation \textbf{M}art for \textbf{I}ntensive \textbf{C}are \\
+
+\end{abbreviations}
+
+%----------------------------------------------------------------------------------------
+%	DEDICATION
+%----------------------------------------------------------------------------------------
+
+\dedicatory{To the practitioners of classical homeopathy worldwide who dedicate their lives to the art and science of healing, and to the patients who place their trust in them.}

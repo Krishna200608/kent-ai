@@ -1,0 +1,181 @@
+% Chapter 6 — Results and Analysis
+
+\chapter{Results and Analysis}
+\label{Chapter6}
+
+This chapter presents the empirical results of the multi-model comparative benchmark study. It analyses the performance of four biomedical transformer encoders and two QLoRA large language models across the three evaluation tiers: Clinical NER, Dense Rubric Retrieval, and Downstream Repertorization Accuracy. The chapter concludes with a synthesis of the complementary strengths of each architecture and the rationale for the ensemble design.
+
+%----------------------------------------------------------------------------------------
+
+\section{Master Comparative Benchmark Matrix}
+
+Table \ref{tab:master} presents the complete performance matrix across all models and evaluation metrics on the held-out test set ($N = 1,973$ cases).
+
+\begin{table}[h]
+\caption[Master Comparative Benchmark]{Master Comparative Benchmark Matrix --- All Models vs. All Metrics.}
+\label{tab:master}
+\centering
+\scriptsize
+\begin{tabular}{llrrrrr}
+\toprule
+\tabhead{Stage} & \tabhead{Metric} & \tabhead{ClinicalBERT} & \tabhead{PubMedBERT} & \tabhead{BioLinkBERT} & \tabhead{DeBERTa-v3} & \tabhead{Best Model} \\
+\midrule
+Token Classifier & Token Accuracy & 83.79\% & \textbf{83.80\%} & 83.69\% & 81.00\% & PubMedBERT \\
+HomeoNER & Token BIO F1 & 33.40\% & 34.72\% & \textbf{34.86\%} & 0.00\% & \textbf{BioLinkBERT} \\
+\midrule
+ChromaDB & Recall@1 & 10.39\% & 10.69\% & 10.85\% & \textbf{28.28\%} & DeBERTa-v3* \\
+ChromaDB & Recall@5 & 25.29\% & 26.46\% & 25.49\% & \textbf{48.30\%} & DeBERTa-v3* \\
+ChromaDB & Recall@10 & 31.68\% & 33.40\% & 32.44\% & \textbf{55.65\%} & DeBERTa-v3* \\
+ChromaDB & Recall@20 & 40.14\% & \textbf{41.56\%} & 41.46\% & 62.95\% & DeBERTa-v3* \\
+ChromaDB & MRR & 0.1746 & \textbf{0.1815} & 0.1798 & 0.3722 & DeBERTa-v3* \\
+\midrule
+Remedy Ranker & Simillimum Top-1 & 13.07\% & 13.02\% & 12.47\% & \textbf{17.65\%} & DeBERTa-v3* \\
+Remedy Ranker & Simillimum Top-3 & 25.33\% & 26.42\% & 25.98\% & \textbf{33.50\%} & DeBERTa-v3* \\
+Remedy Ranker & Simillimum Top-5 & 34.04\% & \textbf{35.02\%} & 34.53\% & 42.16\% & DeBERTa-v3* \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textit{* DeBERTa-v3 retrieval metrics use full-narrative dense embedding mode (NER BIO F1 = 0.00\%, not applicable for entity-based retrieval).}
+
+%----------------------------------------------------------------------------------------
+
+\section{NER Performance Analysis}
+
+\subsection{Token-Level BIO F1 Results}
+
+\textbf{BioLinkBERT achieves the highest Token-Level BIO F1 of 34.86\%}, marginally outperforming PubMedBERT (34.72\%) and Bio\_ClinicalBERT (33.40\%). DeBERTa-v3 failed to converge on the BIO labeling task (0.00\% F1), which is attributed to its domain gap: pre-trained on general text with an RTD objective rather than a masked language modeling objective, its representations required deeper domain adaptation than the available training data permitted within the fixed training budget.
+
+\subsection{7-Dimension F1 Breakdown}
+
+Table \ref{tab:dimf1} reveals the \textbf{complementary specialization} of each encoder:
+
+\begin{table}[h]
+\caption[7-Dimension F1 Breakdown]{Per-Dimension Token F1 Scores Across NER Models.}
+\label{tab:dimf1}
+\centering
+\begin{tabular}{lllrrrl}
+\toprule
+\tabhead{Dim.} & \tabhead{Clinical Meaning} & \tabhead{ClinBERT} & \tabhead{PubMed} & \tabhead{BioLink} & \tabhead{Best} & \tabhead{Delta} \\
+\midrule
+LOC & Location/Anatomy & 29.77\% & \textbf{33.80\%} & 32.26\% & PubMedBERT & +4.03\% \\
+SEN & Sensation/Pain & 30.36\% & 32.41\% & \textbf{32.97\%} & BioLinkBERT & +2.61\% \\
+MOD\_AGG & Aggravation & 25.00\% & 25.43\% & \textbf{26.95\%} & BioLinkBERT & +1.95\% \\
+MOD\_AMEL & Amelioration & \textbf{19.12\%} & 14.06\% & 6.00\% & ClinicalBERT & — \\
+CONC & Concomitant & \textbf{26.62\%} & 23.89\% & 22.91\% & ClinicalBERT & — \\
+TEMP & Temporal & 43.45\% & 43.78\% & \textbf{45.37\%} & BioLinkBERT & +1.92\% \\
+MENT & Mental/Emotional & 35.60\% & \textbf{37.11\%} & 37.10\% & PubMedBERT & +1.51\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Key observations:}
+\begin{itemize}
+  \item \textbf{PubMedBERT} dominates anatomical location extraction (LOC F1 33.80\%, +4.03\% over baseline), reflecting its training on PubMed literature which contains precise anatomical terminology.
+  \item \textbf{BioLinkBERT} dominates sensation and modality extraction (SEN, MOD\_AGG, TEMP), suggesting that citation-graph pre-training captures the co-occurrence patterns of symptom modalities.
+  \item \textbf{Bio\_ClinicalBERT} unexpectedly leads on MOD\_AMEL and CONC, the two rarest label classes. This may reflect overfitting to the class distribution of MIMIC-III clinical notes, where amelioration and concomitant symptom documentation patterns are more prominent.
+\end{itemize}
+
+\subsection{Why BioLinkBERT Outperforms ClinicalBERT}
+
+Bio\_ClinicalBERT was pre-trained on ICU progress notes (MIMIC-III), which are saturated with intensive care jargon (ventilator settings, lab values, vasopressor drugs). Homeopathic consultations, by contrast, describe subjective sensations (\textit{``throbbing at the temples, worse 4pm to 8pm, better warmth''}). PubMedBERT's domain-specific vocabulary and BioLinkBERT's citation-graph relationships more accurately represent this descriptive, sensation-focused language register.
+
+%----------------------------------------------------------------------------------------
+
+\section{QLoRA Large Language Model Results}
+
+\subsection{BioMistral 7B Performance}
+
+Table \ref{tab:biomistral} summarises the BioMistral 7B QLoRA fine-tuned model performance:
+
+\begin{table}[h]
+\caption[BioMistral 7B Results]{BioMistral 7B QLoRA Fine-tuned Model --- Evaluation Results.}
+\label{tab:biomistral}
+\centering
+\begin{tabular}{lrrl}
+\toprule
+\tabhead{Metric} & \tabhead{Score} & \tabhead{Threshold} & \tabhead{Status} \\
+\midrule
+JSON Schema Validity & \textbf{100.0\%} & $\geq$95\% & Pass \\
+Clinical Grounding Rate & \textbf{99.73\%} & $\geq$90\% & Pass \\
+Hallucination Rate & \textbf{0.27\%} & $\leq$10\% & Pass \\
+Micro Precision & 0.4725 & $\geq$0.50 & --- \\
+Micro Recall & 0.4794 & $\geq$0.50 & --- \\
+\textbf{Micro F1} & \textbf{0.4759} & $\geq$0.50 & Near-threshold \\
+Macro F1 & 0.4227 & $\geq$0.40 & Pass \\
+\midrule
+ChromaDB Recall@20 & 37.7\% & --- & --- \\
+MRR & 0.1904 & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Key finding}: BioMistral 7B achieves 47.59\% Micro F1 --- \textbf{significantly higher than all four encoder models} (best: BioLinkBERT 34.86\%) --- demonstrating the substantial advantage of generative extraction with 7B parameters over discriminative token classification with 110M parameters on this novel NER schema. The 100\% JSON validity and 99.73\% clinical grounding confirm the reliability of QLoRA instruction fine-tuning for structured clinical extraction.
+
+\subsection{Per-Dimension BioMistral Analysis}
+
+The temporal dimension (TEMP) achieves the highest F1 at \textbf{61.52\%}, reflecting BioMistral's strong temporal reasoning capability. The mental/emotional dimension (MENT) achieves \textbf{51.28\% F1} despite being the most frequent and linguistically diverse class, confirming its broad clinical NLP capability. Amelioration (MOD\_AMEL) remains the most challenging class at 27.78\% F1, consistent with its rarity in both training data and clinical practice.
+
+%----------------------------------------------------------------------------------------
+
+\section{Dense Retrieval Analysis}
+
+\subsection{The Semantic Granularity Phenomenon}
+
+DeBERTa-v3's \textbf{full-narrative embedding mode} achieves dramatically superior retrieval metrics (Recall@20: 62.95\%, MRR: 0.3722) compared to entity-based retrieval from the three BERT encoders (best: PubMedBERT, Recall@20: 41.56\%, MRR: 0.1815). This reveals a fundamental tension in the pipeline design:
+
+\begin{itemize}
+  \item \textbf{Entity-Constrained Retrieval (Path A)}: Precise but lossy --- extracts specific symptom entities and retrieves rubrics matching each entity individually. Loses holistic semantic context.
+  \item \textbf{Dense Narrative Retrieval (Path B)}: Holistic but imprecise --- embeds the entire patient narrative and retrieves rubrics that match the overall symptom picture. Captures global context but may retrieve irrelevant rubrics.
+\end{itemize}
+
+This finding motivates a \textbf{dual-path retrieval architecture} as a future research direction (Section \ref{Chapter7}).
+
+\subsection{ChromaDB Query Latency}
+
+\begin{table}[h]
+\caption[ChromaDB Latency]{ChromaDB HNSW Query Latency Benchmarks.}
+\label{tab:latency}
+\centering
+\begin{tabular}{lr}
+\toprule
+\tabhead{Operation} & \tabhead{Latency} \\
+\midrule
+Single entity query (Top-5) & $<$18 ms (p99) \\
+Single entity query (Top-20) & $<$22 ms (p99) \\
+Batch of 10 entity queries & $<$45 ms (p99) \\
+Full index build (74,513 rubrics) & 931.14 s \\
+Index build throughput & 80.0 rubrics/sec \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Sub-18ms retrieval from a 74,513-entry semantic index enables real-time repertorization within a clinical consultation.
+
+%----------------------------------------------------------------------------------------
+
+\section{Ensemble Justification and Synthesis}
+
+The 7-dimension F1 breakdown provides the empirical rationale for the 4-Model Majority Voting Ensemble:
+
+\begin{itemize}
+  \item \textbf{PubMedBERT}'s anatomical precision (LOC +4.03\%) ensures body region extraction quality.
+  \item \textbf{BioLinkBERT}'s modality/sensation superiority (SEN, MOD\_AGG, TEMP) captures the most clinically discriminating symptom qualifiers.
+  \item \textbf{Bio\_ClinicalBERT}'s strength on rare classes (MOD\_AMEL, CONC) prevents ensemble degradation on low-frequency labels.
+  \item \textbf{Majority voting} with IoU-based span clustering averages out individual model errors while preserving span boundaries where models agree.
+\end{itemize}
+
+The Two-Stage Hybrid Pipeline further improves on the ensemble by routing ambiguous and low-confidence spans to the LLaMA 3.1 LLM arbitrator, achieving 100\% JSON schema validity and enabling downstream structured reasoning.
+
+%----------------------------------------------------------------------------------------
+
+\section{Summary of Key Empirical Findings}
+
+\begin{enumerate}
+  \item \textbf{BioLinkBERT} achieves the highest Token-Level BIO F1 (34.86\%), confirming that citation-graph pre-training is beneficial for homeopathic symptom modality extraction.
+  \item \textbf{PubMedBERT} achieves the highest Dense Rubric Recall@20 (41.56\%) and Simillimum Top-5 Accuracy (35.02\%) among entity-based extraction models.
+  \item \textbf{BioMistral 7B} (QLoRA fine-tuned) achieves the highest Micro F1 (47.59\%), demonstrating the advantage of generative LLM extraction for domain-novel NER schemas.
+  \item \textbf{DeBERTa-v3 in narrative embedding mode} achieves the highest retrieval and remedy accuracy (Recall@20: 62.95\%, Top-5 Accuracy: 42.16\%), revealing the value of holistic narrative embeddings.
+  \item All encoder models exhibit \textbf{complementary strengths}, confirming the value of ensemble combination.
+  \item ChromaDB HNSW enables \textbf{sub-18ms} semantic search over 74,513 rubrics, meeting real-time clinical requirements.
+\end{enumerate}

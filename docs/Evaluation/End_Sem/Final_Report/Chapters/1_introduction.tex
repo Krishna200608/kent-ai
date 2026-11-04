@@ -1,0 +1,133 @@
+% Chapter 1 — Introduction
+
+\chapter{Introduction}
+\label{Chapter1}
+
+\newcommand{\keyword}[1]{\textbf{#1}}
+\newcommand{\tabhead}[1]{\textbf{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\file}[1]{\texttt{\bfseries#1}}
+\newcommand{\option}[1]{\texttt{\itshape#1}}
+
+This chapter provides an introduction to the Kent-AI project, a conversational clinical decision support system for homeopathic repertorization. It presents the clinical and technical motivation for the system, outlines the core problem statement, articulates the research objectives and scope, and describes the overall structure of this report. The chapter contextualizes the intersection of classical homeopathic practice and modern Natural Language Processing within the broader landscape of AI-assisted clinical tools.
+
+%----------------------------------------------------------------------------------------
+
+\section{Background and Motivation}
+
+Homeopathy is a system of complementary medicine founded by Samuel Hahnemann in the late 18th century, grounded in the \textit{Law of Similars} (\textit{Similia Similibus Curentur} --- ``let likes be cured by likes''). Its prescribing philosophy requires the physician to construct a comprehensive \keyword{symptom totality} encompassing the patient's mental, emotional, and physical symptom profile, then identify the single most similar remedy --- the \keyword{simillimum} --- from a pharmacopeia of hundreds of natural substances.
+
+Dr. James Tyler Kent's \textit{Repertory of the Homoeopathic Materia Medica} (1897) remains the global gold standard for clinical prescribing \cite{kent1897}. It indexes \textbf{74,513 hierarchical rubrics} and \textbf{507,179 rubric-remedy associations} across 37 anatomical and philosophical chapters, encoding centuries of clinical observation into a structured reference system.
+
+\subsection{Operational Bottlenecks in Classical Repertorization}
+
+Despite its clinical rigor, traditional repertorization faces severe operational challenges in modern practice:
+
+\begin{enumerate}
+  \item \textbf{Prolonged Consultation Time}: Manual intake and repertorial analysis routinely require 30 to 45 minutes per patient, constraining clinical throughput and patient accessibility.
+  \item \textbf{Cognitive Overload}: Clinicians cannot navigate 74,000+ rubrics in real time. Studies suggest practitioners disproportionately prescribe from a pool of roughly 30 familiar \textit{polycrest} remedies \cite{sherr2002}, while overlooking potentially more specific simillimum candidates.
+  \item \textbf{Lexical Mismatch}: Patients articulate distress using colloquial, metaphorical language (e.g., \textit{``it feels like my skull is being crushed from both sides''}) whereas repertory rubrics encode rigid 19th-century taxonomic entries (e.g., \texttt{HEAD > PAIN > band or hoop, as from a}). No deterministic keyword bridge exists between these two vocabularies.
+  \item \textbf{Documentation Burden}: Handwritten case records and manual cross-referencing across multiple chapters create significant clerical overhead.
+\end{enumerate}
+
+\subsection{The Opportunity: NLP-Driven Repertorization}
+
+The convergence of three technical advances creates a viable solution space:
+
+\begin{itemize}
+  \item \textbf{Biomedical Pre-trained Transformers}: Models such as BioLinkBERT \cite{yasunaga2022linkbert}, PubMedBERT \cite{gu2021domain}, and Bio\_ClinicalBERT \cite{alsentzer2019publicly}, pre-trained on large biomedical corpora, exhibit strong semantic understanding of clinical language.
+  \item \textbf{Dense Semantic Retrieval}: Sentence-level embedding models combined with approximate nearest-neighbour (ANN) indexes enable sub-second similarity search over collections of hundreds of thousands of documents.
+  \item \textbf{Instruction-Tuned Large Language Models}: Models such as LLaMA 3 and BioMistral 7B, fine-tuned with parameter-efficient adapters (QLoRA), can perform structured clinical information extraction with high fidelity.
+\end{itemize}
+
+Kent-AI synthesizes these advances into the first systematic application of large-scale biomedical NLP to classical homeopathic repertorization.
+
+%----------------------------------------------------------------------------------------
+
+\section{Problem Statement}
+
+\textbf{Given} an unstructured conversational patient narrative describing their health concerns in natural language, \textbf{construct} a structured seven-dimensional symptom profile aligned with Kent's taxonomic dimensions, \textbf{retrieve} semantically matching rubrics from a 74,513-entry repertory index, and \textbf{rank} candidate remedies by totality coverage and bibliographic grade weight --- all within a clinically usable response time and with physician-verifiable reasoning traces.
+
+Formally, the system must solve three coupled sub-problems:
+\begin{enumerate}
+  \item \textbf{Clinical NER}: Given a patient utterance $U$, extract entity spans $\{e_1, e_2, \ldots, e_k\}$ each labelled with a Kentian dimension $d \in \{$\texttt{MENT}, \texttt{LOC}, \texttt{SEN}, \texttt{MOD\_AGG}, \texttt{MOD\_AMEL}, \texttt{CONC}, \texttt{TEMP}$\}$.
+  \item \textbf{Dense Rubric Retrieval}: Given entity spans, retrieve $K$ most relevant rubrics from the vector index $\mathcal{R}$ of cardinality 74,513.
+  \item \textbf{Remedy Ranking}: Given retrieved rubrics, compute a grade-weighted totality coverage score for each candidate remedy $r \in \mathcal{M}$ and rank by descending score.
+\end{enumerate}
+
+%----------------------------------------------------------------------------------------
+
+\section{Research Objectives}
+
+This project pursues the following concrete research objectives:
+
+\begin{enumerate}
+  \item \textbf{O1 --- Synthetic Dataset Construction}: Generate and validate a large-scale annotated training corpus of synthetic clinical cases covering all seven Kentian symptom dimensions, with zero offset drift in BIO token annotations.
+
+  \item \textbf{O2 --- Multi-Encoder NER}: Fine-tune and systematically compare four biomedical transformer architectures (BioLinkBERT, PubMedBERT, Bio\_ClinicalBERT, DeBERTa-v3) on the clinical NER task.
+
+  \item \textbf{O3 --- Ensemble and Hybrid Pipeline}: Design and evaluate a 4-Model Majority Voting Ensemble and a Two-Stage Hybrid Pipeline with LLM arbitration for robust entity extraction.
+
+  \item \textbf{O4 --- Large Language Model Integration}: Fine-tune Qwen 2.5 7B and BioMistral 7B using QLoRA PEFT for structured clinical entity extraction and validate JSON schema fidelity and clinical grounding.
+
+  \item \textbf{O5 --- Dense Retrieval}: Build and validate a ChromaDB HNSW vector index over all 74,513 Kent rubrics and characterize retrieval latency and Recall@K performance.
+
+  \item \textbf{O6 --- Clinical Workstation}: Implement a doctor-in-the-loop Streamlit clinical interface meeting modern UX standards, with a 4-step consultation workflow, PDF export, and Case Library persistence.
+
+  \item \textbf{O7 --- Empirical Evaluation}: Conduct a rigorous multi-model comparative benchmark on a held-out test set of 1,973 cases and characterize the complementary strengths of each architecture.
+\end{enumerate}
+
+%----------------------------------------------------------------------------------------
+
+\section{Scope and Limitations}
+
+\subsection{Scope}
+
+The current implementation focuses on \textbf{Kent's Chapter 1: MIND} (Mental and Emotional symptoms), comprising 4,933 rubrics. This scope was chosen deliberately for three reasons:
+\begin{enumerate}
+  \item MIND symptoms carry the highest prescriptive weight in Kentian hierarchy (Mental $>$ General $>$ Particular).
+  \item All 19,732 synthetic training cases were generated from MIND rubrics, ensuring a consistent training distribution.
+  \item The MIND chapter represents the most linguistically complex region of the repertory, making it an ideal testbed for semantic NLP methods.
+\end{enumerate}
+
+Extension to all 37 repertory chapters (74,513 total rubrics) is architecturally designed and planned as a future release (see Chapter \ref{Chapter7}).
+
+\subsection{Limitations}
+
+\begin{itemize}
+  \item \textbf{Research Platform}: Kent-AI is an investigational decision-support tool. It does not provide medical diagnoses or prescriptions. All repertory findings must be verified against primary homeopathic literature by a qualified practitioner.
+  \item \textbf{Synthetic Training Data}: The training corpus was generated by an LLaMA 3 8B model, which may not fully capture the linguistic diversity of real patient consultations.
+  \item \textbf{BIO F1 Ceiling}: The highest achieved Token-Level BIO F1 is 34.86\% (BioLinkBERT), reflecting the inherent difficulty of the domain-specific clinical NER task on a novel annotation schema.
+  \item \textbf{Offline LLM Dependency}: The conversational intake agent and hybrid pipeline require a locally running Ollama LLM instance, limiting deployment to systems with sufficient VRAM.
+\end{itemize}
+
+%----------------------------------------------------------------------------------------
+
+\section{Core Contributions}
+
+This project makes the following original contributions:
+
+\begin{enumerate}
+  \item \textbf{First Large-Scale Homeopathic NER Dataset}: 19,732 synthetic clinical cases with 99,854 BIO-annotated entities across 7 Kentian dimensions and 15 token label classes, with zero character offset drift.
+  \item \textbf{Multi-Model Comparative Benchmark}: A systematic empirical comparison of four biomedical transformer architectures on a novel clinical NER and repertorization task, providing reproducible baselines for future research.
+  \item \textbf{Two-Stage Hybrid Extraction Pipeline}: A novel architecture combining ensemble candidate mining with LLaMA 3.1 LLM arbitration, achieving 100\% JSON schema validity.
+  \item \textbf{QLoRA-Fine-Tuned BioMistral 7B}: The first fine-tuned large language model for homeopathic symptom extraction, achieving 47.59\% Micro F1 and 99.73\% clinical grounding.
+  \item \textbf{Full-Stack Doctor-in-the-Loop Workstation}: A production-grade Streamlit clinical application with 4-step stepper, Totality Matrix, Case Library, PDF export, and 195 automated tests.
+\end{enumerate}
+
+%----------------------------------------------------------------------------------------
+
+\section{Report Organisation}
+
+The remainder of this report is organized as follows:
+
+\begin{itemize}
+  \item \textbf{Chapter \ref{Chapter2}: Literature Review} --- Surveys related work in biomedical NLP, clinical NER, dense retrieval systems, and AI-assisted clinical decision support.
+  \item \textbf{Chapter \ref{Chapter3}: System Design and Architecture} --- Presents the high-level system architecture, pipeline design, and technology stack choices.
+  \item \textbf{Chapter \ref{Chapter4}: Implementation} --- Details the implementation of each system module: synthetic data generation, NER training, dense retrieval, LLM integration, ensemble, and the clinical workstation.
+  \item \textbf{Chapter \ref{Chapter5}: Experimental Setup} --- Describes the dataset, hardware, evaluation metrics, and experimental protocols used in the benchmark study.
+  \item \textbf{Chapter \ref{Chapter6}: Results and Analysis} --- Presents and analyses the benchmark results for all models and pipeline configurations.
+  \item \textbf{Chapter \ref{Chapter7}: Conclusion and Future Work} --- Summarises findings, draws conclusions, and outlines future research directions.
+  \item \textbf{Appendix \ref{AppendixA}} --- Seven-Dimension BIO Label Schema and clinical examples.
+  \item \textbf{Appendix \ref{AppendixB}} --- System installation and deployment guide.
+\end{itemize}

@@ -1,0 +1,132 @@
+% Appendix B — Installation and Deployment Guide
+
+\chapter{Installation and Deployment Guide}
+\label{AppendixB}
+
+This appendix provides complete instructions for installing, configuring, and running Kent-AI in a local or server environment.
+
+%----------------------------------------------------------------------------------------
+
+\section{System Requirements}
+
+\begin{table}[h]
+\caption[System Requirements]{Kent-AI Minimum and Recommended System Requirements.}
+\label{tab:sysreq}
+\centering
+\begin{tabular}{lll}
+\toprule
+\tabhead{Component} & \tabhead{Minimum} & \tabhead{Recommended} \\
+\midrule
+Python & 3.10 & 3.12 \\
+RAM & 16 GB & 32+ GB \\
+GPU VRAM (LLM) & 8 GB & 32 GB \\
+GPU VRAM (NER) & 4 GB & 16 GB \\
+Storage & 10 GB & 50 GB \\
+OS & Ubuntu 22.04 / Windows 11 & Ubuntu 22.04 \\
+CUDA & 11.8+ & 12.4 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%----------------------------------------------------------------------------------------
+
+\section{Installation}
+
+\subsection{Step 1: Clone the Repository}
+
+\begin{lstlisting}[style=python, caption={Repository Clone}]
+git clone https://github.com/Krishna200608/kent-ai.git
+cd kent-ai
+\end{lstlisting}
+
+\subsection{Step 2: Create Virtual Environment}
+
+\begin{lstlisting}[style=python, caption={Virtual Environment Setup}]
+python -m venv .venv
+# Windows:
+.venv\Scripts\activate
+# Linux/macOS:
+source .venv/bin/activate
+pip install -e ".[dev]"
+\end{lstlisting}
+
+\subsection{Step 3: Install Ollama and Pull LLaMA 3}
+
+\begin{lstlisting}[style=python, caption={Ollama Setup}]
+# Install Ollama from https://ollama.ai
+# Pull the LLaMA 3 8B model:
+ollama pull llama3:8b
+ollama serve  # Start Ollama daemon
+\end{lstlisting}
+
+\subsection{Step 4: Build the ChromaDB Vector Index}
+
+\begin{lstlisting}[style=python, caption={Vector Index Build}]
+python scripts/build_embeddings.py --batch-size 256
+# Expected output: 74,513 rubrics indexed in ~16 minutes
+\end{lstlisting}
+
+\subsection{Step 5: Run the Clinical Dashboard}
+
+\begin{lstlisting}[style=python, caption={Streamlit Dashboard Launch}]
+streamlit run src/dashboard/app.py
+# Dashboard accessible at http://localhost:8501
+\end{lstlisting}
+
+%----------------------------------------------------------------------------------------
+
+\section{Running the Test Suite}
+
+\begin{lstlisting}[style=python, caption={Test Suite Execution}]
+pytest tests/ -q
+# Expected output: 195 passed in ~25s
+\end{lstlisting}
+
+%----------------------------------------------------------------------------------------
+
+\section{GPU Server Deployment}
+
+For production deployment on the IIIT Allahabad GPU server:
+
+\begin{lstlisting}[style=python, caption={GPU Server Deployment}]
+# Generate full training dataset:
+chmod +x scripts/run_gpu_generation.sh
+./scripts/run_gpu_generation.sh
+
+# Monitor generation:
+tail -f logs/generation.log
+
+# Fine-tune NER models:
+python scripts/train_ner.py --model biolinkbert --epochs 15
+
+# Fine-tune BioMistral QLoRA:
+python scripts/train_llm_qlora.py --model biomistral --rank 16
+
+# Evaluate all models:
+python scripts/evaluate.py --models all --output docs/Evaluation/
+\end{lstlisting}
+
+%----------------------------------------------------------------------------------------
+
+\section{Repository Structure}
+
+The key directories and files in the Kent-AI repository:
+
+\begin{verbatim}
+kent-ai/
+├── Context/              # Architecture, Progress, Conventions docs
+├── configs/              # YAML configuration files
+├── data/
+│   ├── raw/              # repertory.sqlite (112 MB)
+│   ├── processed/        # Synthetic cases (19,732 cases)
+│   └── models/           # Fine-tuned model checkpoints
+├── src/
+│   ├── chatbot/          # FSM intake agent (10 states)
+│   ├── data/             # Case generator, BIO tagger, splitter
+│   ├── models/           # NER encoders, ensemble, hybrid pipeline
+│   ├── pipeline/         # Orchestrator, ranker, report generator
+│   └── dashboard/        # Streamlit app, components, views
+├── scripts/              # Training, evaluation, generation CLIs
+├── tests/                # 195 unit and integration tests
+└── docs/                 # Evaluation reports, design docs
+\end{verbatim}

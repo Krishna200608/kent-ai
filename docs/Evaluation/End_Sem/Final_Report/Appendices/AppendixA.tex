@@ -1,0 +1,129 @@
+% Appendix A — 7-Dimension BIO Label Schema
+
+\chapter{Seven-Dimension BIO Label Schema and Clinical Examples}
+\label{AppendixA}
+
+This appendix provides the complete specification of the 15-class BIO token label schema used in Kent-AI, along with annotated clinical examples illustrating each label class.
+
+%----------------------------------------------------------------------------------------
+
+\section{BIO Label Specification}
+
+\begin{table}[h]
+\caption[Complete BIO Label Schema]{Complete 15-Class BIO Token Label Schema with Clinical Definitions.}
+\label{tab:fullschema}
+\centering
+\begin{tabular}{lllp{6cm}}
+\toprule
+\tabhead{Label} & \tabhead{Dimension} & \tabhead{Abbrev.} & \tabhead{Clinical Definition} \\
+\midrule
+B-MENT & Mental/Emotional & MENT & Beginning of a mental or emotional symptom span. Includes anxiety, fears, grief, irritability, restlessness, sadness, despair, and all mental/emotional states. \\
+I-MENT & Mental/Emotional & MENT & Continuation of a MENT span. \\
+\midrule
+B-LOC & Location & LOC & Beginning of an anatomical location span. Includes organ names, body regions, laterality (left, right, bilateral), and directional descriptors (anterior, posterior). \\
+I-LOC & Location & LOC & Continuation of a LOC span. \\
+\midrule
+B-SEN & Sensation & SEN & Beginning of a sensation or pain quality span. Includes descriptors such as throbbing, burning, pressing, stabbing, stitching, cramping, numb. \\
+I-SEN & Sensation & SEN & Continuation of a SEN span. \\
+\midrule
+B-MOD\_AGG & Aggravation & MOD\_AGG & Beginning of an aggravation modality span. Describes conditions or actions that make symptoms worse (e.g., cold air, motion, evening, being alone). \\
+I-MOD\_AGG & Aggravation & MOD\_AGG & Continuation of a MOD\_AGG span. \\
+\midrule
+B-MOD\_AMEL & Amelioration & MOD\_AMEL & Beginning of an amelioration modality span. Describes conditions that relieve symptoms (e.g., warmth, rest, company, pressure). \\
+I-MOD\_AMEL & Amelioration & MOD\_AMEL & Continuation of a MOD\_AMEL span. \\
+\midrule
+B-CONC & Concomitant & CONC & Beginning of a concomitant symptom span. Describes symptoms that consistently accompany the chief complaint but are anatomically or etiologically distinct. \\
+I-CONC & Concomitant & CONC & Continuation of a CONC span. \\
+\midrule
+B-TEMP & Temporal & TEMP & Beginning of a temporal or periodicity span. Includes time of day, day of week, season, duration, frequency, and onset descriptions. \\
+I-TEMP & Temporal & TEMP & Continuation of a TEMP span. \\
+\midrule
+O & Outside & O & Token is not part of any symptom entity. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%----------------------------------------------------------------------------------------
+
+\section{Annotated Clinical Examples}
+
+\subsection{Example 1: Mental/Emotional + Aggravation + Temporal}
+
+\textbf{Patient narrative}: \textit{``I feel terribly anxious and restless, especially in the evening when I am alone.''}
+
+\begin{verbatim}
+Token          Label
+-----------    ----------
+I              O
+feel           O
+terribly       O
+anxious        B-MENT
+and            I-MENT
+restless       I-MENT
+,              O
+especially     O
+in             B-TEMP
+the            I-TEMP
+evening        I-TEMP
+when           B-MOD_AGG
+I              I-MOD_AGG
+am             I-MOD_AGG
+alone          I-MOD_AGG
+.              O
+\end{verbatim}
+
+\textbf{Matched Rubric}: \texttt{MIND > ANXIETY > evening > alone, when}
+
+\subsection{Example 2: Location + Sensation + Amelioration}
+
+\textbf{Patient narrative}: \textit{``There is a severe throbbing pain in my right temple that is better from firm pressure.''}
+
+\begin{verbatim}
+Token          Label
+-----------    ----------
+There          O
+is             O
+a              O
+severe         B-SEN
+throbbing      I-SEN
+pain           I-SEN
+in             O
+my             O
+right          B-LOC
+temple         I-LOC
+that           O
+is             O
+better         B-MOD_AMEL
+from           I-MOD_AMEL
+firm           I-MOD_AMEL
+pressure       I-MOD_AMEL
+.              O
+\end{verbatim}
+
+\textbf{Matched Rubric}: \texttt{HEAD > PAIN > temples > right > pressing > amel.}
+
+\subsection{Example 3: Concomitant + Temporal}
+
+\textbf{Patient narrative}: \textit{``My headaches come every afternoon around 3 to 4 PM and are always accompanied by nausea.''}
+
+\begin{verbatim}
+Token          Label
+-----------    ----------
+My             O
+headaches      O
+come           O
+every          B-TEMP
+afternoon      I-TEMP
+around         I-TEMP
+3              I-TEMP
+to             I-TEMP
+4              I-TEMP
+PM             I-TEMP
+and            O
+are            O
+always         O
+accompanied    O
+by             O
+nausea         B-CONC
+.              O
+\end{verbatim}

@@ -1,0 +1,153 @@
+% Chapter 5 — Experimental Setup
+
+\chapter{Experimental Setup}
+\label{Chapter5}
+
+This chapter describes the experimental design for the multi-model comparative benchmark study. It covers the dataset specification, hardware infrastructure, evaluation metrics, and the protocols used to ensure reproducibility and fairness across all model comparisons.
+
+%----------------------------------------------------------------------------------------
+
+\section{Dataset}
+
+\subsection{Training, Validation, and Test Splits}
+
+All models were trained on the same \textbf{training partition} and evaluated on the same \textbf{held-out test partition} to enable direct comparison. No model had access to test data during training or hyperparameter selection. The dataset details are:
+
+\begin{itemize}
+  \item \textbf{Training Set}: 15,786 cases, 4,933 MIND rubrics, 80,049 annotated entities.
+  \item \textbf{Validation Set} (early stopping): 1,973 cases, 1,973 rubrics, 9,850 entities.
+  \item \textbf{Test Set} (benchmark): 1,973 cases, 1,973 rubrics, 9,955 entities.
+\end{itemize}
+
+The 80/10/10 split uses \textbf{stratified deficit-balancing}: each rubric is guaranteed to appear in the validation and test sets, preventing zero-shot evaluation on unseen rubric categories.
+
+\subsection{Label Distribution in Test Set}
+
+\begin{table}[h]
+\caption[Test Set Label Distribution]{7-Dimension Label Distribution in the Held-Out Test Set.}
+\label{tab:labeldist}
+\centering
+\begin{tabular}{llrr}
+\toprule
+\tabhead{Label} & \tabhead{Dimension} & \tabhead{Entity Count} & \tabhead{Percentage} \\
+\midrule
+MENT & Mental/Emotional & 4,630 & 46.5\% \\
+SEN & Sensation & 1,519 & 15.3\% \\
+LOC & Location & 1,272 & 12.8\% \\
+MOD\_AGG & Aggravation & 803 & 8.1\% \\
+TEMP & Temporal & 941 & 9.5\% \\
+CONC & Concomitant & 686 & 6.9\% \\
+MOD\_AMEL & Amelioration & 104 & 1.0\% \\
+\midrule
+\textbf{Total} & & \textbf{9,955} & 100\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The class imbalance (MENT 46.5\% vs MOD\_AMEL 1.0\%) reflects the clinical distribution of MIND chapter symptoms, where mental/emotional entities dominate.
+
+%----------------------------------------------------------------------------------------
+
+\section{Hardware Infrastructure}
+
+All model training and evaluation experiments were conducted on the following hardware, accessed via IIIT Allahabad's research computing infrastructure:
+
+\begin{table}[h]
+\caption[Hardware Specification]{Experimental Hardware Specification.}
+\label{tab:hardware}
+\centering
+\begin{tabular}{ll}
+\toprule
+\tabhead{Component} & \tabhead{Specification} \\
+\midrule
+GPU & NVIDIA RTX 5000 Ada Generation \\
+VRAM & 32 GB GDDR6 ECC \\
+CUDA Version & 12.4 \\
+PyTorch Version & 2.6.0 \\
+CPU & Intel Xeon (64-core) \\
+RAM & 128 GB DDR5 ECC \\
+Storage & 2 TB NVMe SSD \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Total GPU runtime for all experiments (synthetic data generation + 4 encoder fine-tunings + 2 LLM QLoRA fine-tunings): approximately 48 hours.
+
+%----------------------------------------------------------------------------------------
+
+\section{Evaluation Metrics}
+
+\subsection{Token-Level BIO F1 (Primary NER Metric)}
+
+Token-Level BIO F1 is computed using the \textbf{seqeval} library \cite{seqeval2018} with the strict IoB2 evaluation protocol:
+\begin{itemize}
+  \item A predicted entity span is correct if and only if its start position, end position, and label all exactly match the ground truth annotation.
+  \item Partial overlaps are penalized as false positives and false negatives.
+\end{itemize}
+
+Precision, Recall, and F1 are computed macro-averaged across all 7 dimension labels:
+
+\begin{equation}
+F1 = \frac{2 \times \text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}}
+\label{eq:f1}
+\end{equation}
+
+\subsection{ChromaDB Retrieval Metrics}
+
+Dense retrieval performance is measured at multiple cutoffs:
+\begin{itemize}
+  \item \textbf{Recall@K}: The fraction of test cases where the ground-truth rubric appears in the top-$K$ retrieved results, for $K \in \{1, 5, 10, 20\}$.
+  \item \textbf{Mean Reciprocal Rank (MRR)}: The mean of the reciprocal rank of the first relevant rubric across all test queries.
+\end{itemize}
+
+\begin{equation}
+\text{MRR} = \frac{1}{|Q|} \sum_{q=1}^{|Q|} \frac{1}{\text{rank}_q}
+\label{eq:mrr}
+\end{equation}
+
+\subsection{Downstream Repertorization Accuracy}
+
+Simillimum Remedy Accuracy measures whether the ground-truth remedy (the rubric's primary indicated remedy) appears in the Top-$K$ ranked candidates after the full pipeline (NER + retrieval + ranking):
+\begin{itemize}
+  \item \textbf{Simillimum Accuracy@1}: Top-1 Accuracy.
+  \item \textbf{Simillimum Accuracy@3}: Top-3 Accuracy.
+  \item \textbf{Simillimum Accuracy@5}: Top-5 Accuracy.
+\end{itemize}
+
+\subsection{LLM-Specific Metrics (BioMistral / Qwen)}
+
+For the QLoRA-fine-tuned LLMs, two additional metrics characterize output quality:
+\begin{itemize}
+  \item \textbf{JSON Schema Validity Rate}: Percentage of model outputs that parse as valid JSON conforming to the \code{SymptomProfile} schema.
+  \item \textbf{Clinical Grounding Rate}: Percentage of extracted entity strings that exist as verbatim substrings of the input patient narrative (hallucination detection).
+\end{itemize}
+
+%----------------------------------------------------------------------------------------
+
+\section{Experimental Protocols}
+
+\subsection{Reproducibility Controls}
+
+To ensure reproducibility across all experiments:
+\begin{itemize}
+  \item Random seeds: \code{np.random.seed(42)}, \code{torch.manual\_seed(42)}, \code{random.seed(42)}.
+  \item Deterministic CUDA operations: \code{torch.backends.cudnn.deterministic = True}.
+  \item All hyperparameters frozen in \code{configs/model.yaml} and \code{configs/generation.yaml}.
+  \item Identical tokenizer (AutoTokenizer from each model's official checkpoint) for all experiments.
+\end{itemize}
+
+\subsection{Evaluation Protocol for ChromaDB Retrieval}
+
+For retrieval evaluation, extracted entity spans from each NER model are used to formulate ChromaDB query strings:
+\begin{enumerate}
+  \item Each extracted entity span is embedded using \texttt{all-MiniLM-L6-v2}.
+  \item Top-20 rubrics retrieved per entity span.
+  \item Retrieved rubric sets pooled across all entities from the same case.
+  \item Ground-truth rubric (the rubric used to generate the synthetic case) checked against pooled retrieved set at each cutoff $K$.
+\end{enumerate}
+
+\textbf{DeBERTa-v3 Special Protocol}: DeBERTa-v3's BIO F1 on the test set was 0.00\% (failure to converge on the BIO labeling task due to domain gap). Its retrieval metrics were therefore evaluated by directly embedding the full patient narrative as a single query string against ChromaDB, bypassing the NER stage --- constituting a ``dense narrative retrieval'' mode that bypasses entity extraction.
+
+\subsection{Statistical Reporting}
+
+All reported metrics are computed on the full held-out test set ($N = 1,973$ cases) without cross-validation averaging, as the test set is sufficiently large for stable metric estimates. No significance testing is applied, as the benchmark is designed for comparative reporting rather than hypothesis testing.
