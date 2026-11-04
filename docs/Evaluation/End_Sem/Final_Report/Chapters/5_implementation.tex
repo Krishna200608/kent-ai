@@ -173,3 +173,4 @@ class NumberedCanvas(canvas.Canvas):
 \subsection{Challenge 5: Session State Volatility in Streamlit Workstation}
 \textbf{Problem}: Streamlit executes the entire script on every user interaction, causing widget state resets, repeated model inferences, and dialogue history loss.  
 \textbf{Solution}: We established a \textbf{strict session state architecture} in \texttt{src/dashboard/app.py}. All case data is bound to an immutable \texttt{ClinicalCase} dataclass persisted in \texttt{st.session\_state["current\_case"]}, with an embedded SQLite database (\texttt{cases.sqlite}) providing disk-level persistence across browser refreshes and session restarts.
+
