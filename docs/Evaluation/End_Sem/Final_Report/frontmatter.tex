@@ -42,11 +42,13 @@
 \textsc{\Large \deptname}\\
 
 \vspace{15mm}
+\ifXeTeX
 \begin{hindi}
   {\Large\textsc{
       भारतीय सूचना प्रौद्योगिकी संस्थान, इलाहाबाद
   }}
 \end{hindi} \\[3mm]
+\fi
 \textsc{\Large \univname}
 
 \vspace{5mm}
@@ -73,12 +75,22 @@
 \noindent It is certified that the work contained in the project report titled \enquote{\ttitle} by {\studentnamescomma} has been carried out under my supervision and that this work has not been submitted elsewhere for a degree.
 
 \vspace{3.5cm}
-\hfill\begin{minipage}{7.5cm}
+\noindent
+\begin{minipage}[t]{0.45\textwidth}
   \begin{spacing}{1.2}
-    \par
     \rule{\textwidth}{0.2pt}\\
-    {\supname} \par
+    \textbf{\supname} \par
+    Supervisor / Guide \par
     Assistant Professor \par
+    {\deptname} \par
+    IIIT Allahabad \par
+  \end{spacing}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.45\textwidth}
+  \begin{spacing}{1.2}
+    \rule{\textwidth}{0.2pt}\\
+    \textbf{Head of Department} \par
     {\deptname} \par
     IIIT Allahabad \par
   \end{spacing}
@@ -229,3 +241,4 @@ Finally, we thank our families and friends for their patience, support, and enco
 %----------------------------------------------------------------------------------------
 
 \dedicatory{To the practitioners of classical homeopathy worldwide who dedicate their lives to the art and science of healing, and to the patients who place their trust in them.}
+

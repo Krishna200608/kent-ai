@@ -1,0 +1,175 @@
+% Chapter 5 — Implementation
+
+\chapter{Implementation}
+\label{Chapter5}
+
+This chapter details the technical implementation of Kent-AI. It provides a module-by-module walkthrough of the codebase, presents key code snippets implementing core algorithms, details the model training pipelines, and documents five major engineering challenges encountered during development along with their verified solutions.
+
+%----------------------------------------------------------------------------------------
+
+\section{Module-by-Module Walkthrough}
+
+The system implementation is organized across eight modular subsystems within the \texttt{src/} package:
+
+\subsection{1. Synthetic Data Generation and BIO Alignment (\texttt{src/data/})}
+\begin{itemize}
+  \item \textbf{\texttt{case\_generator.py}}: Orchestrates synthetic case generation using the LLaMA 3 8B model via the Ollama HTTP REST API. Includes a deterministic mock generator (\texttt{--mock}) for continuous integration testing.
+  \item \textbf{\texttt{bio\_tagger.py}}: Implements tokenization, BIO label generation, and the subword alignment repair algorithm that eliminates character offset drift.
+  \item \textbf{\texttt{splitter.py}}: Implements stratified deficit-balancing to partition the 19,732 cases into 80/10/10 train/val/test splits, guaranteeing that every rubric is represented in evaluation splits.
+  \item \textbf{\texttt{kent\_db.py}}: Provides high-performance SQLite data access layers (DAL) with connection pooling and cached prepared statements for querying rubrics, remedies, and cross-references.
+\end{itemize}
+
+\subsection{2. Multi-Encoder Sequence Labeling Models (\texttt{src/models/})}
+\begin{itemize}
+  \item \textbf{\texttt{symptom\_ner.py}}: Encapsulates HuggingFace \texttt{AutoModelForTokenClassification} behind a clean interface. Converts subword token predictions back into word-level character spans with associated clinical dimensions.
+  \item \textbf{\texttt{trainer.py}}: Encapsulates the PyTorch training loop with mixed-precision FP16, AdamW optimizer, linear warmup scheduler, SeqEval F1 validation callbacks, and early stopping.
+\end{itemize}
+
+\subsection{3. QLoRA Large Language Model Fine-Tuning}
+\begin{itemize}
+  \item \textbf{\texttt{llm\_dataset.py}}: Formats synthetic clinical cases into instruction-following prompt templates with structured JSON target outputs.
+  \item \textbf{\texttt{scripts/train\_llm\_qlora.py}}: Executes 4-bit NormalFloat (NF4) quantized fine-tuning using BitsAndBytes and HuggingFace PEFT on BioMistral 7B and Qwen 2.5 7B.
+\end{itemize}
+
+\subsection{4. Dense Vector Semantic Retrieval (\texttt{src/search/})}
+\begin{itemize}
+  \item \textbf{\texttt{embedder.py}}: Wraps \texttt{sentence-transformers/all-MiniLM-L6-v2}. Employs lazy model loading and produces 384-dimensional L2 unit-normalized dense vectors.
+  \item \textbf{\texttt{vector\_store.py}}: Manages the persistent ChromaDB collection. Configures the HNSW index with cosine distance metric, batch upserts vectors in chunks of 256, and executes metadata-filtered queries.
+\end{itemize}
+
+\subsection{5. Multi-Model Ensemble and Hybrid Pipeline}
+\begin{itemize}
+  \item \textbf{\texttt{ensemble.py}}: Implements Algorithm \ref{alg:ensemble} (weighted majority voting and span clustering across BioLinkBERT, PubMedBERT, Bio\_ClinicalBERT, and DeBERTa-v3).
+  \item \textbf{\texttt{hybrid\_pipeline.py}}: Combines the 4-model ensemble (as a candidate span miner) with a local LLaMA 3.1 LLM arbitrator to resolve label ambiguities and enforce JSON schema compliance.
+\end{itemize}
+
+\subsection{6. Conversational Dialogue Engine (\texttt{src/chatbot/})}
+\begin{itemize}
+  \item \textbf{\texttt{state\_machine.py}}: Implements the 10-state clinical intake finite state machine with automatic transition logic, adaptive slot skipping, and explicit symptom denial tracking.
+  \item \textbf{\texttt{dialogue\_manager.py}}: Manages consultation turn history, coordinates slot extraction, interacts with Ollama for prompt-driven generation, and handles undo/resume actions.
+  \item \textbf{\texttt{suggestions.py}}: Classifies physician/patient query intent and streams dynamic quick-reply suggestion chips.
+\end{itemize}
+
+\subsection{7. Remedy Totality Ranker and Orchestration (\texttt{src/pipeline/})}
+\begin{itemize}
+  \item \textbf{\texttt{ranker.py}}: Computes the mathematical totality score (Equation \ref{eq:totality_exact}) across active rubrics, constructing the complete remedies $\times$ rubrics grid.
+  \item \textbf{\texttt{orchestrator.py}}: Coordinates the end-to-end pipeline from conversation transcript to final clinical report.
+\end{itemize}
+
+\subsection{8. Streamlit Clinical Workstation (\texttt{src/dashboard/})}
+\begin{itemize}
+  \item \textbf{\texttt{app.py}}: Main Streamlit portal with 6 navigation tabs and the 4-step consultation stepper.
+  \item \textbf{\texttt{pdf\_exporter.py}}: Generates professional clinical reports using ReportLab Flowables, custom table styles, and Matplotlib visualizations.
+  \item \textbf{\texttt{totality\_grid.py}}: Renders the interactive Repertory Totality Matrix with Mute/Eliminatory controls.
+\end{itemize}
+
+%----------------------------------------------------------------------------------------
+
+\section{Key Code Snippets}
+
+\subsection{Snippet 1: Subword-to-Character Offset Alignment Repair}
+When tokenizers divide words into subword pieces (e.g., \textit{``headache''} $\to$ \textit{``head''}, \textit{``\#\#ache''}), character offsets can drift. The following logic in \texttt{bio\_tagger.py} resolves boundary misalignment:
+
+\begin{lstlisting}[style=python, caption={Subword Offset Alignment Repair Algorithm}]
+def align_tokens_to_spans(tokens: list[str], text: str, entities: list[dict]) -> list[str]:
+    """Aligns token sequence to character spans with zero offset drift."""
+    bio_tags = ["O"] * len(tokens)
+    curr_char = 0
+    token_spans = []
+    
+    for token in tokens:
+        clean = token.replace("##", "")
+        start = text.find(clean, curr_char)
+        end = start + len(clean) if start != -1 else curr_char
+        token_spans.append((start, end))
+        curr_char = max(curr_char, end)
+        
+    for ent in entities:
+        e_start, e_end, label = ent["start"], ent["end"], ent["label"]
+        first_token = True
+        for idx, (t_start, t_end) in enumerate(token_spans):
+            if t_start >= e_start and t_end <= e_end:
+                tag = f"B-{label}" if first_token else f"I-{label}"
+                bio_tags[idx] = tag
+                first_token = False
+    return bio_tags
+\end{lstlisting}
+
+\subsection{Snippet 2: Weighted IoU Span Clustering}
+The core consensus logic of the 4-model ensemble in \texttt{ensemble.py}:
+
+\begin{lstlisting}[style=python, caption={Span Clustering via Intersection-over-Union}]
+def cluster_spans(spans: list[Span], iou_threshold: float = 0.5) -> list[list[Span]]:
+    """Groups overlapping entity spans from multiple models using IoU."""
+    clusters = []
+    for span in sorted(spans, key=lambda s: s.start):
+        assigned = False
+        for cluster in clusters:
+            c_start = min(s.start for s in cluster)
+            c_end = max(s.end for s in cluster)
+            intersection = max(0, min(span.end, c_end) - max(span.start, c_start))
+            union = max(span.end, c_end) - min(span.start, c_start)
+            if union > 0 and (intersection / union) >= iou_threshold:
+                cluster.append(span)
+                assigned = True
+                break
+        if not assigned:
+            clusters.append([span])
+    return clusters
+\end{lstlisting}
+
+\subsection{Snippet 3: NumberedCanvas for Two-Pass PDF Generation}
+ReportLab does not know the total page count on the first rendering pass. The \texttt{NumberedCanvas} subclass in \texttt{pdf\_exporter.py} intercepts page drawing and writes ``Page X of Y'' headers and footers on the second pass:
+
+\begin{lstlisting}[style=python, caption={Two-Pass Running Header/Footer Canvas in ReportLab}]
+class NumberedCanvas(canvas.Canvas):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._saved_page_states = []
+
+    def showPage(self):
+        self._saved_page_states.append(dict(self.__dict__))
+        self._startPage()
+
+    def save(self):
+        num_pages = len(self._saved_page_states)
+        for state in self._saved_page_states:
+            self.__dict__.update(state)
+            self.draw_header_footer(num_pages)
+            super().showPage()
+        super().save()
+
+    def draw_header_footer(self, total_pages: int):
+        self.saveState()
+        self.setFont("Helvetica", 9)
+        self.setFillColor(colors.HexColor("#64748B"))
+        # Running footer
+        footer_text = f"Page {self._pageNumber} of {total_pages}"
+        self.drawRightString(200 * mm, 12 * mm, footer_text)
+        self.drawString(15 * mm, 12 * mm, "Kent-AI Clinical Decision Support | Confidential")
+        self.restoreState()
+\end{lstlisting}
+
+%----------------------------------------------------------------------------------------
+
+\section{Technical Challenges and Solutions}
+
+\subsection{Challenge 1: Character Offset Drift in LLM-Generated Annotations}
+\textbf{Problem}: When large language models generate entity character start and end indices directly, they frequently exhibit small counting errors ($\pm 1$--3 characters) due to subword tokenization boundaries, producing corrupted span references.  
+\textbf{Solution}: We designed the \texttt{bio\_tagger.py} subword alignment repair module (Snippet 1). The generator outputs raw entity text strings, and the Python-side tagger deterministically matches them against the source narrative using exact substring index search and expands them to whole-token boundaries, achieving \textbf{zero offset drift across 99,854 entities}.
+
+\subsection{Challenge 2: Domain Vocabulary Fragmentation in ClinicalBERT}
+\textbf{Problem}: Bio\_ClinicalBERT was pre-trained on MIMIC-III ICU notes. When applied to classical homeopathic symptom descriptions (e.g., \textit{``grief'', ``forsaken'', ``scanty'', ``ameliorated''}), its tokenizer broke words into fine-grained fragments, degrading token-level BIO classification to 33.40\% F1.  
+\textbf{Solution}: We adopted PubMedBERT, which was pre-trained from scratch on biomedical literature with a domain-specific vocabulary. PubMedBERT represents descriptive clinical concepts with significantly fewer fragments, yielding a \textbf{+4.03\% improvement in anatomical location extraction (LOC)}.
+
+\subsection{Challenge 3: GPU Memory Saturation During 7B LLM Fine-Tuning}
+\textbf{Problem}: Fine-tuning a 7-billion-parameter model with full 16-bit weights requires over 28 GB of VRAM solely for model parameters, leaving insufficient memory for activations and optimizer states during training on a 32GB GPU.  
+\textbf{Solution}: We implemented \textbf{4-bit NormalFloat (NF4) QLoRA} with double quantization and paged optimizers via BitsAndBytes. Trainable parameters were restricted to rank-16 low-rank adapter matrices (78--81MB), reducing peak training VRAM to \textbf{under 14 GB} and enabling 100\% local fine-tuning on the institutional NVIDIA RTX 5000 Ada GPU.
+
+\subsection{Challenge 4: Lexical Divergence Between Patient Language and Repertory}
+\textbf{Problem}: Patients express distress metaphorically (\textit{``feels like a tight band around my temples''}), whereas Kent's 1897 repertory stores rigid taxonomic phrasing (\texttt{HEAD > PAIN > band or hoop, as from a}). Keyword search fails completely.  
+\textbf{Solution}: We constructed a 384-dimensional dense semantic vector index over all 74,513 rubrics using \texttt{all-MiniLM-L6-v2} and ChromaDB HNSW cosine similarity. The dense representation projects colloquial metaphors and taxonomic entries into a shared semantic latent space, achieving \textbf{41.56\% Top-20 recall and $<$18ms retrieval latency}.
+
+\subsection{Challenge 5: Session State Volatility in Streamlit Workstation}
+\textbf{Problem}: Streamlit executes the entire script on every user interaction, causing widget state resets, repeated model inferences, and dialogue history loss.  
+\textbf{Solution}: We established a \textbf{strict session state architecture} in \texttt{src/dashboard/app.py}. All case data is bound to an immutable \texttt{ClinicalCase} dataclass persisted in \texttt{st.session\_state["current\_case"]}, with an embedded SQLite database (\texttt{cases.sqlite}) providing disk-level persistence across browser refreshes and session restarts.

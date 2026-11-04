@@ -19,22 +19,26 @@ This directory contains the complete LaTeX source for the **Kent-AI B.Tech Final
 Final_Report/
 ├── main.tex                    # Root LaTeX file (compile this)
 ├── frontmatter.tex             # Title page, certificate, declaration, abstract, acknowledgements
-├── references.bib              # BibLaTeX bibliography (30+ references)
-├── Thesis.cls                  # IIIT Allahabad thesis class file
+├── references.bib              # BibLaTeX bibliography (31 references)
+├── Thesis.cls                  # IIIT Allahabad thesis class file (engine-adaptive)
 ├── Chapters/
 │   ├── 1_introduction.tex      # Chapter 1: Introduction & Motivation
-│   ├── 2_literature.tex        # Chapter 2: Literature Review
-│   ├── 3_system_design.tex     # Chapter 3: System Design & Architecture
-│   ├── 4_implementation.tex    # Chapter 4: Implementation
-│   ├── 5_experiments.tex       # Chapter 5: Experimental Setup
-│   ├── 6_results.tex           # Chapter 6: Results & Analysis
-│   └── 7_conclusion.tex        # Chapter 7: Conclusion & Future Work
+│   ├── 2_literature.tex        # Chapter 2: Literature Review (with Comparison Table)
+│   ├── 3_system_analysis.tex   # Chapter 3: System Analysis and Requirements
+│   ├── 4_system_design.tex     # Chapter 4: System Design (DFDs, ER, UML, Algorithms, Wireframes)
+│   ├── 5_implementation.tex    # Chapter 5: Implementation (Walkthrough, Code, Challenges)
+│   ├── 6_testing_results.tex   # Chapter 6: Testing and Results (Test Cases, Screenshots, Benchmarks)
+│   └── 7_conclusion.tex        # Chapter 7: Conclusion and Future Scope (Objectives vs Outcomes)
 ├── Appendices/
-│   ├── AppendixA.tex           # 7-Dimension BIO Label Schema & Examples
-│   └── AppendixB.tex           # Installation & Deployment Guide
+│   ├── AppendixA.tex           # Appendix A: 7-Dimension BIO Label Schema & Examples
+│   ├── AppendixB.tex           # Appendix B: Installation & GPU Deployment Guide
+│   └── AppendixC.tex           # Appendix C: Complete 195 Automated Test Suite Matrix
 └── Figures/
     ├── IIITA_Logo.png          # IIIT Allahabad logo (title page)
-    └── IIITA_Header.png        # IIIT Allahabad header (certificate, declaration)
+    ├── IIITA_Header.png        # IIIT Allahabad header (certificate, declaration)
+    ├── dashboard_full.jpg      # Full clinical workstation screenshot (Step 1 Intake)
+    ├── chat_suggestions.png    # Dynamic suggestion chips screenshot
+    └── intake_progress.png     # FSM intake stepper & persona screenshot
 ```
 
 ## Compilation Instructions
@@ -70,25 +74,26 @@ The final compiled PDF will be at `main.pdf`.
 ### Using Overleaf (Recommended)
 
 1. Zip this entire `Final_Report/` directory.
-2. Upload to [https://overleaf.com](https://overleaf.com) as a new project.
-3. Set compiler to **pdfLaTeX** and bibliography tool to **Biber**.
-4. Click **Compile** — Overleaf handles all passes automatically.
-
-> **Note**: The `Thesis.cls` class file uses the `hindi` environment for the IIIT Allahabad Hindi text on the title page. If your LaTeX distribution does not support Hindi, comment out the `\begin{hindi}...\end{hindi}` block in `frontmatter.tex`.
+2. Upload the zip to [https://overleaf.com](https://overleaf.com) via **New Project $\to$ Upload Project**.
+3. Overleaf Settings:
+   - **Compiler**: Either **pdfLaTeX** (default) or **XeLaTeX** (for full Devanagari Hindi font support). `Thesis.cls` is engine-adaptive and compiles cleanly under both.
+   - **TeX Live version**: 2024 or latest.
+4. Click **Recompile** — Overleaf handles all biblatex/biber and document passes automatically.
 
 ## Report Structure Summary
 
-| Chapter | Title | Pages (est.) |
+| Chapter | Title | Key Contents |
 |---|---|---|
-| Frontmatter | Title, Certificate, Declaration, Abstract, Acknowledgements, TOC | 10 |
-| Chapter 1 | Introduction | 8 |
-| Chapter 2 | Literature Review | 7 |
-| Chapter 3 | System Design & Architecture | 10 |
-| Chapter 4 | Implementation | 10 |
-| Chapter 5 | Experimental Setup | 6 |
-| Chapter 6 | Results & Analysis | 10 |
-| Chapter 7 | Conclusion & Future Work | 7 |
-| Appendix A | BIO Label Schema | 4 |
-| Appendix B | Installation Guide | 3 |
-| References | Bibliography | 4 |
-| **Total** | | **~79 pages** |
+| Frontmatter | Title, Certificate (Guide \& HOD), Declaration, Abstract, Acknowledgements, TOC | Official IIITA pre-content pages |
+| Chapter 1 | Introduction | Background, Problem Statement, Objectives (O1--O7), Scope, Contributions |
+| Chapter 2 | Literature Review | Biomedical PLMs, Clinical NER, Dense Retrieval, LLMs, Critical Comparison Table |
+| Chapter 3 | System Analysis and Requirements | Functional (FR1--FR8), Non-Functional (NFR1--NFR5), Feasibility, Tech Justification |
+| Chapter 4 | System Design | 6-Tier Architecture, DFD (Levels 0, 1, 2), ER Schemas, UML (Use Case, Class, Sequence), Algorithms, UI Wireframes |
+| Chapter 5 | Implementation | 8 Module Walkthroughs, Code Snippets (Subword repair, IoU clustering, NumberedCanvas), 5 Challenges \& Solutions |
+| Chapter 6 | Testing and Results | 4-Tier Test Plan, Test Cases (Expected vs Actual), Workstation Screenshots, Master Comparative Benchmark, Latency |
+| Chapter 7 | Conclusion and Future Scope | Audit of Achievements vs Objectives (O1--O7), Limitations, Near/Medium/Long-term Roadmap |
+| Appendix A | BIO Label Schema | Complete 15-Class BIO Label Definitions with 3 Clinical Examples |
+| Appendix B | Installation Guide | Local, Virtualenv, Ollama, ChromaDB, and GPU Server Deployment Instructions |
+| Appendix C | Test Suite Verification | Verification Inventory of all 195 Automated Tests across 22 Modules |
+| References | Bibliography | 31 Authoritative BibLaTeX Entries |
+

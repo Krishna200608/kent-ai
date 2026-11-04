@@ -1,0 +1,375 @@
+% Chapter 4 — System Design
+
+\chapter{System Design}
+\label{Chapter4}
+
+This chapter presents the architectural and structural design of Kent-AI. It details the high-level layered architecture, data flow diagrams (Levels 0, 1, and 2), database schemas and entity-relationship models, UML use case, class, and sequence diagrams, formal algorithmic specifications, and user interface structural wireframes.
+
+%----------------------------------------------------------------------------------------
+
+\section{System Architecture Overview}
+
+Kent-AI is structured into a \textbf{six-tier modular layered architecture}, enforcing strict separation of concerns between patient intake, sequence labeling, clinical reasoning, dense retrieval, mathematical ranking, and user interface presentation.
+
+\begin{figure}[h]
+\centering
+\begin{minipage}{0.95\textwidth}
+\small
+\begin{verbatim}
++=========================================================================+
+|                    LAYER 6: PRESENTATION & WORKSTATION                  |
+|  Streamlit Doctor-in-the-Loop GUI | ReportLab Multi-Page PDF Exporter  |
+|  4-Step Stepper (Intake->Review->Analysis->Report) | Totality Matrix    |
++=========================================================================+
+                                    |
+                                    v
++=========================================================================+
+|                   LAYER 5: ORCHESTRATION & PERSISTENCE                  |
+|  PipelineOrchestrator | CaseStore (cases.sqlite) | Turn History Manager |
++=========================================================================+
+                                    |
+                                    v
++=========================================================================+
+|                     LAYER 4: TOTALLITY RANKING ENGINE                   |
+|  RemedyRanker: Kent 3-Tier Grade Weighting x Similarity x Specificity   |
+|  SQL Association Join on 507,179 rubric_remedies | Dimension Modulators |
++=========================================================================+
+                                    |
+                                    v
++=========================================================================+
+|                    LAYER 3: DENSE RETRIEVAL SUBSYSTEM                   |
+|  ChromaDB HNSW Persistent Cosine Index | 74,513 Rubric Embeddings      |
+|  RubricEmbedder: all-MiniLM-L6-v2 (384-dim unit-normalized vectors)    |
++=========================================================================+
+                                    |
+                                    v
++=========================================================================+
+|                LAYER 2: CLINICAL REASONING & RESOLVER                   |
+|  SymptomResolver: Negation Filtering | Coreference Disambiguation      |
+|  QLoRA BioMistral 7B & Qwen 2.5 7B LLM Arbitration                      |
++=========================================================================+
+                                    |
+                                    v
++=========================================================================+
+|                 LAYER 1: BIOMEDICAL NER ENSEMBLE                        |
+|  BioLinkBERT-Base | PubMedBERT | Bio_ClinicalBERT | DeBERTa-v3         |
+|  4-Model Majority Voting & IoU Span Clustering (15 BIO Token Labels)   |
++=========================================================================+
+                                    |
+                                    v
++=========================================================================+
+|                 LAYER 0: CONVERSATIONAL INTAKE FSM                      |
+|  10-State Intake FSM | Dynamic Suggestion Chips | Dialogue Manager     |
++=========================================================================+
+\end{verbatim}
+\end{minipage}
+\caption[Kent-AI Six-Tier Layered Architecture]{Kent-AI Six-Tier Layered Architecture.}
+\label{fig:six_tier_arch}
+\end{figure}
+
+%----------------------------------------------------------------------------------------
+
+\section{Data Flow Diagrams}
+
+\subsection{Level 0: Context Diagram}
+At the highest abstraction level, Kent-AI interfaces with three primary entities: the Patient (who provides natural language symptom descriptions), the Clinician (who reviews, modifies, and validates clinical findings), and the Local Repository Knowledge Base (storing the digitized 1897 Repertory).
+
+\begin{figure}[h]
+\centering
+\begin{minipage}{0.9\textwidth}
+\small
+\begin{verbatim}
+                     +---------------------------------+
+                     |             PATIENT             |
+                     +---------------------------------+
+                               |              ^
+              Symptom Narrative|              | Guided Questions &
+                               v              | Suggestion Chips
+                     +---------------------------------+
+                     |                                 |
+                     |             KENT-AI             |
+                     |         CLINICAL SYSTEM         |
+                     |                                 |
+                     +---------------------------------+
+                               |              ^
+                 Ranked Report |              | Verified Totality
+                 & PDF Preview |              | & Remedy Selections
+                               v              |
+                     +---------------------------------+
+                     |            CLINICIAN            |
+                     +---------------------------------+
+\end{verbatim}
+\end{minipage}
+\caption[DFD Level 0 Context Diagram]{Data Flow Diagram (Level 0) --- Context Diagram.}
+\label{fig:dfd0}
+\end{figure}
+
+\subsection{Level 1: Subsystem Data Flow}
+Figure \ref{fig:dfd1} decomposes the system into its five principal processing sub-processes:
+
+\begin{figure}[h]
+\centering
+\begin{minipage}{0.95\textwidth}
+\scriptsize
+\begin{verbatim}
+Patient Narrative
+       |
+       v
++--------------+    Raw Spans     +--------------+  Resolved Entities +--------------+
+| 1.0 Intake   |----------------->| 2.0 Clinical |------------------->| 3.0 Dense    |
+| Conversation |                  | NER Ensemble |                    | Rubric Search|
++--------------+                  +--------------+                    +--------------+
+       |                                                                      |
+       v Transcripts                                                          v Candidate Rubrics
++--------------+                                                      +--------------+
+| 5.0 Case     |<-----------------------------------------------------| 4.0 Totality |
+| Persistence  |                    Final Repertorization Report      | Remedy Ranker|
++--------------+                                                      +--------------+
+\end{verbatim}
+\end{minipage}
+\caption[DFD Level 1 Subsystem Flow]{Data Flow Diagram (Level 1) --- Subsystem Decomposition.}
+\label{fig:dfd1}
+\end{figure}
+
+\subsection{Level 2: Retrieval and Repertorization Flow}
+In Level 2, an extracted symptom triplet $[d, \text{text}, \text{context}]$ is transformed into an embedding query $\mathbf{q} \in \mathbb{R}^{384}$. The vector store computes cosine similarities against HNSW graph vertices:
+$$\cos(\mathbf{q}, \mathbf{r}_i) = \frac{\mathbf{q} \cdot \mathbf{r}_i}{\|\mathbf{q}\|_2 \|\mathbf{r}_i\|_2}$$
+The top-20 nearest rubrics are retrieved, filtered by section constraints, and joined in SQLite against \texttt{rubric\_remedies} to fetch candidate remedies and their respective bibliographic grades (1, 2, or 3).
+
+%----------------------------------------------------------------------------------------
+
+\section{Database Schema and Entity-Relationship Design}
+
+Kent-AI uses two separate SQLite databases to decouple static reference knowledge from dynamic patient session data.
+
+\subsection{Repertory Knowledge Base (\texttt{repertory.sqlite})}
+The static repertory database encodes Kent's 1897 taxonomic structure:
+
+\begin{table}[h]
+\caption[Repertory Database Schema]{Repertory Database (\texttt{repertory.sqlite}) Schema.}
+\label{tab:repertory_schema}
+\centering
+\small
+\begin{tabular}{lllp{5.5cm}}
+\toprule
+\tabhead{Table} & \tabhead{Column} & \tabhead{Type} & \tabhead{Description / Constraints} \\
+\midrule
+\multirow{4}{*}{\texttt{sections}} & \texttt{id} & INTEGER & Primary Key (1 to 37) \\
+ & \texttt{code} & TEXT & Short code (e.g., \texttt{MIND}, \texttt{VERT}, \texttt{HEAD}) \\
+ & \texttt{name} & TEXT & Full anatomical section title \\
+ & \texttt{rubric\_count} & INTEGER & Total rubrics in section \\
+\midrule
+\multirow{5}{*}{\texttt{rubrics}} & \texttt{id} & INTEGER & Primary Key \\
+ & \texttt{section\_id} & INTEGER & Foreign Key $\to$ \texttt{sections.id} \\
+ & \texttt{full\_path} & TEXT & Hierarchical breadcrumb \\
+ & \texttt{leaf\_text} & TEXT & Terminal leaf symptom text \\
+ & \texttt{remedy\_count} & INTEGER & Number of associated remedies \\
+\midrule
+\multirow{3}{*}{\texttt{remedies}} & \texttt{id} & INTEGER & Primary Key \\
+ & \texttt{abbrev} & TEXT & Standard repertory short code (e.g., \texttt{phos}) \\
+ & \texttt{full\_name} & TEXT & Full botanical/zoological Latin name \\
+\midrule
+\multirow{4}{*}{\texttt{rubric\_remedies}} & \texttt{rubric\_id} & INTEGER & Foreign Key $\to$ \texttt{rubrics.id} \\
+ & \texttt{remedy\_id} & INTEGER & Foreign Key $\to$ \texttt{remedies.id} \\
+ & \texttt{grade} & INTEGER & Bibliographic Grade (3=Bold, 2=Italic, 1=Roman) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Clinical Case Store (\texttt{cases.sqlite})}
+The dynamic consultation store persists clinical consultations:
+
+\begin{table}[h]
+\caption[Case Store Schema]{Clinical Case Store (\texttt{cases.sqlite}) Schema.}
+\label{tab:cases_schema}
+\centering
+\small
+\begin{tabular}{lllp{5.5cm}}
+\toprule
+\tabhead{Table} & \tabhead{Column} & \tabhead{Type} & \tabhead{Description / Constraints} \\
+\midrule
+\multirow{5}{*}{\texttt{cases}} & \texttt{case\_id} & TEXT & Primary Key (UUID4) \\
+ & \texttt{patient\_name} & TEXT & Anonymized patient identifier \\
+ & \texttt{chief\_complaint} & TEXT & Primary patient narrative \\
+ & \texttt{status} & TEXT & \texttt{Draft}, \texttt{Reviewed}, \texttt{Completed} \\
+ & \texttt{created\_at} & TIMESTAMP & Creation timestamp \\
+\midrule
+\multirow{4}{*}{\texttt{turns}} & \texttt{turn\_id} & INTEGER & Primary Key (Auto-increment) \\
+ & \texttt{case\_id} & TEXT & Foreign Key $\to$ \texttt{cases.case\_id} \\
+ & \texttt{speaker} & TEXT & \texttt{user} or \texttt{assistant} \\
+ & \texttt{text} & TEXT & Utterance text content \\
+\midrule
+\multirow{5}{*}{\texttt{totality\_items}} & \texttt{id} & INTEGER & Primary Key \\
+ & \texttt{case\_id} & TEXT & Foreign Key $\to$ \texttt{cases.case\_id} \\
+ & \texttt{rubric\_id} & INTEGER & Referenced rubric ID \\
+ & \texttt{status} & TEXT & \texttt{active}, \texttt{muted}, \texttt{eliminatory} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%----------------------------------------------------------------------------------------
+
+\section{Unified Modeling Language (UML) Design}
+
+\subsection{UML Use Case Model}
+The system supports two primary actors: the Patient and the Clinician.
+
+\begin{figure}[h]
+\centering
+\begin{minipage}{0.85\textwidth}
+\small
+\begin{verbatim}
+                  +-----------------------------------+
+                  |        KENT-AI SYSTEM BOUNDARY    |
+                  |                                   |
+(Patient) ------->| (UC1: Engage in Guided Intake)    |
+                  | (UC2: Provide Free-form Symptoms) |
+                  |                                   |
+(Clinician) ----->| (UC3: Review Extracted Entities)  |
+                  | (UC4: Modify Rubric Totality)     |
+                  | (UC5: Toggle Eliminatory Filters) |
+                  | (UC6: Inspect Remedy Keynotes)    |
+                  | (UC7: Export Clinical PDF)        |
+                  | (UC8: Manage Case Library)        |
+                  +-----------------------------------+
+\end{verbatim}
+\end{minipage}
+\caption[UML Use Case Diagram]{UML Use Case Diagram for Patient and Clinician Workflows.}
+\label{fig:usecase}
+\end{figure}
+
+\subsection{UML Class Diagram}
+The domain architecture is anchored around the immutable \texttt{ClinicalCase} dataclass, interacting with decoupled service modules:
+
+\begin{figure}[h]
+\centering
+\begin{minipage}{0.95\textwidth}
+\scriptsize
+\begin{verbatim}
++------------------------------------+          +------------------------------------+
+|            ClinicalCase            |          |           SymptomProfile           |
++------------------------------------+          +------------------------------------+
+| + case_id: str                     |<>------->| + mental: List[str]                |
+| + patient_name: str                |          | + location: List[str]              |
+| + chief_complaint: str             |          | + sensation: List[str]             |
+| + symptom_profile: SymptomProfile  |          | + modalities_agg: List[str]        |
+| + active_rubric_ids: List[int]     |          | + modalities_amel: List[str]       |
+| + status: str                      |          | + concomitants: List[str]          |
+| + created_at: datetime             |          | + temporal: List[str]              |
++------------------------------------+          +------------------------------------+
+                  ^                                               ^
+                  |                                               |
++------------------------------------+          +------------------------------------+
+|        PipelineOrchestrator        |          |             SymptomNER             |
++------------------------------------+          +------------------------------------+
+| - vector_store: RubricVectorStore  |--------->| + extract_entities(text): List     |
+| - ranker: RemedyRanker             |          | + predict_bio_tags(tokens): List   |
+| + repertorize_case(case): Report   |          +------------------------------------+
++------------------------------------+                            |
+                  |                                               v
+                  v                             +------------------------------------+
++------------------------------------+          |          RubricVectorStore         |
+|            RemedyRanker            |          +------------------------------------+
++------------------------------------+          | - client: chromadb.Client          |
+| + rank_remedies(rubrics): Scores   |          | + search(query, k=20): List[Rubric]|
+| + compute_totality_matrix(): Matrix|          +------------------------------------+
++------------------------------------+
+\end{verbatim}
+\end{minipage}
+\caption[UML Class Diagram]{Core UML Class Diagram illustrating Domain Models and Services.}
+\label{fig:class_diag}
+\end{figure}
+
+\subsection{UML Sequence Diagram}
+Figure \ref{fig:seq_diag} details the interaction sequence during consultation repertorization:
+
+\begin{figure}[h]
+\centering
+\begin{minipage}{0.95\textwidth}
+\scriptsize
+\begin{verbatim}
+Clinician            Workstation UI         Orchestrator            NER Ensemble          ChromaDB           RemedyRanker
+    |                      |                      |                       |                   |                   |
+    |-- Click "Analyze" -->|                      |                       |                   |                   |
+    |                      |-- repertorize(case)->|                       |                   |                   |
+    |                      |                      |-- extract(narrative)->|                   |                   |
+    |                      |                      |<-- entity_spans ------|                   |                   |
+    |                      |                      |-- search_rubrics(entities)--------------->|                   |
+    |                      |                      |<-- candidate_rubrics(Top-20)--------------|                   |
+    |                      |                      |-- compute_scores(rubrics, grades)---------------------------->|
+    |                      |                      |<-- ranked_remedies, totality_matrix---------------------------|
+    |                      |<-- display_report ---|                       |                   |                   |
+    |<-- View Matrix ------|                      |                       |                   |                   |
+\end{verbatim}
+\end{minipage}
+\caption[UML Sequence Diagram]{UML Sequence Diagram for Case Repertorization.}
+\label{fig:seq_diag}
+\end{figure}
+
+%----------------------------------------------------------------------------------------
+
+\section{Algorithms and Flowcharts}
+
+\subsection{Algorithm 1: Weighted Majority Voting with IoU Span Clustering}
+The ensemble reconciles token sequences predicted across multiple fine-tuned models:
+
+\begin{algorithm}[H]
+\caption{Weighted Majority Voting and Span Clustering}
+\label{alg:ensemble}
+\begin{algorithmic}[1]
+\Require Set of model predictions $\mathcal{P} = \{P_1, P_2, \ldots, P_M\}$, threshold $\theta = 0.5$, min votes $V_{\min} = 2$
+\Ensure Clustered, consensus-labeled entity spans $\mathcal{E}^*$
+\State Extract labeled character spans $S_m = \{(s, e, \ell)\}$ from each prediction $P_m$
+\State Initialize empty cluster list $\mathcal{C} \gets \emptyset$
+\For{each span $s_i \in \bigcup S_m$}
+    \State Matched $\gets \text{False}$
+    \For{each cluster $c_k \in \mathcal{C}$}
+        \If{$\text{IoU}(s_i, \text{boundary}(c_k)) \geq \theta$}
+            \State Add $s_i$ to cluster $c_k$; Update $\text{boundary}(c_k)$; Matched $\gets \text{True}$; \textbf{break}
+        \EndIf
+    \EndFor
+    \If{\textbf{not} Matched}
+        \State Create new cluster $c_{\text{new}} \gets \{s_i\}$ in $\mathcal{C}$
+    \EndIf
+\EndFor
+\State $\mathcal{E}^* \gets \emptyset$
+\For{each cluster $c_k \in \mathcal{C}$}
+    \If{$|c_k| \geq V_{\min}$}
+        \State Label $\ell^* \gets \operatorname{argmax}_{\ell} \sum_{s \in c_k, \operatorname{label}(s)=\ell} w_m$
+        \State Start $s^* \gets \operatorname{median}(\{s.\text{start} \mid s \in c_k\})$
+        \State End $e^* \gets \operatorname{median}(\{s.\text{end} \mid s \in c_k\})$
+        \State Add $(s^*, e^*, \ell^*)$ to $\mathcal{E}^*$
+    \EndIf
+\EndFor
+\State \Return $\mathcal{E}^*$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Algorithm 2: Kentian Grade-Weighted Totality Scorer}
+Given a set of active rubrics $\mathcal{R}_{\text{active}}$ and their cosine similarity scores $S(r)$, the score of candidate remedy $R$ is formulated as:
+
+\begin{equation}
+\text{TotalityScore}(R) = \sum_{r \in \mathcal{R}_{\text{active}}} \text{Grade}(R, r) \cdot S(r) \cdot \log\left(\frac{N}{\text{RemedyCount}(r) + 1}\right) \cdot W(\operatorname{Dim}(r))
+\label{eq:totality_exact}
+\end{equation}
+
+where:
+\begin{itemize}
+  \item $\text{Grade}(R, r) \in \{3.0, 2.0, 1.0, 0.0\}$ is Kent's typographic grade (Bold=3, Italic=2, Roman=1, Absent=0).
+  \item $S(r) \in [0, 1]$ is the dense vector cosine similarity score.
+  \item $\log(N / (\text{RemedyCount}(r) + 1))$ is the inverse rubric frequency, awarding higher weights to specific rubrics over generic ones.
+  \item $W(\operatorname{Dim}(r))$ is the Kentian clinical dimension multiplier ($\text{MENT} = 3.0$, $\text{MOD} = 2.0$, $\text{SEN} = 2.0$, $\text{LOC} = 1.0$).
+\end{itemize}
+
+%----------------------------------------------------------------------------------------
+
+\section{User Interface Wireframes and Layouts}
+
+The workstation enforces a structured \textbf{4-step stepper}:
+
+\begin{enumerate}
+  \item \textbf{Step 1 --- Clinical Intake}: 7:3 asymmetric grid. Left 70\%: chat dialogue console with message history and dynamic quick-reply chips. Right 30\%: live Case Snapshot displaying completed symptom slots (0/7 Captured).
+  \item \textbf{Step 2 --- Review and Edit}: Extracted entity spans grouped into the 7 dimensions. Clinician can modify text, adjust boundaries, or delete spurious entities before search execution.
+  \item \textbf{Step 3 --- Analysis and Matrix}: Classical Repertory Totality Matrix (Remedies $\times$ Rubrics) with colour-coded grade badges (Grade 3 in emerald, Grade 2 in cyan, Grade 1 in slate) with per-rubric Mute and Eliminatory toggles.
+  \item \textbf{Step 4 --- Report and Export}: Physician narrative brief, Matplotlib totality score bar chart, and 1-click ReportLab PDF generation.
+\end{enumerate}

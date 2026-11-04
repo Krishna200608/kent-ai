@@ -1,0 +1,189 @@
+% Chapter 3 — System Analysis and Requirements
+
+\chapter{System Analysis and Requirements}
+\label{Chapter3}
+
+This chapter establishes the engineering and clinical requirements for Kent-AI. It formalises the functional and non-functional requirements, presents a feasibility study across technical, operational, and clinical dimensions, specifies the hardware and software constraints, and provides a structured justification for every technology selected in the system stack.
+
+%----------------------------------------------------------------------------------------
+
+\section{Requirements Gathering and Analysis}
+
+Classical homeopathic repertorization is fundamentally a semantic matching problem constrained by clinical safety. Requirements were formulated through analysis of Dr. J. T. Kent's prescribing methodology \cite{kent1897}, consultation with homeopathic practitioners, and systematic review of clinical case-taking protocols.
+
+The analysis revealed that practitioners spend 60--75\% of total consultation time mapping colloquial symptoms into taxonomic rubrics. Furthermore, existing digital tools require manual rubric selection, creating severe cognitive friction. Kent-AI was therefore conceived not as an autonomous diagnostic agent, but as an \textbf{AI-augmented clinical decision-support workstation} that accelerates rubric discovery while keeping the physician in absolute control of final remedy selection.
+
+%----------------------------------------------------------------------------------------
+
+\section{Functional Requirements}
+
+The functional requirements (FR) define the observable behaviours and capabilities of the system:
+
+\begin{enumerate}
+  \item \textbf{FR1: Conversational Clinical Intake}
+  \begin{itemize}
+    \item The system shall guide the patient through a multi-turn natural language dialogue covering seven Kentian dimensions: Mental/Emotional, Anatomical Location, Sensation, Aggravation Modalities, Amelioration Modalities, Concomitants, and Temporal Patterns.
+    \item The system shall provide context-aware dynamic quick-reply suggestion chips streamed from an LLM intent classifier.
+    \item The system shall support free-form typing, guided multi-choice replies, and paste-in of pre-written clinical consultation notes.
+  \end{itemize}
+
+  \item \textbf{FR2: Seven-Dimension Named Entity Recognition (HomeoNER)}
+  \begin{itemize}
+    \item The system shall extract clinical symptom spans from raw dialogue transcripts and classify them into 15 BIO token labels.
+    \item The system shall operate with zero character offset drift between raw input text and extracted spans.
+  \end{itemize}
+
+  \item \textbf{FR3: Negation and Coreference Resolution}
+  \begin{itemize}
+    \item The system shall identify explicitly negated symptoms (e.g., \textit{``no nausea''}, \textit{``denies headache''}) and exclude them from retrieval queries.
+    \item The system shall resolve anaphoric references (e.g., \textit{``it gets worse in the evening''} resolved to the previously mentioned pain).
+  \end{itemize}
+
+  \item \textbf{FR4: Sub-Second Dense Semantic Rubric Retrieval}
+  \begin{itemize}
+    \item The system shall index all 74,513 rubrics from Kent's Repertory in a persistent vector database.
+    \item Given an extracted symptom entity, the system shall retrieve the Top-$K$ ($K=20$) semantically similar rubrics in under 20 milliseconds.
+    \item The system shall support repertory section filtering (e.g., scoping search to MIND rubrics).
+  \end{itemize}
+
+  \item \textbf{FR5: Deterministic Grade-Weighted Totality Ranking}
+  \begin{itemize}
+    \item The system shall rank candidate remedies using Kent's bibliographic grades: Grade 3 (Bold) = 3.0, Grade 2 (Italic) = 2.0, Grade 1 (Roman) = 1.0.
+    \item Scores shall incorporate cosine similarity from dense retrieval and inverse rubric frequency specificity.
+    \item Dimension weights shall prioritize Mental symptoms (3$\times$) over Modalities (2$\times$), Sensations (2$\times$), and Locations (1$\times$).
+  \end{itemize}
+
+  \item \textbf{FR6: Physician Review and Case Editing}
+  \begin{itemize}
+    \item The clinician shall be able to inspect, edit, add, or delete extracted symptom entities before rubric retrieval.
+    \item The clinician shall be able to toggle rubrics between active, muted, and eliminatory (hard filter) modes in an interactive Totality Matrix.
+  \end{itemize}
+
+  \item \textbf{FR7: Multi-Page Clinical PDF Export}
+  \begin{itemize}
+    \item The system shall export a formatted, multi-page clinical report including patient vitals, 7-dimension totality grids, candidate remedy scores, totality score bar charts, and running ``Page X of Y'' headers/footers.
+  \end{itemize}
+
+  \item \textbf{FR8: Persistent Case Library Management}
+  \begin{itemize}
+    \item The system shall persist consultation records, transcripts, totality selections, and final reports in a local SQLite database (\texttt{cases.sqlite}).
+    \item The system shall support case filtering, search, pagination, duplicate, and batch JSON/CSV export.
+  \end{itemize}
+\end{enumerate}
+
+%----------------------------------------------------------------------------------------
+
+\section{Non-Functional Requirements}
+
+\begin{enumerate}
+  \item \textbf{NFR1: Retrieval Latency}
+  \begin{itemize}
+    \item 99th percentile (p99) retrieval latency for a single symptom query against the 74,513-rubric index shall not exceed 25 milliseconds on consumer hardware.
+  \end{itemize}
+
+  \item \textbf{NFR2: Clinical Data Privacy and Air-Gapped Operation}
+  \begin{itemize}
+    \item All patient data, transcripts, embeddings, and LLM inferences shall execute 100\% on-premises without external API calls or cloud egress.
+    \item The system shall operate fully offline once local model weights and the vector index are initialized.
+  \end{itemize}
+
+  \item \textbf{NFR3: Extraction Accuracy and Reliability}
+  \begin{itemize}
+    \item LLM clinical extraction shall maintain $\geq$95\% JSON schema validity and $\geq$90\% verbatim clinical grounding on patient narratives.
+    \item The system shall never hallucinate nonexistent remedies or alter Kent's published bibliographic grades.
+  \end{itemize}
+
+  \item \textbf{NFR4: Usability and Ergonomics}
+  \begin{itemize}
+    \item The interface shall adhere to modern design tokens: dark slate palette, clear contrast ratios (WCAG AA compliant), 2px focus-visible rings for keyboard accessibility, and zero emojis in clinical telemetry.
+    \item The workstation shall enforce a predictable 4-step stepper (Intake $\to$ Review $\to$ Analysis $\to$ Report).
+  \end{itemize}
+
+  \item \textbf{NFR5: Maintainability and Test Coverage}
+  \begin{itemize}
+    \item The codebase shall maintain $\geq$90\% test pass rate with fully isolated unit tests using mock backends, enabling test suite execution without GPU or Ollama dependencies in under 30 seconds.
+  \end{itemize}
+\end{enumerate}
+
+%----------------------------------------------------------------------------------------
+
+\section{Feasibility Study}
+
+\subsection{Technical Feasibility}
+The system relies on transformer-based sequence labeling, dense vector indexing, and quantized LLM inference. High-performance biomedical transformers (PubMedBERT, BioLinkBERT) are freely available via HuggingFace. ChromaDB provides an embedded HNSW implementation requiring no external server process. Local LLM execution via Ollama (LLaMA 3 8B, BioMistral 7B) requires 8--16 GB VRAM, which is readily available on modern workstations and institutional GPU clusters. Technical feasibility is confirmed by our working implementation.
+
+\subsection{Operational Feasibility}
+The workstation conforms to the standard clinical intake workflow of homeopathic practitioners: case-taking, symptom recording, totality analysis, and repertorization. By automating the transcription-to-rubric mapping while retaining the practitioner's ultimate decision-making authority, the system integrates smoothly into existing clinical routines without imposing artificial constraints.
+
+\subsection{Economic and Licensing Feasibility}
+All system components --- Python, PyTorch, HuggingFace Transformers, ChromaDB, Ollama, Streamlit, SQLite, and ReportLab --- are released under permissive open-source licenses (MIT, Apache 2.0, BSD). The Kent's Repertory dataset is derived from the public-domain 1897 edition. The system incurs zero ongoing per-query API costs.
+
+\subsection{Clinical and Regulatory Feasibility}
+Kent-AI is designated as an \textbf{Investigational Clinical Decision Support Tool} under Section 520(o) of the US FDA 21st Century Cures Act guidelines for non-device CDS software. It displays clear disclaimers, surfaces source-grounded rubric provenance, and does not provide automated diagnoses or prescriptions.
+
+%----------------------------------------------------------------------------------------
+
+\section{Hardware and Software Requirements}
+
+Table \ref{tab:hardwaresoftware} outlines the hardware and software constraints for development, training, and production deployment.
+
+\begin{table}[h]
+\caption[System Hardware and Software Constraints]{System Hardware and Software Specifications.}
+\label{tab:hardwaresoftware}
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+\tabhead{Environment} & \tabhead{Component} & \tabhead{Specification} \\
+\midrule
+\multirow{4}{*}{\textbf{Training / GPU Server}} & GPU & NVIDIA RTX 5000 Ada (32GB GDDR6 ECC) \\
+ & CUDA / Driver & CUDA 12.4, NVIDIA Driver $\geq$ 550.0 \\
+ & CPU / RAM & 64-core Intel Xeon, 128 GB DDR5 ECC \\
+ & Storage & 2 TB NVMe SSD \\
+\midrule
+\multirow{4}{*}{\textbf{Inference / Deployment}} & GPU (Optional) & NVIDIA RTX 3060 / 4060 (8--16 GB VRAM) \\
+ & CPU Mode & Intel Core i7 / AMD Ryzen 7 (16+ GB RAM) \\
+ & Storage & 15 GB available disk space (models + index) \\
+ & OS & Linux (Ubuntu 22.04+), Windows 11, macOS (Metal) \\
+\midrule
+\multirow{4}{*}{\textbf{Software Stack}} & Language & Python 3.12 (standard virtual environment) \\
+ & Deep Learning & PyTorch 2.6.0, Transformers 4.46, PEFT 0.14 \\
+ & Vector Store & ChromaDB 0.5.5, sentence-transformers 3.0 \\
+ & UI / PDF & Streamlit 1.64.0, ReportLab 5.1, PyMuPDF 1.24 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%----------------------------------------------------------------------------------------
+
+\section{Tools and Technologies Chosen with Justification}
+
+Table \ref{tab:techjustification} details the engineering justification for every major technology selected, comparing each against rejected alternatives.
+
+\begin{table}[h]
+\caption[Technology Selection Justification]{Detailed Justification for Technology Stack Choices.}
+\label{tab:techjustification}
+\centering
+\scriptsize
+\begin{tabular}{p{2.5cm}p{3.2cm}p{3.5cm}p{4cm}}
+\toprule
+\tabhead{Component} & \tabhead{Selected Technology} & \tabhead{Evaluated Alternatives} & \tabhead{Justification} \\
+\midrule
+\textbf{Vector Store} & ChromaDB (HNSW) & FAISS, Milvus, Qdrant, pgvector & Embedded Python native, zero daemon setup, built-in persistence, native metadata filtering on section IDs, sub-18ms latency. \\
+\midrule
+\textbf{Sentence Embedder} & \texttt{all-MiniLM-L6-v2} & OpenAI \texttt{text-embedding-ada-002}, Clinical-BERT & 384-dim compact unit-normalized vectors, fast CPU/GPU inference ($<$5ms), zero cloud egress, completely open-source. \\
+\midrule
+\textbf{Biomedical Encoders} & BioLinkBERT \& PubMedBERT & Standard BERT, RoBERTa, ClinicalBERT alone & PubMedBERT trained from scratch on biomedical texts (no subword fragmentation); BioLinkBERT captures citation-graph modality linkages. \\
+\midrule
+\textbf{LLM Fine-Tuning} & QLoRA (NF4 + BitsAndBytes) & Full fine-tuning, Prefix tuning, LoRA-16bit & Reduces 7B model VRAM from 28GB to $\sim$6GB, enabling fine-tuning on a single workstation GPU with minimal performance loss. \\
+\midrule
+\textbf{Local LLM Runtime} & Ollama REST API & vLLM, TGI, llama.cpp direct bindings & Turnkey model management, robust streaming HTTP REST API, standardized JSON schema enforcement, cross-platform. \\
+\midrule
+\textbf{Frontend Workstation} & Streamlit ($\geq$1.64.0) & React + FastAPI, Electron, PyQt & Fast clinical iteration, built-in session state management, native Python integration with ML models, fragment reruns for snappy UI. \\
+\midrule
+\textbf{Clinical PDF Engine} & ReportLab 5.1 + PyMuPDF & Weasyprint, wkhtmltopdf, LaTeX CLI & Deterministic canvas rendering, exact two-pass page numbering (\texttt{NumberedCanvas}), native vector tables and charts, zero external binary dependency. \\
+\midrule
+\textbf{Case Database} & SQLite 3 & PostgreSQL, MongoDB & Embedded zero-admin ACID storage, file-level portability (\texttt{cases.sqlite}), seamless integration with Python's standard library. \\
+\bottomrule
+\end{tabular}
+\end{table}

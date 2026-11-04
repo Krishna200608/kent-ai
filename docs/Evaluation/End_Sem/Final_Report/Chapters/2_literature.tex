@@ -77,6 +77,40 @@ AI applications in complementary medicine are nascent. \citeauthor{yuan2019study
 
 The closest related work is by \citeauthor{mcsporran2020digital} \cite{mcsporran2020digital}, who proposed keyword-based rubric search for digital repertory access, but this approach does not address the lexical mismatch between patient language and repertory terminology. Kent-AI's dense semantic retrieval directly bridges this gap.
 
+\subsection{Critical Comparison of Existing Approaches}
+
+Table \ref{tab:litcomparison} provides a systematic comparative analysis of existing commercial and academic clinical repertorization and medical NLP platforms against Kent-AI across key functional dimensions.
+
+\begin{table}[h]
+\caption[Comparative Analysis of Repertorization and Clinical NLP Systems]{Critical Comparison of Existing Clinical Systems vs. Kent-AI.}
+\label{tab:litcomparison}
+\centering
+\scriptsize
+\begin{tabular}{p{3.2cm}p{2.8cm}p{3cm}p{2.5cm}p{3.5cm}}
+\toprule
+\tabhead{Dimension / Feature} & \tabhead{RadarOpus / Synthesis} & \tabhead{Clinical NLP (cTAKES/Med7)} & \tabhead{TCM ML Systems} & \tabhead{Kent-AI (This Work)} \\
+\midrule
+\textbf{Case Intake} & Manual form entry & Batch EHR text parsing & Structured questionnaire & Conversational 10-state FSM with suggestion chips \\
+\midrule
+\textbf{Entity Extraction} & None (manual selection) & Standard medical entities (ICD, RxNorm) & Symptom vector binary flags & 7-Dimension Kentian NER (15 BIO token labels) \\
+\midrule
+\textbf{Search Paradigm} & Exact keyword \& boolean lookup & Keyword indexing / ontology code matching & Rule-based / naive Bayes matching & Dense semantic vector retrieval (ChromaDB HNSW) \\
+\midrule
+\textbf{Vocabulary Bridging} & Rigid (fails on colloquial metaphors) & Limited to synonym ontologies & Static lexicon lookup & High ($\sim$384-dim semantic space, $<$18ms) \\
+\midrule
+\textbf{Repertory Scale} & $\sim$60,000--100,000 rubrics & N/A & N/A & 74,513 rubrics (full Kent index) \\
+\midrule
+\textbf{Remedy Scoring} & Frequency sum & N/A & Syndrome probabilities & Kentian 3-tier grade $\times$ similarity $\times$ specificity \\
+\midrule
+\textbf{Explainability} & Raw rubric lists & Entity highlight & Feature weights & Interactive Totality Matrix \& Provenance \\
+\midrule
+\textbf{Architecture} & Monolithic proprietary C++ & Java/Python libraries & Ad-hoc research scripts & Modular 6-tier Python/Streamlit stack \\
+\midrule
+\textbf{Open Source \& Audit} & Closed proprietary ($\sim$\$1,500+) & Open source & Research code only & 100\% Open Source (MIT, 195 tests) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 %----------------------------------------------------------------------------------------
 
 \section{Summary and Research Gaps}
@@ -90,3 +124,4 @@ The literature review reveals the following key gaps that Kent-AI addresses:
   \item \textbf{LLM fine-tuning for homeopathic extraction}: No prior work has fine-tuned an LLM for structured homeopathic symptom extraction with schema validation and clinical grounding metrics.
   \item \textbf{No integrated doctor-in-the-loop workstation}: Existing repertory software (Synthesis Repertory, Radar Opus) lacks conversational intake, NLP-based extraction, and AI-driven semantic retrieval in an integrated open-source platform.
 \end{enumerate}
+

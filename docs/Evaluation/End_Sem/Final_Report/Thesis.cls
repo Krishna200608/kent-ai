@@ -227,14 +227,22 @@
 \usepackage{amsmath} % The amsmath part is an extension package for LaTeX that provides various features to facilitate writing math formulas and to improve the typographical quality of their output.
 \usepackage{tikz}
 
-% ------------For Hindi Fonts----------
-% COMMENTED OUT FOR PDFLATEX COMPATIBILITY
-% Change compile engine to XeLatex: Menu -> Compiler
-\usepackage{polyglossia}
-\setmainlanguage{english}
-\setotherlanguages{hindi} %% or other languages
-\newfontfamily\devanagarifont[Script=Devanagari]{Noto Serif Devanagari}
-% NOTE: If you need Hindi support, use XeLaTeX and uncomment the above lines
+% ------------For Hindi Fonts (Engine-Adaptive)----------
+\usepackage{iftex}
+\ifXeTeX
+  \usepackage{polyglossia}
+  \setmainlanguage{english}
+  \setotherlanguages{hindi}
+  \newfontfamily\devanagarifont[Script=Devanagari]{Noto Serif Devanagari}
+\else\ifLuaTeX
+  \usepackage{polyglossia}
+  \setmainlanguage{english}
+  \setotherlanguages{hindi}
+  \newfontfamily\devanagarifont[Script=Devanagari]{Noto Serif Devanagari}
+\else
+  % For pdfLaTeX: dummy environment so compilation does not fail
+  \newenvironment{hindi}{}{}
+\fi\fi
 
 
 
