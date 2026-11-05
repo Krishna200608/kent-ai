@@ -72,7 +72,17 @@ Despite its achievements, the system has several limitations:
 
 \section{Future Scope and Realistic Extensions}
 
-\subsection{Near-Term Extensions (3 to 6 Months)}
+\subsection{Human Validation: Clinical Expert Evaluation (Homeopathy Practitioners)}
+
+A pivotal translational milestone for Kent-AI is rigorous, empirical human validation conducted directly in collaboration with board-certified homeopathic practitioners and clinical experts. While computational benchmarks establish the technical efficacy of our dense retrieval and extraction models on synthetic corpora, formal real-world clinical evaluation is indispensable to validate practical decision-support utility. This prospective validation framework targets three core operational and diagnostic objectives:
+
+\begin{enumerate}
+  \item \textbf{Clinical Remedy Verification (\textit{Simillimum} Validation)}: Partnering with licensed homeopathic practitioners to conduct blinded multi-rater case evaluations. Clinicians will audit the top-$K$ candidate remedies ranked by the totality scoring engine against primary Materia Medica indications and classical constitutional prescribing guidelines, determining the concordance between algorithmically recommended remedies and expert clinical prescriptions.
+  \item \textbf{Repertorial Rubric Matching Fidelity}: Assessing expert practitioner agreement with the system's automated rubric extraction. Certified homeopaths will evaluate whether nuanced patient expressions, modalities (e.g., thermal states, temporal aggravations), and emotional states captured during intake are accurately mapped to the corresponding Kent repertory rubrics without semantic distortion or clinical loss of context.
+  \item \textbf{Quantifiable Consultation Duration Reduction}: Conducting controlled time-and-motion clinical workflow studies comparing traditional manual case-taking against Kent-AI--assisted consultations. Conventional homeopathic case-taking, repertory cross-referencing, and differential analysis typically consume 40 to 45 minutes per patient; our objective is to demonstrate that Kent-AI's guided conversational intake and sub-20ms semantic totality retrieval compress this workflow to under 10 minutes ($<$10~min) while maintaining diagnostic thoroughness and therapeutic rapport.
+\end{enumerate}
+
+\subsection{Near-Term Technical Extensions (3 to 6 Months)}
 \begin{itemize}
   \item \textbf{Dual-Path Hybrid Retrieval}: Implement a hybrid fusion engine combining entity-constrained retrieval (Path A) with full-narrative holistic dense retrieval (Path B), leveraging the superior Recall@20 (62.95\%) observed in DeBERTa-v3 experiments.
   \item \textbf{Multi-Chapter Training Expansion}: Extend synthetic case generation across the remaining 36 chapters (74,513 rubrics) to create a comprehensive 100,000+ case multi-chapter corpus.
@@ -82,7 +92,7 @@ Despite its achievements, the system has several limitations:
 \subsection{Medium-Term Extensions (6 to 18 Months)}
 \begin{itemize}
   \item \textbf{Multi-Lingual Intake}: Extend the intake FSM and embedding models to support Hindi, Bengali, and regional Indian languages using multi-lingual sentence transformers (\texttt{paraphrase-multilingual-MiniLM-L12-v2}), enabling accessibility across rural healthcare centers.
-  \item \textbf{Prospective Clinical Pilot Study}: Conduct an observational clinical study with licensed homeopathic physicians ($N=50$ patients) to evaluate diagnostic concordances between Kent-AI recommendations and expert human prescriptions.
+  \item \textbf{Prospective Multi-Center Clinical Pilot}: Conduct an observational clinical study with licensed homeopathic physicians ($N=100$ patients across outpatient clinics) to measure longitudinal remedy efficacy and practitioner satisfaction metrics.
   \item \textbf{Peer-Reviewed Academic Publication}: Prepare and submit the empirical benchmark findings to the \textit{Journal of Biomedical Informatics} (JBI) or \textit{IEEE Journal of Biomedical and Health Informatics} (JBHI).
 \end{itemize}
 
