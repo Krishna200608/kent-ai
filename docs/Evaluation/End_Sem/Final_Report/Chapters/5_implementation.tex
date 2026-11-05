@@ -46,7 +46,7 @@ The system implementation is organized across eight modular subsystems within th
 \subsection{6. Conversational Dialogue Engine (\texttt{src/chatbot/})}
 \begin{itemize}
   \item \textbf{\texttt{state\_machine.py}}: Implements the 10-state clinical intake finite state machine with automatic transition logic, adaptive slot skipping, and explicit symptom denial tracking.
-  \item \textbf{\texttt{dialogue\_manager.py}}: Manages consultation turn history, coordinates slot extraction, interacts with Ollama for prompt-driven generation, and handles undo/resume actions.
+  \item {\raggedright \textbf{\texttt{dialogue\_manager.py}}: Tracks consultation turns, coordinates slot extraction, integrates Ollama-based responses, and supports undo and resume.\par}
   \item \textbf{\texttt{suggestions.py}}: Classifies physician/patient query intent and streams dynamic quick-reply suggestion chips.
 \end{itemize}
 
@@ -60,7 +60,7 @@ The system implementation is organized across eight modular subsystems within th
 \begin{itemize}
   \item \textbf{\texttt{app.py}}: Main Streamlit portal with 6 navigation tabs and the 4-step consultation stepper.
   \item \textbf{\texttt{pdf\_exporter.py}}: Generates professional clinical reports using ReportLab Flowables, custom table styles, and Matplotlib visualizations.
-  \item \textbf{\texttt{totality\_grid.py}}: Renders the interactive Repertory Totality Matrix with Mute/Eliminatory controls.
+  \item \textbf{\texttt{totality\_grid.py}}: Displays the Repertory Totality Matrix with controls to mute or eliminate rubric rows.
 \end{itemize}
 
 %----------------------------------------------------------------------------------------
@@ -171,6 +171,8 @@ class NumberedCanvas(canvas.Canvas):
 \textbf{Solution}: We constructed a 384-dimensional dense semantic vector index over all 74,513 rubrics using \texttt{all-MiniLM-L6-v2} and ChromaDB HNSW cosine similarity. The dense representation projects colloquial metaphors and taxonomic entries into a shared semantic latent space, achieving \textbf{41.56\% Top-20 recall and $<$18ms retrieval latency}.
 
 \subsection{Challenge 5: Session State Volatility in Streamlit Workstation}
-\textbf{Problem}: Streamlit executes the entire script on every user interaction, causing widget state resets, repeated model inferences, and dialogue history loss.  
-\textbf{Solution}: We established a \textbf{strict session state architecture} in \texttt{src/dashboard/app.py}. All case data is bound to an immutable \texttt{ClinicalCase} dataclass persisted in \texttt{st.session\_state["current\_case"]}, with an embedded SQLite database (\texttt{cases.sqlite}) providing disk-level persistence across browser refreshes and session restarts.
+{\raggedright
+\textbf{Problem}: Streamlit executes the entire script on every user interaction, causing widget state resets, repeated model inferences, and dialogue history loss.\par
+\textbf{Solution}: We established a \textbf{strict session state architecture} in \texttt{src/dashboard/app.py}. All case data is bound to an immutable \texttt{ClinicalCase} dataclass persisted in \texttt{st.session\_state["current\_case"]}, with an embedded SQLite database (\texttt{cases.sqlite}) providing disk-level persistence across browser refreshes and session restarts.\par
+}
 

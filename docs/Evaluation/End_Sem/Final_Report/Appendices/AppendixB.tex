@@ -9,7 +9,9 @@ This appendix provides complete instructions for installing, configuring, and ru
 
 \section{System Requirements}
 
-\begin{table}[h]
+The hardware and software prerequisites for running Kent-AI across client workstation, inference server, and GPU training environments are summarized in Table~\ref{tab:sysreq}.
+
+\begin{table}[H]
 \caption[System Requirements]{Kent-AI Minimum and Recommended System Requirements.}
 \label{tab:sysreq}
 \centering
@@ -114,20 +116,20 @@ The key directories and files in the Kent-AI repository:
 
 \begin{verbatim}
 kent-ai/
-├── Context/              # Architecture, Progress, Conventions docs
-├── configs/              # YAML configuration files
-├── data/
-│   ├── raw/              # repertory.sqlite (112 MB)
-│   ├── processed/        # Synthetic cases (19,732 cases)
-│   └── models/           # Fine-tuned model checkpoints
-├── src/
-│   ├── chatbot/          # FSM intake agent (10 states)
-│   ├── data/             # Case generator, BIO tagger, splitter
-│   ├── models/           # NER encoders, ensemble, hybrid pipeline
-│   ├── pipeline/         # Orchestrator, ranker, report generator
-│   └── dashboard/        # Streamlit app, components, views
-├── scripts/              # Training, evaluation, generation CLIs
-├── tests/                # 195 unit and integration tests
-└── docs/                 # Evaluation reports, design docs
++-- Context/              # Architecture, Progress, Conventions docs
++-- configs/              # YAML configuration files
++-- data/
+|   +-- raw/              # repertory.sqlite (112 MB)
+|   +-- processed/        # Synthetic cases (19,732 cases)
+|   `-- models/           # Fine-tuned model checkpoints
++-- src/
+|   +-- chatbot/          # FSM intake agent (10 states)
+|   +-- data/             # Case generator, BIO tagger, splitter
+|   +-- models/           # NER encoders, ensemble, hybrid pipeline
+|   +-- pipeline/         # Orchestrator, ranker, report generator
+|   `-- dashboard/        # Streamlit app, components, views
++-- scripts/              # Training, evaluation, generation CLIs
++-- tests/                # 195 unit and integration tests
+`-- docs/                 # Evaluation reports, design docs
 \end{verbatim}
 

@@ -30,6 +30,10 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{mathpazo}
+{\fontencoding{T1}\fontfamily{ppl}\selectfont}
+\DeclareFontShape{T1}{ppl}{m}{scit}{<->ssub * ppl/m/sc}{}
+\DeclareFontShape{T1}{ppl}{m}{scsl}{<->ssub * ppl/m/sc}{}
+\usepackage[english]{babel}
 \usepackage[backend=biber,
   style=numeric,
   bibencoding=utf8,
@@ -43,6 +47,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{xcolor}
+\usepackage{float}
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, shapes.multipart, arrows.meta, positioning, fit, backgrounds, calc, shadows}
 \usepackage{listings}
@@ -52,6 +57,20 @@
 \usepackage{pdfpages}
 \usepackage{url}
 \usepackage{hyperref}
+
+\definecolor{KentNavy}{HTML}{18324B}
+\definecolor{KentBlue}{HTML}{326F9F}
+\definecolor{KentTeal}{HTML}{2A8C82}
+\definecolor{KentGreen}{HTML}{5B9279}
+\definecolor{KentAmber}{HTML}{C98637}
+\definecolor{KentViolet}{HTML}{7967A8}
+\definecolor{KentSlate}{HTML}{627486}
+\definecolor{KentMist}{HTML}{F3F6F8}
+\definecolor{KentLine}{HTML}{B8C5D1}
+
+\newcommand{\tabhead}[1]{\textbf{#1}}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\setlength{\tabcolsep}{4pt}
 
 % Code listing style
 \lstdefinestyle{python}{
@@ -80,16 +99,19 @@
   bindingoffset=5mm,
   top=25mm,
   bottom=20mm,
-}
+  headheight=22pt,
+}\setlength{\footheight}{22pt}
+\raggedbottom
+
 
 %----------------------------------------------------------------------------------------
 %	THESIS INFORMATION
 %----------------------------------------------------------------------------------------
 
-\thesistitle{Kent-AI: An AI-Powered Conversational Clinical Assistant for Homeopathic Case-Taking and Dense Semantic Repertorization}
+\thesistitle{Kent-AI: Conversational Case-Taking and Semantic Repertorization}
 \degree{Bachelor of Technology}
 
-\supervisor{Dr. Nikhilanand Arya}
+\supervisor{XYZ}
 
 \newcommand{\studentonename}{Krishna Sikheriya}
 \newcommand{\studentoneroll}{IIT2023139}
@@ -206,13 +228,13 @@ me%
 \pagestyle{thesis}
 \begin{spacing}{1.5}
 
-\include{Chapters/1_introduction}
-\include{Chapters/2_literature}
-\include{Chapters/3_system_analysis}
-\include{Chapters/4_system_design}
-\include{Chapters/5_implementation}
-\include{Chapters/6_testing_results}
-\include{Chapters/7_conclusion}
+\input{Chapters/1_introduction}
+\input{Chapters/2_literature}
+\input{Chapters/3_system_analysis}
+\input{Chapters/4_system_design}
+\input{Chapters/5_implementation}
+\input{Chapters/6_testing_results}
+\input{Chapters/7_conclusion}
 
 \end{spacing}
 
@@ -222,9 +244,9 @@ me%
 
 \appendix
 
-\include{Appendices/AppendixA}
-\include{Appendices/AppendixB}
-\include{Appendices/AppendixC}
+\input{Appendices/AppendixA}
+\input{Appendices/AppendixB}
+\input{Appendices/AppendixC}
 
 %----------------------------------------------------------------------------------------
 %	BIBLIOGRAPHY
@@ -235,4 +257,3 @@ me%
 %----------------------------------------------------------------------------------------
 \end{sloppypar}
 \end{document}
-

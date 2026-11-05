@@ -9,76 +9,60 @@ This chapter presents the architectural and structural design of Kent-AI. It det
 
 \section{System Architecture Overview}
 
-Kent-AI is structured into a \textbf{six-tier modular layered architecture}, enforcing strict separation of concerns between patient intake, sequence labeling, clinical reasoning, dense retrieval, mathematical ranking, and user interface presentation.
+Kent-AI is structured into a \textbf{seven-tier modular architecture}, separating conversational intake, sequence labeling, clinical reasoning, retrieval, remedy ranking, case orchestration, and clinician presentation.
 
 \begin{figure}[htbp]
 \centering
-\resizebox{0.95\textwidth}{!}{%
 \begin{tikzpicture}[
-    node distance=0.42cm,
-    layer/.style={
-        rectangle,
+    node distance=0.28cm,
+    layer/.style args={#1}{
         rounded corners=4pt,
-        draw=#1!75!black,
-        fill=#1!8,
-        line width=1.1pt,
-        minimum width=15cm,
-        minimum height=1.35cm,
+        draw=#1!78!KentNavy,
+        fill=#1!7!white,
+        line width=0.9pt,
+        text width=14.6cm,
+        minimum height=1.05cm,
         align=center,
-        inner sep=6pt
+        inner sep=5pt
     },
-    arr/.style={
-        -{Stealth[scale=1.1]},
-        line width=1.3pt,
-        color=gray!70!black
-    }
+    arr/.style={-{Stealth[length=2mm]}, line width=1.0pt, draw=KentSlate}
 ]
-
-\node[layer=blue] (l6) {
-    \textbf{\large Layer 6: Presentation \& Clinical Workstation}\\[2pt]
-    \footnotesize Streamlit Doctor-in-the-Loop Web GUI \textbar{} ReportLab Multi-Page PDF Exporter \textbar{} 4-Step Stepper \textbar{} Totality Matrix
+\node[layer=KentNavy] (l6) {
+    \textbf{Layer 6 \textbar{} Presentation and Clinical Workstation}\\[-1pt]
+    \footnotesize Streamlit clinician interface \textbar{} PDF report export \textbar{} consultation workflow \textbar{} totality matrix
 };
-
-\node[layer=teal, below=of l6] (l5) {
-    \textbf{\large Layer 5: Orchestration \& Case Persistence}\\[2pt]
-    \footnotesize PipelineOrchestrator \textbar{} SQLite Case Store (\texttt{cases.sqlite}) \textbar{} Multi-Turn Session \& State Manager
+\node[layer=KentBlue, below=of l6] (l5) {
+    \textbf{Layer 5 \textbar{} Orchestration and Case Persistence}\\[-1pt]
+    \footnotesize PipelineOrchestrator \textbar{} SQLite case store \textbar{} multi-turn session and state manager
 };
-
-\node[layer=cyan, below=of l5] (l4) {
-    \textbf{\large Layer 4: Totality Remedy Ranking Engine}\\[2pt]
-    \footnotesize RemedyRanker: Kent 3-Tier Grade Weighting $\times$ Cosine Similarity $\times$ Specificity \textbar{} SQL Join on 507,179 Associations
+\node[layer=KentTeal, below=of l5] (l4) {
+    \textbf{Layer 4 \textbar{} Totality Remedy Ranking}\\[-1pt]
+    \footnotesize RemedyRanker \textbar{} grade weighting, cosine similarity, and specificity \textbar{} 507,179 links
 };
-
-\node[layer=purple, below=of l4] (l3) {
-    \textbf{\large Layer 3: Dense Semantic Retrieval Subsystem}\\[2pt]
-    \footnotesize ChromaDB HNSW Persistent Cosine Index \textbar{} 74,513 Rubric Embeddings \textbar{} RubricEmbedder: \texttt{all-MiniLM-L6-v2} (384-dim, $<$18ms)
+\node[layer=KentTeal, below=of l4] (l3) {
+    \textbf{Layer 3 \textbar{} Dense Semantic Retrieval}\\[-1pt]
+    \footnotesize ChromaDB HNSW cosine index \textbar{} 74,513 rubric embeddings \textbar{} 384-dimensional vectors
 };
-
-\node[layer=orange, below=of l3] (l2) {
-    \textbf{\large Layer 2: Clinical Reasoning \& Resolver}\\[2pt]
-    \footnotesize SymptomResolver: Negation Filtering \textbar{} Coreference Disambiguation \textbar{} QLoRA BioMistral 7B \& Qwen 2.5 7B LLM Arbitration
+\node[layer=KentBlue, below=of l3] (l2) {
+    \textbf{Layer 2 \textbar{} Clinical Reasoning and Resolution}\\[-1pt]
+    \footnotesize SymptomResolver \textbar{} negation and coreference handling \textbar{} QLoRA model arbitration
 };
-
-\node[layer=green!60!black, below=of l2] (l1) {
-    \textbf{\large Layer 1: Biomedical NER Ensemble}\\[2pt]
-    \footnotesize BioLinkBERT-Base \textbar{} PubMedBERT \textbar{} Bio\_ClinicalBERT \textbar{} DeBERTa-v3 \textbar{} 4-Model Majority Voting \& IoU Span Clustering
+\node[layer=KentGreen, below=of l2] (l1) {
+    \textbf{Layer 1 \textbar{} Biomedical NER Ensemble}\\[-1pt]
+    \footnotesize Four encoder models \textbar{} majority voting \textbar{} IoU span clustering
 };
-
-\node[layer=gray!70!black, below=of l1] (l0) {
-    \textbf{\large Layer 0: Conversational Intake Engine}\\[2pt]
-    \footnotesize 10-State Clinical Intake FSM \textbar{} Dynamic Suggestion Chips \textbar{} Dialogue Manager \textbar{} Bedside Persona
+\node[layer=KentSlate, below=of l1] (l0) {
+    \textbf{Layer 0 \textbar{} Conversational Intake}\\[-1pt]
+    \footnotesize Guided clinical dialogue \textbar{} dynamic suggestions \textbar{} 10-state intake manager
 };
-
-\draw[arr] (l6) -- (l5);
-\draw[arr] (l5) -- (l4);
-\draw[arr] (l4) -- (l3);
-\draw[arr] (l3) -- (l2);
-\draw[arr] (l2) -- (l1);
-\draw[arr] (l1) -- (l0);
-
-\end{tikzpicture}%
-}
-\caption[Kent-AI Six-Tier Layered Architecture]{Kent-AI Six-Tier Modular Layered Architecture.}
+\draw[arr] (l0.north) -- (l1.south);
+\draw[arr] (l1.north) -- (l2.south);
+\draw[arr] (l2.north) -- (l3.south);
+\draw[arr] (l3.north) -- (l4.south);
+\draw[arr] (l4.north) -- (l5.south);
+\draw[arr] (l5.north) -- (l6.south);
+\end{tikzpicture}
+\caption[Kent-AI Seven-Tier Layered Architecture]{Kent-AI seven-tier modular layered architecture.}
 \label{fig:six_tier_arch}
 \end{figure}
 
@@ -91,80 +75,24 @@ At the highest abstraction level, Kent-AI interfaces with three primary entities
 
 \begin{figure}[htbp]
 \centering
-\resizebox{0.92\textwidth}{!}{%
 \begin{tikzpicture}[
-    process/.style={
-        circle,
-        draw=blue!80!black,
-        fill=blue!8,
-        line width=1.5pt,
-        minimum size=4.2cm,
-        align=center,
-        font=\small
-    },
-    entity/.style={
-        rectangle,
-        rounded corners=5pt,
-        draw=#1!75!black,
-        fill=#1!10,
-        line width=1.3pt,
-        minimum width=3.2cm,
-        minimum height=2.0cm,
-        align=center,
-        font=\small
-    },
-    flow/.style={
-        -{Stealth[scale=1.1]},
-        line width=1.1pt,
-        draw=gray!80!black
-    }
+    process/.style={circle, draw=KentBlue!85!KentNavy, fill=KentBlue!6, line width=1.2pt, minimum size=3.4cm, align=center, font=\small},
+    entity/.style args={#1}{rectangle, rounded corners=4pt, draw=#1!78!KentNavy, fill=#1!7!white, line width=0.9pt, text width=2.8cm, minimum height=1.45cm, align=center, font=\small, inner sep=4pt},
+    store/.style={rectangle, rounded corners=4pt, draw=KentViolet!78!KentNavy, fill=KentViolet!7, line width=0.9pt, text width=3.4cm, minimum height=1.4cm, align=center, font=\small, inner sep=4pt},
+    flow/.style={-{Stealth[length=2mm]}, line width=0.9pt},
+    flowlabel/.style={font=\footnotesize, align=center, text=KentNavy, fill=white, inner sep=2pt}
 ]
-
-% Central Process 0
-\node[process] (sys) {
-    \textbf{\Large 0}\\[3pt]
-    \textbf{\large Kent-AI Clinical}\\[2pt]
-    \textbf{\large Decision Support}\\[2pt]
-    \textbf{\large System}
-};
-
-% External Entities
-\node[entity=green!70!black, left=3.8cm of sys] (patient) {
-    \textbf{\large Patient}\\[4pt]
-    \footnotesize (Natural Language\\Conversational User)
-};
-
-\node[entity=teal, right=3.8cm of sys] (clinician) {
-    \textbf{\large Clinician}\\[4pt]
-    \footnotesize (Supervising Homeopathic\\Physician)
-};
-
-\node[entity=purple, below=2.6cm of sys] (kb) {
-    \textbf{\large Repertory DB}\\[4pt]
-    \footnotesize (74,513 Rubrics \&\\507,179 Remedy Links)
-};
-
-% Data Flows - Patient
-\draw[flow, draw=blue!80!black] (patient.north east) to[bend left=24] 
-    node[above, font=\footnotesize, align=center] {Symptom Narrative \&\\Intake Responses} (sys.north west);
-
-\draw[flow, draw=green!60!black] (sys.south west) to[bend left=24] 
-    node[below, font=\footnotesize, align=center] {Guided Inquiries \&\\Suggestion Chips} (patient.south east);
-
-% Data Flows - Clinician
-\draw[flow, draw=teal!80!black] (sys.north east) to[bend left=24] 
-    node[above, font=\footnotesize, align=center] {Ranked Remedies, Rubric\\Matrix \& PDF Preview} (clinician.north west);
-
-\draw[flow, draw=purple!80!black] (clinician.south west) to[bend left=24] 
-    node[below, font=\footnotesize, align=center] {Reviewed Totality, Eliminatory\\Toggles \& Final Prescriptions} (sys.south east);
-
-% Data Flows - KB
-\draw[flow, draw=gray!70!black] (kb.north) -- 
-    node[right, font=\footnotesize, align=left] {Bibliographic Grades\\\& Hierarchy Lookup} (sys.south);
-
-\end{tikzpicture}%
-}
-\caption[DFD Level 0 Context Diagram]{Data Flow Diagram (Level 0) --- Context Diagram of the Kent-AI System.}
+\node[process] (sys) at (0,0) {{\color{KentBlue}\textbf{\Large 0}}\\[3pt]\textbf{Kent-AI}\\Clinical decision support};
+\node[entity=KentGreen] (patient) at (-6.4,0) {\textbf{Patient}\\[3pt]\footnotesize Consultation user};
+\node[entity=KentTeal] (clinician) at (6.4,0) {\textbf{Clinician}\\[3pt]\footnotesize Supervising practitioner};
+\node[store] (kb) at (0,-4.8) {\textbf{Repertory DB}\\[2pt]\footnotesize 74,513 rubrics\\507,179 remedy links};
+\draw[flow, draw=KentBlue] (patient.north east) to[out=28,in=152] node[flowlabel, above, text width=2.7cm] {Case narrative and intake} (sys.west);
+\draw[flow, draw=KentGreen] (sys.south west) to[out=208,in=-28] node[flowlabel, below, text width=2.7cm] {Guided prompts and questions} (patient.east);
+\draw[flow, draw=KentTeal] (sys.north east) to[out=28,in=152] node[flowlabel, above, text width=2.8cm] {Ranked remedies and report} (clinician.west);
+\draw[flow, draw=KentAmber] (clinician.south west) to[out=208,in=-28] node[flowlabel, below, text width=2.8cm] {Review and rubric edits} (sys.east);
+\draw[<->, draw=KentViolet, line width=0.9pt] (sys.south) -- node[right=2cm, flowlabel, text width=2.4cm] {Rubric and grade lookup} (kb.north);
+\end{tikzpicture}
+\caption[DFD Level 0 Context Diagram]{Data Flow Diagram (Level 0): Kent-AI context and external data flows.}
 \label{fig:dfd0}
 \end{figure}
 
@@ -173,64 +101,32 @@ Figure \ref{fig:dfd1} decomposes the system into its five principal processing s
 
 \begin{figure}[htbp]
 \centering
-\resizebox{0.95\textwidth}{!}{%
 \begin{tikzpicture}[
-    process/.style={
-        rectangle,
-        rounded corners=8pt,
-        draw=blue!75!black,
-        fill=blue!8,
-        line width=1.1pt,
-        minimum width=2.7cm,
-        minimum height=1.6cm,
-        align=center,
-        font=\footnotesize
-    },
-    store/.style={
-        rectangle,
-        draw=purple!75!black,
-        fill=purple!8,
-        line width=1.1pt,
-        minimum width=3.0cm,
-        minimum height=1.1cm,
-        align=center,
-        font=\footnotesize
-    },
-    flow/.style={
-        -{Stealth[scale=1.05]},
-        line width=1.0pt,
-        draw=gray!80!black
-    }
+    process/.style={rectangle, rounded corners=4pt, draw=KentBlue!78!KentNavy, fill=KentBlue!5, line width=0.9pt, text width=2.3cm, minimum height=1.55cm, align=center, font=\footnotesize, inner sep=3pt},
+    store/.style={rectangle, rounded corners=3pt, draw=KentViolet!78!KentNavy, fill=KentViolet!6, line width=0.8pt, text width=2.6cm, minimum height=0.85cm, align=center, font=\scriptsize, inner sep=3pt},
+    flow/.style={-{Stealth[length=1.8mm]}, line width=0.85pt, draw=KentSlate},
+    dbflow/.style={<->, line width=0.75pt, draw=KentViolet},
+    flowlabel/.style={font=\scriptsize, align=center, text=KentNavy, fill=white, inner sep=2pt, text width=2.3cm}
 ]
-
-% Processes
-\node[process] (p1) {\textbf{1.0}\\[2pt]\textbf{Clinical Intake}\\[2pt]Dialogue Engine};
-\node[process, right=1.6cm of p1] (p2) {\textbf{2.0}\\[2pt]\textbf{HomeoNER}\\[2pt]Multi-Encoder};
-\node[process, right=1.6cm of p2] (p3) {\textbf{3.0}\\[2pt]\textbf{Dense Semantic}\\[2pt]Rubric Search};
-\node[process, below=2.4cm of p3] (p4) {\textbf{4.0}\\[2pt]\textbf{Totality Remedy}\\[2pt]Ranking Engine};
-\node[process, left=1.6cm of p4] (p5) {\textbf{5.0}\\[2pt]\textbf{Case Persist \&}\\[2pt]Report Generator};
-
-% Stores
-\node[store, above=1.5cm of p3] (d2) {\textbf{D2: ChromaDB HNSW}\\[1pt]\scriptsize 74,513 Rubrics (384-dim)};
-\node[store, below=1.5cm of p4] (d1) {\textbf{D1: Kent SQLite DB}\\[1pt]\scriptsize 507,179 Remedy Links};
-\node[store, below=1.5cm of p5] (d3) {\textbf{D3: Case Store}\\[1pt]\scriptsize \texttt{cases.sqlite}};
-
-% Flows
-\draw[flow] (-2.2, 0) -- node[above, font=\scriptsize] {Narrative} (p1.west);
-\draw[flow] (p1) -- node[above, font=\scriptsize] {Transcript} (p2);
-\draw[flow] (p2) -- node[above, font=\scriptsize] {Entities [LOC, SEN]} (p3);
-\draw[flow] (p3) -- node[right, font=\scriptsize] {Matched Rubrics} (p4);
-\draw[flow] (p4) -- node[above, font=\scriptsize] {Totality Report} (p5);
-\draw[flow] (p5.west) -- (-2.2, -3.8) node[above right, font=\scriptsize] {PDF / UI Report};
-
-% Store flows
-\draw[flow] (p3.north) -- (d2.south);
-\draw[flow] (p4.south) -- (d1.north);
-\draw[flow] (p5.south) -- (d3.north);
-
-\end{tikzpicture}%
-}
-\caption[DFD Level 1 Subsystem Flow]{Data Flow Diagram (Level 1) --- Subsystem Decomposition and Data Store Interactions.}
+\node[process] (p1) at (-5.8,0) {\textcolor{KentBlue}{\textbf{\scriptsize 01}}\\[1pt]\textbf{Intake}\\[-1pt]\footnotesize Guided dialogue};
+\node[process] (p2) at (-2.9,0) {\textcolor{KentBlue}{\textbf{\scriptsize 02}}\\[1pt]\textbf{HomeoNER}\\[-1pt]\footnotesize Multi-encoder};
+\node[process] (p3) at (0,0) {\textcolor{KentBlue}{\textbf{\scriptsize 03}}\\[1pt]\textbf{Semantic}\\[-1pt]\footnotesize Rubric search};
+\node[process] (p4) at (2.9,0) {\textcolor{KentBlue}{\textbf{\scriptsize 04}}\\[1pt]\textbf{Ranking}\\[-1pt]\footnotesize Totality score};
+\node[process] (p5) at (5.8,0) {\textcolor{KentBlue}{\textbf{\scriptsize 05}}\\[1pt]\textbf{Case report}\\[-1pt]\footnotesize Persistence};
+\node[store] (d2) at (0,-2.25) {\textbf{D2 \textbar{} Vector index}\\74,513 rubrics};
+\node[store] (d1) at (2.9,-2.25) {\textbf{D1 \textbar{} Repertory DB}\\507,179 links};
+\node[store] (d3) at (5.8,-2.25) {\textbf{D3 \textbar{} Case store}\\SQLite records};
+\draw[flow] (-7.75,0) -- node[flowlabel, pos=0, yshift=12mm, anchor=south west] {Narrative} (p1.west);
+\draw[flow] (p1.east) -- node[flowlabel, above=12mm] {Transcript} (p2.west);
+\draw[flow] (p2.east) -- node[flowlabel, above=12mm] {Entity spans} (p3.west);
+\draw[flow] (p3.east) -- node[flowlabel, above=12mm] {Matched rubrics} (p4.west);
+\draw[flow] (p4.east) -- node[flowlabel, above=12mm] {Ranked results} (p5.west);
+\draw[flow] (p5.east) -- node[flowlabel, pos=1, yshift=12mm, anchor=south east] {Clinical report} (7.75,0);
+\draw[dbflow] (p3.south) -- (d2.north);
+\draw[dbflow] (p4.south) -- (d1.north);
+\draw[dbflow] (p5.south) -- (d3.north);
+\end{tikzpicture}
+\caption[DFD Level 1 Subsystem Flow]{Data Flow Diagram (Level 1): five-stage processing pipeline and persistent stores.}
 \label{fig:dfd1}
 \end{figure}
 
@@ -248,12 +144,12 @@ Kent-AI uses two separate SQLite databases to decouple static reference knowledg
 \subsection{Repertory Knowledge Base (\texttt{repertory.sqlite})}
 The static repertory database encodes Kent's 1897 taxonomic structure:
 
-\begin{table}[h]
+\begin{table}[htbp]
 \caption[Repertory Database Schema]{Repertory Database (\texttt{repertory.sqlite}) Schema.}
 \label{tab:repertory_schema}
 \centering
 \small
-\begin{tabular}{lllp{5.5cm}}
+\begin{tabular}{lllP{5.5cm}}
 \toprule
 \tabhead{Table} & \tabhead{Column} & \tabhead{Type} & \tabhead{Description / Constraints} \\
 \midrule
@@ -282,12 +178,12 @@ The static repertory database encodes Kent's 1897 taxonomic structure:
 \subsection{Clinical Case Store (\texttt{cases.sqlite})}
 The dynamic consultation store persists clinical consultations:
 
-\begin{table}[h]
+\begin{table}[htbp]
 \caption[Case Store Schema]{Clinical Case Store (\texttt{cases.sqlite}) Schema.}
 \label{tab:cases_schema}
 \centering
 \small
-\begin{tabular}{lllp{5.5cm}}
+\begin{tabular}{lllP{5.5cm}}
 \toprule
 \tabhead{Table} & \tabhead{Column} & \tabhead{Type} & \tabhead{Description / Constraints} \\
 \midrule
@@ -319,70 +215,33 @@ The system supports two primary actors: the Patient and the Clinician.
 
 \begin{figure}[htbp]
 \centering
-\resizebox{0.92\textwidth}{!}{%
 \begin{tikzpicture}[
-    actor/.style={
-        rectangle,
-        rounded corners=4pt,
-        draw=#1!75!black,
-        fill=#1!12,
-        line width=1.2pt,
-        minimum width=2.4cm,
-        minimum height=1.2cm,
-        align=center,
-        font=\small\bfseries
-    },
-    usecase/.style={
-        ellipse,
-        draw=blue!75!black,
-        fill=blue!7,
-        line width=1.0pt,
-        minimum width=4.6cm,
-        minimum height=0.95cm,
-        align=center,
-        font=\footnotesize
-    },
-    conn/.style={
-        draw=gray!70!black,
-        line width=0.9pt
-    }
+    actor/.style args={#1}{rectangle, rounded corners=4pt, draw=#1!78!KentNavy, fill=#1!8!white, line width=0.9pt, text width=2.1cm, minimum height=0.9cm, align=center, font=\small\bfseries, inner sep=4pt},
+    usecase/.style={ellipse, draw=KentBlue!72!KentNavy, fill=KentBlue!5, line width=0.85pt, text width=3.0cm, minimum width=3.25cm, minimum height=0.82cm, align=center, font=\footnotesize},
+    conn/.style={draw=KentLine, line width=0.85pt}
 ]
-
-% System Boundary Box
-\draw[draw=gray!60, fill=gray!3, rounded corners=6pt, line width=1.2pt] 
-    (-0.5, 4.8) rectangle (6.5, -5.2);
-\node[font=\bfseries\small, text=gray!70!black] at (3.0, 4.4) {Kent-AI System Boundary};
-
-% Actors
-\node[actor=green!60!black] (patient) at (-3.2, 2.0) {Patient\\[2pt]\scriptsize (User)};
-\node[actor=teal] (clinician) at (9.2, -0.4) {Clinician\\[2pt]\scriptsize (Practitioner)};
-
-% Use Cases inside boundary
-\node[usecase] (uc1) at (3.0, 3.5) {UC1: Engage in Guided Intake Dialogue};
-\node[usecase] (uc2) at (3.0, 2.3) {UC2: Provide Free-Form Symptom Notes};
-\node[usecase] (uc3) at (3.0, 1.1) {UC3: Review \& Edit Extracted Entities};
-\node[usecase] (uc4) at (3.0, -0.1) {UC4: Modify Active Rubric Totality};
-\node[usecase] (uc5) at (3.0, -1.3) {UC5: Toggle Eliminatory Constraints};
-\node[usecase] (uc6) at (3.0, -2.5) {UC6: Inspect Materia Medica Keynotes};
-\node[usecase] (uc7) at (3.0, -3.7) {UC7: Export Multi-Page Clinical PDF};
-\node[usecase] (uc8) at (3.0, -4.7) {UC8: Manage Case Consultation Library};
-
-% Patient Associations
-\draw[conn] (patient) -- (uc1);
-\draw[conn] (patient) -- (uc2);
-
-% Clinician Associations
-\draw[conn] (clinician) -- (uc1);
-\draw[conn] (clinician) -- (uc3);
-\draw[conn] (clinician) -- (uc4);
-\draw[conn] (clinician) -- (uc5);
-\draw[conn] (clinician) -- (uc6);
-\draw[conn] (clinician) -- (uc7);
-\draw[conn] (clinician) -- (uc8);
-
-\end{tikzpicture}%
-}
-\caption[UML Use Case Diagram]{UML Use Case Diagram for Patient and Clinician Workflows.}
+\draw[draw=KentLine, fill=KentMist, rounded corners=5pt, line width=0.9pt] (-1.65,4.25) rectangle (7.0,-3.35);
+\node[font=\bfseries\small, text=KentNavy, fill=KentMist, inner sep=3pt] at (2.7,4.15) {Kent-AI System};
+\node[actor=KentGreen] (patient) at (-4.0,2.05) {Patient\\[-1pt]\scriptsize User};
+\node[actor=KentTeal] (clinician) at (9.6,0.1) {Clinician\\[-1pt]\scriptsize Practitioner};
+\node[usecase] (uc1) at (0.4,2.7) {Guided intake};
+\node[usecase] (uc2) at (0.4,1.35) {Free-form notes};
+\node[usecase] (uc3) at (5.1,2.9) {Review entities};
+\node[usecase] (uc4) at (5.1,1.8) {Edit repertory};
+\node[usecase] (uc5) at (5.1,0.7) {Set exclusions};
+\node[usecase] (uc6) at (5.1,-0.4) {Inspect remedies};
+\node[usecase] (uc7) at (5.1,-1.5) {Export report};
+\node[usecase] (uc8) at (5.1,-2.6) {Manage cases};
+\draw[conn] (patient.east) -- (uc1.west);
+\draw[conn] (patient.east) -- (uc2.west);
+\draw[conn] (uc3.east) -- (clinician.west);
+\draw[conn] (uc4.east) -- (clinician.west);
+\draw[conn] (uc5.east) -- (clinician.west);
+\draw[conn] (uc6.east) -- (clinician.west);
+\draw[conn] (uc7.east) -- (clinician.west);
+\draw[conn] (uc8.east) -- (clinician.west);
+\end{tikzpicture}
+\caption[UML Use Case Diagram]{Patient and clinician interactions with the Kent-AI system.}
 \label{fig:usecase}
 \end{figure}
 
@@ -391,34 +250,14 @@ The domain architecture is anchored around the immutable \texttt{ClinicalCase} d
 
 \begin{figure}[htbp]
 \centering
-\resizebox{0.95\textwidth}{!}{%
+\resizebox{0.98\textwidth}{!}{%
 \begin{tikzpicture}[
-    umlclass/.style={
-        rectangle split,
-        rectangle split parts=3,
-        rounded corners=2pt,
-        draw=blue!75!black,
-        fill=blue!5,
-        line width=1.0pt,
-        align=left,
-        font=\scriptsize,
-        minimum width=4.8cm
-    },
-    assoc/.style={
-        -{Stealth[scale=1.0]},
-        line width=1.0pt,
-        draw=gray!80!black
-    },
-    comp/.style={
-        {Diamond[scale=1.4, fill=gray!80!black]}-,
-        line width=1.0pt,
-        draw=gray!80!black
-    }
+    umlclass/.style={rectangle split, rectangle split parts=3, rectangle split part fill={KentNavy,KentBlue!5,white}, rounded corners=3pt, draw=KentNavy, line width=0.9pt, align=left, text=KentNavy, font=\scriptsize, minimum width=4.8cm, inner sep=5pt},
+    assoc/.style={-{Stealth[length=1.7mm]}, line width=0.9pt, draw=KentSlate},
+    comp/.style={{Diamond[scale=1.2, fill=KentTeal]}-, line width=0.9pt, draw=KentTeal}
 ]
-
-% Class: ClinicalCase
-\node[umlclass] (case) at (0, 0) {
-    \textbf{\small ClinicalCase}
+\node[umlclass] (case) at (0,0) {
+    \textcolor{white}{\small\textbf{ClinicalCase}}
     \nodepart{second}
     + case\_id: str\\
     + patient\_name: str\\
@@ -427,15 +266,13 @@ The domain architecture is anchored around the immutable \texttt{ClinicalCase} d
     + active\_rubric\_ids: List[int]\\
     + status: str
     \nodepart{third}
-    + add\_rubric(rubric\_id: int): void\\
-    + remove\_rubric(rubric\_id: int): void\\
+    + add\_rubric(rubric\_id): void\\
+    + remove\_rubric(rubric\_id): void\\
     + to\_dict(): dict\\
     + from\_sqlite(row): ClinicalCase
 };
-
-% Class: SymptomProfile
 \node[umlclass, right=2.0cm of case] (profile) {
-    \textbf{\small SymptomProfile}
+    \textcolor{white}{\small\textbf{SymptomProfile}}
     \nodepart{second}
     + mental: List[str]\\
     + location: List[str]\\
@@ -446,12 +283,10 @@ The domain architecture is anchored around the immutable \texttt{ClinicalCase} d
     \nodepart{third}
     + get\_search\_queries(): List[str]\\
     + to\_json(): str\\
-    + get\_dimension(dim: str): List[str]
+    + get\_dimension(dim): List[str]
 };
-
-% Class: PipelineOrchestrator
 \node[umlclass, below=2.0cm of case] (orch) {
-    \textbf{\small PipelineOrchestrator}
+    \textcolor{white}{\small\textbf{PipelineOrchestrator}}
     \nodepart{second}
     - vector\_store: RubricVectorStore\\
     - ranker: RemedyRanker\\
@@ -461,10 +296,8 @@ The domain architecture is anchored around the immutable \texttt{ClinicalCase} d
     + extract\_profile(text): SymptomProfile\\
     + rescore\_report(case): Report
 };
-
-% Class: RemedyRanker
 \node[umlclass, below=2.0cm of profile] (ranker) {
-    \textbf{\small RemedyRanker}
+    \textcolor{white}{\small\textbf{RemedyRanker}}
     \nodepart{second}
     - kent\_db\_conn: Connection\\
     - dim\_weights: Dict[str, float]
@@ -473,109 +306,73 @@ The domain architecture is anchored around the immutable \texttt{ClinicalCase} d
     + compute\_totality\_matrix(): Matrix\\
     + get\_keynotes(remedy\_id): List[str]
 };
-
-% Class: RubricVectorStore
 \node[umlclass, below=1.8cm of orch] (vs) {
-    \textbf{\small RubricVectorStore}
+    \textcolor{white}{\small\textbf{RubricVectorStore}}
     \nodepart{second}
     - client: chromadb.Client\\
     - embedder: RubricEmbedder
     \nodepart{third}
-    + search(query: str, k: int=20): List[Rubric]\\
+    + search(query, k=20): List[Rubric]\\
     + batch\_upsert(embeddings): void
 };
-
-% Class: SymptomNER
 \node[umlclass, below=1.8cm of ranker] (ner) {
-    \textbf{\small SymptomNER}
+    \textcolor{white}{\small\textbf{SymptomNER}}
     \nodepart{second}
     - model: AutoModelForTokenClass\\
     - tokenizer: AutoTokenizer
     \nodepart{third}
-    + extract\_entities(text: str): List[Span]\\
+    + extract\_entities(text): List[Span]\\
     + predict\_bio\_tags(tokens): List[str]
 };
-
-% Relationships
-\draw[comp] (case.east) -- node[above, font=\tiny] {1 \quad has-a \quad 1} (profile.west);
+\draw[comp] (case.east) -- node[above, font=\tiny, fill=white, inner sep=1pt] {1:1} (profile.west);
 \draw[assoc] (orch.north) -- (case.south);
 \draw[assoc] (orch.east) -- (ranker.west);
 \draw[assoc] (orch.south) -- (vs.north);
 \draw[assoc] (orch.south east) -- (ner.north west);
-
 \end{tikzpicture}%
 }
-\caption[UML Class Diagram]{Core UML Class Diagram illustrating Domain Models and System Services.}
+\caption[UML Class Diagram]{Core domain model and service relationships.}
 \label{fig:class_diag}
 \end{figure}
 
 \subsection{UML Sequence Diagram}
 Figure \ref{fig:seq_diag} details the interaction sequence during consultation repertorization:
 
-\begin{figure}[htbp]
+\begin{figure}[p]
 \centering
-\resizebox{0.95\textwidth}{!}{%
+\resizebox{0.98\textwidth}{!}{%
 \begin{tikzpicture}[
-    lifeline/.style={
-        draw=gray!50,
-        dashed,
-        line width=0.8pt
-    },
-    participant/.style={
-        rectangle,
-        rounded corners=3pt,
-        draw=#1!75!black,
-        fill=#1!12,
-        line width=1.0pt,
-        minimum width=2.3cm,
-        minimum height=0.9cm,
-        align=center,
-        font=\scriptsize\bfseries
-    },
-    msg/.style={
-        -{Stealth[scale=1.0]},
-        line width=0.9pt,
-        draw=blue!80!black
-    },
-    ret/.style={
-        -{Stealth[scale=1.0]},
-        dashed,
-        line width=0.8pt,
-        draw=gray!70!black
-    }
+    lifeline/.style={draw=KentLine, dashed, line width=0.8pt},
+    participant/.style args={#1}{rectangle, rounded corners=3pt, draw=#1!78!KentNavy, fill=#1!8!white, line width=0.9pt, text width=2.55cm, minimum height=0.85cm, align=center, font=\footnotesize\bfseries, inner sep=3pt},
+    msg/.style={-{Stealth[length=1.8mm]}, line width=0.9pt, draw=KentBlue},
+    ret/.style={-{Stealth[length=1.8mm]}, dashed, line width=0.8pt, draw=KentSlate},
+    msglabel/.style={font=\scriptsize, text=KentNavy, text width=2.8cm, align=center, fill=white, inner sep=1.5pt}
 ]
-
-% Participants
-\node[participant=teal] (clin) at (0, 0) {Clinician};
-\node[participant=blue] (ui) at (2.5, 0) {Workstation UI};
-\node[participant=teal!80!black] (orch) at (5.2, 0) {Orchestrator};
-\node[participant=green!60!black] (ner) at (8.0, 0) {NER Ensemble};
-\node[participant=purple] (vstore) at (10.8, 0) {ChromaDB};
-\node[participant=orange] (ranker) at (13.6, 0) {RemedyRanker};
-
-% Lifelines
-\draw[lifeline] (clin) -- (0, -7.8);
-\draw[lifeline] (ui) -- (2.5, -7.8);
-\draw[lifeline] (orch) -- (5.2, -7.8);
-\draw[lifeline] (ner) -- (8.0, -7.8);
-\draw[lifeline] (vstore) -- (10.8, -7.8);
-\draw[lifeline] (ranker) -- (13.6, -7.8);
-
-% Sequence Messages
-\draw[msg] (0, -1.0) -- node[above, font=\tiny] {1. Click "Analyze Case"} (2.5, -1.0);
-\draw[msg] (2.5, -1.7) -- node[above, font=\tiny] {2. repertorize\_case(case)} (5.2, -1.7);
-\draw[msg] (5.2, -2.4) -- node[above, font=\tiny] {3. extract\_entities(narrative)} (8.0, -2.4);
-\draw[ret] (8.0, -3.1) -- node[above, font=\tiny] {4. return entity\_spans} (5.2, -3.1);
-\draw[msg] (5.2, -3.8) -- node[above, font=\tiny] {5. search(entity\_queries, k=20)} (10.8, -3.8);
-\draw[ret] (10.8, -4.5) -- node[above, font=\tiny] {6. return candidate\_rubrics} (5.2, -4.5);
-\draw[msg] (5.2, -5.2) -- node[above, font=\tiny] {7. rank\_remedies(rubrics, grades)} (13.6, -5.2);
-\draw[ret] (13.6, -5.9) -- node[above, font=\tiny] {8. return ranked\_scores, totality\_matrix} (5.2, -5.9);
-\draw[ret] (5.2, -6.6) -- node[above, font=\tiny] {9. render\_report\_and\_matrix()} (2.5, -6.6);
-\draw[msg] (2.5, -7.3) -- node[above, font=\tiny] {10. View Totality Matrix \& Remedies} (0, -7.3);
-
+\node[participant=KentTeal] (clin) at (0,0) {Clinician};
+\node[participant=KentBlue] (ui) at (2.8,0) {Workstation UI};
+\node[participant=KentNavy] (orch) at (5.6,0) {Orchestrator};
+\node[participant=KentGreen] (ner) at (8.4,0) {NER Ensemble};
+\node[participant=KentViolet] (vstore) at (11.2,0) {ChromaDB};
+\node[participant=KentAmber] (ranker) at (14.0,0) {RemedyRanker};
+\draw[lifeline] (clin) -- (0,-9.5);
+\draw[lifeline] (ui) -- (2.8,-9.5);
+\draw[lifeline] (orch) -- (5.6,-9.5);
+\draw[lifeline] (ner) -- (8.4,-9.5);
+\draw[lifeline] (vstore) -- (11.2,-9.5);
+\draw[lifeline] (ranker) -- (14.0,-9.5);
+\draw[msg] (0,-1.0) -- node[msglabel, above=4pt] {1. Analyze case} (2.8,-1.0);
+\draw[msg] (2.8,-1.85) -- node[msglabel, above=4pt] {2. Run analysis} (5.6,-1.85);
+\draw[msg] (5.6,-2.70) -- node[msglabel, above=4pt] {3. Extract entities} (8.4,-2.70);
+\draw[ret] (8.4,-3.55) -- node[msglabel, above=4pt] {4. Return entities} (5.6,-3.55);
+\draw[msg] (5.6,-4.40) -- node[msglabel, above=4pt] {5. Search top-20} (11.2,-4.40);
+\draw[ret] (11.2,-5.25) -- node[msglabel, above=4pt] {6. Return rubrics} (5.6,-5.25);
+\draw[msg] (5.6,-6.10) -- node[msglabel, above=4pt] {7. Rank remedies} (14.0,-6.10);
+\draw[ret] (14.0,-6.95) -- node[msglabel, above=4pt] {8. Ranked report} (5.6,-6.95);
+\draw[ret] (5.6,-7.80) -- node[msglabel, above=4pt] {9. Render results} (2.8,-7.80);
+\draw[msg] (2.8,-8.65) -- node[msglabel, above=4pt] {10. Display report} (0,-8.65);
 \end{tikzpicture}%
 }
-\caption[UML Sequence Diagram]{UML Sequence Diagram for Case Repertorization Workflow.}
+\caption[UML Sequence Diagram]{Consultation repertorization request and response sequence.}
 \label{fig:seq_diag}
 \end{figure}
 

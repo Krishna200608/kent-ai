@@ -9,11 +9,9 @@ This appendix provides the complete specification of the 15-class BIO token labe
 
 \section{BIO Label Specification}
 
-\begin{table}[h]
-\caption[Complete BIO Label Schema]{Complete 15-Class BIO Token Label Schema with Clinical Definitions.}
-\label{tab:fullschema}
-\centering
-\begin{tabular}{lllp{6cm}}
+\scriptsize
+\begin{longtable}{P{2.2cm}P{2.6cm}P{2.4cm}P{7.2cm}}
+\caption[Complete BIO Label Schema]{Complete 15-Class BIO Token Label Schema with Clinical Definitions.}\label{tab:fullschema}\\
 \toprule
 \tabhead{Label} & \tabhead{Dimension} & \tabhead{Abbrev.} & \tabhead{Clinical Definition} \\
 \midrule
@@ -26,11 +24,11 @@ I-LOC & Location & LOC & Continuation of a LOC span. \\
 B-SEN & Sensation & SEN & Beginning of a sensation or pain quality span. Includes descriptors such as throbbing, burning, pressing, stabbing, stitching, cramping, numb. \\
 I-SEN & Sensation & SEN & Continuation of a SEN span. \\
 \midrule
-B-MOD\_AGG & Aggravation & MOD\_AGG & Beginning of an aggravation modality span. Describes conditions or actions that make symptoms worse (e.g., cold air, motion, evening, being alone). \\
-I-MOD\_AGG & Aggravation & MOD\_AGG & Continuation of a MOD\_AGG span. \\
+B-MOD\_\allowbreak AGG & Aggravation & MOD\_\allowbreak AGG & Beginning of an aggravation modality span. Describes conditions or actions that make symptoms worse (e.g., cold air, motion, evening, being alone). \\
+I-MOD\_\allowbreak AGG & Aggravation & MOD\_\allowbreak AGG & Continuation of a MOD\_\allowbreak AGG span. \\
 \midrule
-B-MOD\_AMEL & Amelioration & MOD\_AMEL & Beginning of an amelioration modality span. Describes conditions that relieve symptoms (e.g., warmth, rest, company, pressure). \\
-I-MOD\_AMEL & Amelioration & MOD\_AMEL & Continuation of a MOD\_AMEL span. \\
+B-MOD\_\allowbreak AMEL & Amelioration & MOD\_\allowbreak AMEL & Beginning of an amelioration modality span. Describes conditions that relieve symptoms (e.g., warmth, rest, company, pressure). \\
+I-MOD\_\allowbreak AMEL & Amelioration & MOD\_\allowbreak AMEL & Continuation of a MOD\_\allowbreak AMEL span. \\
 \midrule
 B-CONC & Concomitant & CONC & Beginning of a concomitant symptom span. Describes symptoms that consistently accompany the chief complaint but are anatomically or etiologically distinct. \\
 I-CONC & Concomitant & CONC & Continuation of a CONC span. \\
@@ -40,8 +38,8 @@ I-TEMP & Temporal & TEMP & Continuation of a TEMP span. \\
 \midrule
 O & Outside & O & Token is not part of any symptom entity. \\
 \bottomrule
-\end{tabular}
-\end{table}
+\end{longtable}
+\normalsize
 
 %----------------------------------------------------------------------------------------
 

@@ -26,12 +26,12 @@ The entire test suite comprises \textbf{195 automated tests across 22 test modul
 
 Table \ref{tab:testcases} documents twelve representative automated test cases spanning the entire pipeline.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \caption[Selected Automated Test Cases]{Representative Automated Test Cases with Expected vs. Actual Outputs.}
 \label{tab:testcases}
 \centering
 \scriptsize
-\begin{tabular}{lp{3.2cm}p{3.2cm}p{3.2cm}c}
+\begin{tabular}{lP{3.2cm}P{3.2cm}P{3.2cm}c}
 \toprule
 \tabhead{ID} & \tabhead{Test Scenario} & \tabhead{Expected Output} & \tabhead{Actual Output} & \tabhead{Status} \\
 \midrule
@@ -68,7 +68,7 @@ Table \ref{tab:testcases} documents twelve representative automated test cases s
 
 The Streamlit clinical workstation provides an intuitive, doctor-in-the-loop environment for case-taking, rubric review, and remedy analysis. Figures \ref{fig:screen_full}, \ref{fig:screen_suggestions}, and \ref{fig:screen_intake} illustrate the running application.
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{Figures/dashboard_full.jpg}
 \caption[Kent-AI Clinical Workstation Layout]{Kent-AI Clinical Workstation --- Step 1: Patient Clinical Intake. Demonstrates the 7:3 asymmetric layout: 70\% left console for the conversational dialogue stream and 30\% right rail for the persistent Case Snapshot tracking captured symptom dimensions.}
@@ -77,7 +77,7 @@ The Streamlit clinical workstation provides an intuitive, doctor-in-the-loop env
 
 As shown in Figure \ref{fig:screen_full}, the top header bar maintains clinical situational awareness with a leaf icon, system status pill (\texttt{Llama 3 8B Online}), and the active case banner (\texttt{CASE-2026-167}, \texttt{Draft}). The 4-step stepper clearly displays the consultation progress (1. Intake $\to$ 2. Review $\to$ 3. Analysis $\to$ 4. Report). The right-hand \textbf{Case Snapshot} rail displays real-time dimension status (Mental/Emotional, Location, Sensation, Worse from, Better from, Concomitants, Time pattern).
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.9\textwidth]{Figures/chat_suggestions.png}
 \caption[Dynamic Quick-Reply Suggestions]{Kent-AI Dynamic Quick-Reply Suggestion Chips. Contextual candidate responses generated dynamically to accelerate patient symptom articulation while supporting manual input.}
@@ -86,7 +86,7 @@ As shown in Figure \ref{fig:screen_full}, the top header bar maintains clinical 
 
 Figure \ref{fig:screen_suggestions} highlights the \textbf{Dynamic Quick-Reply Suggestion Chips} (\textit{``It started recently''}, \textit{``It has been ongoing for a while''}, \textit{``It comes and goes in episodes''}) generated in real time by the intent classifier to match the current clinical inquiry. Patients can click a chip to reply instantly or type custom prose in the bottom input bar.
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.75\textwidth]{Figures/intake_progress.png}
 \caption[FSM Intake Stepper and Persona Controls]{FSM Intake Stepper and Persona Controls. Tracks current intake dimension progress (Location 3/10) with persona toggling between Patient and Practitioner.}
@@ -105,11 +105,12 @@ All evaluation experiments were conducted on the held-out test partition ($N = 1
 \subsection{Master Comparative Benchmark Matrix}
 Table \ref{tab:master_benchmark} presents the master evaluation results across all four transformer encoders and two evaluation paradigms.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \caption[Master Comparative Benchmark Matrix]{Master Comparative Benchmark Matrix on Held-Out Test Set ($N = 1,973$).}
 \label{tab:master_benchmark}
 \centering
 \scriptsize
+\setlength{\tabcolsep}{3pt}
 \begin{tabular}{llrrrrr}
 \toprule
 \tabhead{Pipeline Stage} & \tabhead{Metric} & \tabhead{ClinicalBERT} & \tabhead{PubMedBERT} & \tabhead{BioLinkBERT} & \tabhead{DeBERTa-v3} & \tabhead{Best Performer} \\
@@ -135,12 +136,13 @@ Table \ref{tab:master_benchmark} presents the master evaluation results across a
 \subsection{Seven-Dimension F1 Extraction Breakdown}
 Table \ref{tab:dimension_breakdown} reveals the complementary specialization of each encoder across the seven Kentian dimensions.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \caption[Per-Dimension F1 Breakdown]{Per-Dimension F1 Performance Breakdown Across Biomedical Encoders.}
 \label{tab:dimension_breakdown}
 \centering
 \small
-\begin{tabular}{llrrrl}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{P{2.2cm}P{3cm}rrrP{3.6cm}}
 \toprule
 \tabhead{Dimension} & \tabhead{Clinical Meaning} & \tabhead{ClinicalBERT} & \tabhead{PubMedBERT} & \tabhead{BioLinkBERT} & \tabhead{Best Model} \\
 \midrule
@@ -153,16 +155,18 @@ Table \ref{tab:dimension_breakdown} reveals the complementary specialization of 
 \texttt{MENT} & Mental / Emotional & 35.60\% & \textbf{37.11\%} & 37.10\% & \textbf{PubMedBERT (+1.51\%)} \\
 \bottomrule
 \end{tabular}
+%
+}
 \end{table}
 
 \subsection{BioMistral 7B QLoRA Evaluation}
 The QLoRA-fine-tuned BioMistral 7B model was evaluated on the same test set:
 
-\begin{table}[h]
+\begin{table}[htbp]
 \caption[BioMistral 7B Evaluation Results]{BioMistral 7B (4-bit QLoRA) Clinical Extraction Performance.}
 \label{tab:biomistral_eval}
 \centering
-\begin{tabular}{lrrl}
+\begin{tabular}{P{4.5cm}P{2.5cm}P{3.7cm}P{3.2cm}}
 \toprule
 \tabhead{Evaluation Metric} & \tabhead{Empirical Score} & \tabhead{Benchmark Threshold} & \tabhead{Outcome} \\
 \midrule
@@ -187,11 +191,11 @@ BioMistral 7B achieves a Micro F1 of **47.59\%** --- outperforming the best disc
 
 Table \ref{tab:benchmarks} summarizes the computational performance across pipeline stages.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \caption[Computational Performance Benchmarks]{Computational Latency and Throughput Benchmarks.}
 \label{tab:benchmarks}
 \centering
-\begin{tabular}{lll}
+\begin{tabular}{P{4.2cm}P{3cm}P{8cm}}
 \toprule
 \tabhead{Operation / Component} & \tabhead{Measurement} & \tabhead{Hardware Context} \\
 \midrule

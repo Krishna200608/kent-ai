@@ -9,12 +9,14 @@ This appendix provides the comprehensive verification matrix of all \textbf{195 
 
 \section{Test Module Inventory and Coverage}
 
-\begin{table}[h]
+Table~\ref{tab:test_inventory} documents the complete test execution inventory of all 195 automated tests across the 22 test modules comprising the Kent-AI test suite. Each module is listed alongside its architectural subsystem, test count, runtime duration, and verified clinical functionality.
+
+\begin{table}[H]
 \caption[Test Suite Execution Summary]{Kent-AI Test Suite Verification Inventory.}
 \label{tab:test_inventory}
 \centering
 \scriptsize
-\begin{tabular}{llrrp{5.5cm}}
+\begin{tabular}{llrrP{5.5cm}}
 \toprule
 \tabhead{Module Path} & \tabhead{Subsystem} & \tabhead{Tests} & \tabhead{Duration} & \tabhead{Scope / Verified Functionality} \\
 \midrule
@@ -46,6 +48,7 @@ This appendix provides the comprehensive verification matrix of all \textbf{195 
 \end{tabular}
 \end{table}
 
+\clearpage
 %----------------------------------------------------------------------------------------
 
 \section{Continuous Integration Command}
