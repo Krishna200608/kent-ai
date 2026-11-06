@@ -31,28 +31,68 @@ def clean_message_text(text: str) -> str:
     text = cleaned
 
     # 1. Remove SLOT_UPDATE and QUICK_REPLIES blocks anywhere in the text (bracketed and unbracketed)
-    text = re.sub(r"\[?\s*SLOT_UPDATE\s*:\s*\{[^{}]*\}\s*\]?", "", text, flags=re.IGNORECASE | re.DOTALL)
-    text = re.sub(r"\[?\s*QUICK_REPLIES\s*:\s*\[.*?\]\s*\]?", "", text, flags=re.IGNORECASE | re.DOTALL)
-    text = re.sub(r"(?:\[\s*)?QUICK_REPLIES\s*:.*$", "", text, flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
-    text = re.sub(r"(?:\[\s*)?SLOT_UPDATE\s*:.*$", "", text, flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
+    text = re.sub(
+        r"\[?\s*SLOT_UPDATE\s*:\s*\{[^{}]*\}\s*\]?",
+        "",
+        text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    text = re.sub(
+        r"\[?\s*QUICK_REPLIES\s*:\s*\[.*?\]\s*\]?",
+        "",
+        text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    text = re.sub(
+        r"(?:\[\s*)?QUICK_REPLIES\s*:.*$",
+        "",
+        text,
+        flags=re.IGNORECASE | re.MULTILINE | re.DOTALL,
+    )
+    text = re.sub(
+        r"(?:\[\s*)?SLOT_UPDATE\s*:.*$",
+        "",
+        text,
+        flags=re.IGNORECASE | re.MULTILINE | re.DOTALL,
+    )
 
     # 2. Remove any trailing JSON array or object
-    text = re.sub(r"\[\s*\"[^\"]+\"\s*(?:,\s*\"[^\"]+\"\s*)*\]\s*$", "", text.strip(), flags=re.DOTALL)
+    text = re.sub(
+        r"\[\s*\"[^\"]+\"\s*(?:,\s*\"[^\"]+\"\s*)*\]\s*$",
+        "",
+        text.strip(),
+        flags=re.DOTALL,
+    )
     text = re.sub(r"\{[^{}]*\}\s*$", "", text.strip(), flags=re.DOTALL)
 
     # 3. Remove markdown fences like ```json ... ``` or hanging ```
     text = re.sub(r"```(?:json)?\s*$", "", text.strip(), flags=re.IGNORECASE)
 
     # 4. Remove labels if they appear on their own lines or at the end
-    text = re.sub(r"(?:QUICK_REPLIES|SLOT_UPDATE)\s*:\s*$", "", text.strip(), flags=re.IGNORECASE)
+    text = re.sub(
+        r"(?:QUICK_REPLIES|SLOT_UPDATE)\s*:\s*$", "", text.strip(), flags=re.IGNORECASE
+    )
 
     # 5. Split into lines and filter out any lines that are just lone punctuation/brackets
     cleaned_lines = []
     for line in text.split("\n"):
         stripped = line.strip()
-        if stripped in ("[", "]", "{", "}", "(", ")", "```", "```json", "QUICK_REPLIES:", "SLOT_UPDATE:"):
+        if stripped in (
+            "[",
+            "]",
+            "{",
+            "}",
+            "(",
+            ")",
+            "```",
+            "```json",
+            "QUICK_REPLIES:",
+            "SLOT_UPDATE:",
+        ):
             continue
-        if re.match(r"^\[\s*(?:QUICK_REPLIES|SLOT_UPDATE)?:?\]?$", stripped, re.IGNORECASE):
+        if re.match(
+            r"^\[\s*(?:QUICK_REPLIES|SLOT_UPDATE)?:?\]?$", stripped, re.IGNORECASE
+        ):
             continue
         cleaned_lines.append(line)
 
@@ -65,7 +105,9 @@ def clean_message_text(text: str) -> str:
     return text.strip()
 
 
-def parse_and_strip_quick_replies(text: str, intake_mode: str = "patient") -> Tuple[str, List[str]]:
+def parse_and_strip_quick_replies(
+    text: str, intake_mode: str = "patient"
+) -> Tuple[str, List[str]]:
     """Extract QUICK_REPLIES from LLaMA output (bracketed JSON or unbracketed list) and return clean text + options."""
     if not text:
         return "", []
@@ -74,7 +116,9 @@ def parse_and_strip_quick_replies(text: str, intake_mode: str = "patient") -> Tu
     quick_options: List[str] = []
     clean_part = text
 
-    match = re.search(r"(?:\[\s*)?QUICK_REPLIES\s*:\s*(.+)$", text, re.IGNORECASE | re.DOTALL)
+    match = re.search(
+        r"(?:\[\s*)?QUICK_REPLIES\s*:\s*(.+)$", text, re.IGNORECASE | re.DOTALL
+    )
     if match:
         clean_part = text[: match.start()].strip()
         raw_replies = match.group(1).strip()
@@ -88,32 +132,49 @@ def parse_and_strip_quick_replies(text: str, intake_mode: str = "patient") -> Tu
             clean_raw = raw_replies.strip("[]")
             if "\n" in clean_raw:
                 lines = clean_raw.split("\n")
-                for l in lines:
-                    l = re.sub(r"^[\s\-\*\d\.\•]+", "", l).strip(' "\'')
-                    if l:
-                        quick_options.append(l)
+                for line in lines:
+                    clean_line = re.sub(r"^[\s\-\*\d\.\•]+", "", line).strip(" \"'")
+                    if clean_line:
+                        quick_options.append(clean_line)
             else:
                 parts = clean_raw.split(",")
                 for p in parts:
-                    p_clean = re.sub(r"^[\s\-\*\d\.\•]+", "", p).strip(' "\'')
+                    p_clean = re.sub(r"^[\s\-\*\d\.\•]+", "", p).strip(" \"'")
                     if p_clean:
                         quick_options.append(p_clean)
 
         quick_options = [
-            opt.capitalize() if opt.islower() else opt
-            for opt in quick_options
-            if opt
+            opt.capitalize() if opt.islower() else opt for opt in quick_options if opt
         ]
 
     # Strict validation: Quick replies must be valid statements/observations, never doctor questions
     valid_replies: List[str] = []
     question_openers = (
-        "how ", "what ", "why ", "when ", "where ", "can you ", "could you ",
-        "is there ", "are there ", "do you ", "tell me ", "describe ", "would you ",
-        "which ", "have you ", "should you ", "can we ", "could we "
+        "how ",
+        "what ",
+        "why ",
+        "when ",
+        "where ",
+        "can you ",
+        "could you ",
+        "is there ",
+        "are there ",
+        "do you ",
+        "tell me ",
+        "describe ",
+        "would you ",
+        "which ",
+        "have you ",
+        "should you ",
+        "can we ",
+        "could we ",
     )
     forbidden_practitioner_openers = (
-        "makes me ", "i feel ", "i am ", "feel helpless", "affecting my"
+        "makes me ",
+        "i feel ",
+        "i am ",
+        "feel helpless",
+        "affecting my",
     )
     for opt in quick_options:
         s_opt = opt.strip()
@@ -123,7 +184,9 @@ def parse_and_strip_quick_replies(text: str, intake_mode: str = "patient") -> Tu
             continue
         if s_opt.lower().startswith(question_openers):
             continue
-        if is_practitioner and any(f in s_opt.lower() for f in forbidden_practitioner_openers):
+        if is_practitioner and any(
+            f in s_opt.lower() for f in forbidden_practitioner_openers
+        ):
             continue
         if len(s_opt.split()) > 8:
             continue
@@ -150,10 +213,20 @@ def parse_and_strip_slot_update(text: str) -> Tuple[str, Dict[str, List[str]]]:
         text_without_slot = text[: match.start()] + text[match.end() :]
         try:
             parsed = json.loads(raw_json)
-            valid_keys = {"location", "sensation", "modality_agg", "modality_amel", "concomitant", "temporal", "mental"}
+            valid_keys = {
+                "location",
+                "sensation",
+                "modality_agg",
+                "modality_amel",
+                "concomitant",
+                "temporal",
+                "mental",
+            }
             for key, vals in parsed.items():
                 if key in valid_keys and isinstance(vals, list):
-                    clean_vals = [str(v).strip().lower() for v in vals if str(v).strip()]
+                    clean_vals = [
+                        str(v).strip().lower() for v in vals if str(v).strip()
+                    ]
                     if clean_vals:
                         found[key] = clean_vals
         except Exception:
@@ -231,14 +304,19 @@ def get_state_fallback(state: IntakeState) -> List[str]:
             "No other symptoms",
         ],
     }
-    return state_fallback.get(state, [
-        "Yes, exactly like that",
-        "Not quite, let me explain",
-        "Please analyze my remedies now",
-    ])
+    return state_fallback.get(
+        state,
+        [
+            "Yes, exactly like that",
+            "Not quite, let me explain",
+            "Please analyze my remedies now",
+        ],
+    )
 
 
-def _format_chips(options: List[str], current_state: Optional[IntakeState], is_slot: bool = False) -> List[str]:
+def _format_chips(
+    options: List[str], current_state: Optional[IntakeState], is_slot: bool = False
+) -> List[str]:
     """Format chips: for slot states or slot questions, provide up to 3 contextual chips + 'Skip' + 'None of these'."""
     slot_states = {
         IntakeState.LOCATION,
@@ -249,7 +327,11 @@ def _format_chips(options: List[str], current_state: Optional[IntakeState], is_s
         IntakeState.MENTAL,
     }
     if is_slot or (current_state in slot_states):
-        filtered = [opt for opt in options if opt.lower() not in ("skip", "none of these", "none")]
+        filtered = [
+            opt
+            for opt in options
+            if opt.lower() not in ("skip", "none of these", "none")
+        ]
         contextual = filtered[:3]
         if "Skip" not in contextual:
             contextual.append("Skip")
@@ -267,24 +349,47 @@ def generate_dynamic_suggestions(
 ) -> List[str]:
     """Generate 3-4 contextual first-person or clinical instant-reply suggestions."""
     if current_state == IntakeState.DONE:
-        return ["Everything looks accurate", "I'd like to check my answers", "No other symptoms"]
+        return [
+            "Everything looks accurate",
+            "I'd like to check my answers",
+            "No other symptoms",
+        ]
 
     text = (bot_message or "").lower()
     slots = extracted_slots or {}
-    is_practitioner = (intake_mode or "").lower() == "practitioner" or "practitioner" in text
+    is_practitioner = (
+        intake_mode or ""
+    ).lower() == "practitioner" or "practitioner" in text
 
     raw_options: List[str] = []
 
     # Opening / Chief Complaint (Kentian anatomical location first)
-    if not text or any(p in text for p in [
-        "troubling you", "primary symptoms", "bring you in", "bothers you",
-        "what brings you in", "what brings you here", "what brings you today",
-        "how are you", "practitioner mode", "chief complaint",
-        "health concern", "discomfort that brought", "what you've been experiencing",
-        "what you are experiencing", "main concern", "main problem",
-        "reason for your visit", "describe how you feel", "what would you like help with",
-        "describe the main", "experiencing today",
-    ]):
+    if not text or any(
+        p in text
+        for p in [
+            "troubling you",
+            "primary symptoms",
+            "bring you in",
+            "bothers you",
+            "what brings you in",
+            "what brings you here",
+            "what brings you today",
+            "how are you",
+            "practitioner mode",
+            "chief complaint",
+            "health concern",
+            "discomfort that brought",
+            "what you've been experiencing",
+            "what you are experiencing",
+            "main concern",
+            "main problem",
+            "reason for your visit",
+            "describe how you feel",
+            "what would you like help with",
+            "describe the main",
+            "experiencing today",
+        ]
+    ):
         if is_practitioner:
             raw_options = [
                 "Headache / Migraine (Frontal/Temporal)",
@@ -302,11 +407,22 @@ def generate_dynamic_suggestions(
         return _format_chips(raw_options, current_state)
 
     # Concomitants
-    if any(w in text for w in [
-        "alongside", "other symptom", "at the same time", "also notice",
-        "nausea, dizziness", "concomitant", "accompanied by", "together with",
-        "in addition to", "associated with", "sweating or chills",
-    ]):
+    if any(
+        w in text
+        for w in [
+            "alongside",
+            "other symptom",
+            "at the same time",
+            "also notice",
+            "nausea, dizziness",
+            "concomitant",
+            "accompanied by",
+            "together with",
+            "in addition to",
+            "associated with",
+            "sweating or chills",
+        ]
+    ):
         if is_practitioner:
             raw_options = [
                 "Concomitant nausea & vertigo",
@@ -324,33 +440,117 @@ def generate_dynamic_suggestions(
         return _format_chips(raw_options, current_state, is_slot=True)
 
     # Location
-    if any(w in text for w in [
-        "where", "location", "part of your", "which side", "whereabouts",
-        "where in", "which area", "affected region", "where in your body",
-    ]):
+    if any(
+        w in text
+        for w in [
+            "where",
+            "location",
+            "part of your",
+            "which side",
+            "whereabouts",
+            "where in",
+            "which area",
+            "affected region",
+            "where in your body",
+        ]
+    ):
         known_locs = " ".join(slots.get("location", [])).lower()
-        if "head" in known_locs or "head" in text or "migraine" in text or "temple" in text:
-            raw_options = ["Forehead and temples", "Top of head (vertex)", "Back of head (occiput)", "Behind my eyes"]
-        elif "stomach" in known_locs or "abdomen" in known_locs or "stomach" in text or "nausea" in text:
-            raw_options = ["Pit of stomach (epigastrium)", "Lower abdomen & cramping", "All across my stomach", "Around my navel area"]
-        elif "chest" in known_locs or "chest" in text or "heart" in text or "breath" in text:
-            raw_options = ["Center of my chest", "Left side around heart", "Upper chest and lungs", "Tightness across my ribs"]
+        if (
+            "head" in known_locs
+            or "head" in text
+            or "migraine" in text
+            or "temple" in text
+        ):
+            raw_options = [
+                "Forehead and temples",
+                "Top of head (vertex)",
+                "Back of head (occiput)",
+                "Behind my eyes",
+            ]
+        elif (
+            "stomach" in known_locs
+            or "abdomen" in known_locs
+            or "stomach" in text
+            or "nausea" in text
+        ):
+            raw_options = [
+                "Pit of stomach (epigastrium)",
+                "Lower abdomen & cramping",
+                "All across my stomach",
+                "Around my navel area",
+            ]
+        elif (
+            "chest" in known_locs
+            or "chest" in text
+            or "heart" in text
+            or "breath" in text
+        ):
+            raw_options = [
+                "Center of my chest",
+                "Left side around heart",
+                "Upper chest and lungs",
+                "Tightness across my ribs",
+            ]
         elif "throat" in known_locs or "throat" in text:
-            raw_options = ["Right side of throat", "Left side and tonsils", "Deep down in the throat", "Larynx and voice box"]
-        elif "back" in known_locs or "back" in text or "spine" in text or "lumbar" in text:
-            raw_options = ["Lower lumbar area", "Upper back between shoulders", "Along the entire spine", "Sacrum and tailbone"]
-        elif "joint" in known_locs or "knee" in known_locs or "joint" in text or "limb" in text:
-            raw_options = ["Knees and ankles", "Hands and wrists", "Shoulders and elbows", "Small finger joints"]
+            raw_options = [
+                "Right side of throat",
+                "Left side and tonsils",
+                "Deep down in the throat",
+                "Larynx and voice box",
+            ]
+        elif (
+            "back" in known_locs
+            or "back" in text
+            or "spine" in text
+            or "lumbar" in text
+        ):
+            raw_options = [
+                "Lower lumbar area",
+                "Upper back between shoulders",
+                "Along the entire spine",
+                "Sacrum and tailbone",
+            ]
+        elif (
+            "joint" in known_locs
+            or "knee" in known_locs
+            or "joint" in text
+            or "limb" in text
+        ):
+            raw_options = [
+                "Knees and ankles",
+                "Hands and wrists",
+                "Shoulders and elbows",
+                "Small finger joints",
+            ]
         else:
-            raw_options = ["In my head and temples", "In my stomach and abdomen", "In my chest and throat", "In my lower back and joints"]
+            raw_options = [
+                "In my head and temples",
+                "In my stomach and abdomen",
+                "In my chest and throat",
+                "In my lower back and joints",
+            ]
         return _format_chips(raw_options, current_state, is_slot=True)
 
     # Sensation
-    if any(w in text for w in [
-        "sensation", "feel like", "kind of pain", "type of", "throbbing",
-        "burning", "stabbing", "describe the", "how does it", "stitching",
-        "dull ache", "heavy pressure", "shooting pain", "cramping",
-    ]):
+    if any(
+        w in text
+        for w in [
+            "sensation",
+            "feel like",
+            "kind of pain",
+            "type of",
+            "throbbing",
+            "burning",
+            "stabbing",
+            "describe the",
+            "how does it",
+            "stitching",
+            "dull ache",
+            "heavy pressure",
+            "shooting pain",
+            "cramping",
+        ]
+    ):
         if is_practitioner:
             raw_options = [
                 "Throbbing / Pulsating rhythm",
@@ -368,14 +568,37 @@ def generate_dynamic_suggestions(
         return _format_chips(raw_options, current_state, is_slot=True)
 
     # Modality
-    if any(w in text for w in [
-        "made this worse", "made it worse", "makes this worse", "makes it worse",
-        "make it worse", "aggravat", "flare", "trigger", "worse from",
-        "bring relief", "brings relief", "brings you any relief", "relief",
-        "relieve", "relieved", "comfort", "soothe", "better from",
-        "relieved by", "modality", "modalities", "improves", "ameliorat",
-        "cold compress", "warmth", "motion or rest",
-    ]):
+    if any(
+        w in text
+        for w in [
+            "made this worse",
+            "made it worse",
+            "makes this worse",
+            "makes it worse",
+            "make it worse",
+            "aggravat",
+            "flare",
+            "trigger",
+            "worse from",
+            "bring relief",
+            "brings relief",
+            "brings you any relief",
+            "relief",
+            "relieve",
+            "relieved",
+            "comfort",
+            "soothe",
+            "better from",
+            "relieved by",
+            "modality",
+            "modalities",
+            "improves",
+            "ameliorat",
+            "cold compress",
+            "warmth",
+            "motion or rest",
+        ]
+    ):
         if is_practitioner:
             raw_options = [
                 "Worse: Motion & physical exertion",
@@ -393,11 +616,26 @@ def generate_dynamic_suggestions(
         return _format_chips(raw_options, current_state, is_slot=True)
 
     # Temporal
-    if any(w in text for w in [
-        "what time", "time of day", "time pattern", "when does", "morning or night",
-        "day or night", "waking up", "periodicity", "hour", "clock", "midnight",
-        "temporal", "when did it start", "how long has this", "specific time",
-    ]):
+    if any(
+        w in text
+        for w in [
+            "what time",
+            "time of day",
+            "time pattern",
+            "when does",
+            "morning or night",
+            "day or night",
+            "waking up",
+            "periodicity",
+            "hour",
+            "clock",
+            "midnight",
+            "temporal",
+            "when did it start",
+            "how long has this",
+            "specific time",
+        ]
+    ):
         if is_practitioner:
             raw_options = [
                 "Aggravation: Morning on waking",
@@ -415,11 +653,26 @@ def generate_dynamic_suggestions(
         return _format_chips(raw_options, current_state, is_slot=True)
 
     # Mental/Emotional
-    if any(w in text for w in [
-        "mood", "stress", "emotion", "feeling mentally", "anxious", "anxiety",
-        "mind", "irritab", "peace of mind", "emotional", "mental", "restless",
-        "depress", "tearful", "fears",
-    ]):
+    if any(
+        w in text
+        for w in [
+            "mood",
+            "stress",
+            "emotion",
+            "feeling mentally",
+            "anxious",
+            "anxiety",
+            "mind",
+            "irritab",
+            "peace of mind",
+            "emotional",
+            "mental",
+            "restless",
+            "depress",
+            "tearful",
+            "fears",
+        ]
+    ):
         if is_practitioner:
             raw_options = [
                 "Restless, anxious, pacing",
@@ -437,11 +690,25 @@ def generate_dynamic_suggestions(
         return _format_chips(raw_options, current_state, is_slot=True)
 
     # Review / Confirmation / Clarification / Readiness
-    if any(w in text for w in [
-        "accurate", "summarize", "anything else", "sound right", "add anything",
-        "confirm", "covers it", "covers all", "got it right", "proceed",
-        "repertoriz", "ready to review", "reflect your symptoms", "ready",
-    ]):
+    if any(
+        w in text
+        for w in [
+            "accurate",
+            "summarize",
+            "anything else",
+            "sound right",
+            "add anything",
+            "confirm",
+            "covers it",
+            "covers all",
+            "got it right",
+            "proceed",
+            "repertoriz",
+            "ready to review",
+            "reflect your symptoms",
+            "ready",
+        ]
+    ):
         if is_practitioner:
             return [
                 "Totality accurate as recorded",
@@ -457,7 +724,18 @@ def generate_dynamic_suggestions(
         ]
 
     # Impact on daily life / relationships / coping
-    if any(w in text for w in ["daily life", "relationships", "affecting", "coping", "manage", "interfere", "routine"]):
+    if any(
+        w in text
+        for w in [
+            "daily life",
+            "relationships",
+            "affecting",
+            "coping",
+            "manage",
+            "interfere",
+            "routine",
+        ]
+    ):
         raw_options = [
             "Yes, deeply affecting my daily life",
             "I struggle to get through each day",
@@ -467,7 +745,10 @@ def generate_dynamic_suggestions(
         return _format_chips(raw_options, current_state)
 
     # Hopelessness / Despair / Grief
-    if any(w in text for w in ["hopeless", "despair", "grief", "forsaken", "weep", "tearful"]):
+    if any(
+        w in text
+        for w in ["hopeless", "despair", "grief", "forsaken", "weep", "tearful"]
+    ):
         raw_options = [
             "I feel completely hopeless & forsaken",
             "Weeping easily from any emotional upset",

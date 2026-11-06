@@ -13,7 +13,12 @@ from src.dashboard.components.busy import busy_slot
 from src.dashboard.components.icons import get_icon
 from src.dashboard.components.rubric_tree import render_rubric_card
 from src.dashboard.components.totality_grid import render_classical_totality_matrix
-from src.dashboard.constants import APP_VERSION, GIT_SHA, MODEL_DISPLAY_NAME, format_rubric_path
+from src.dashboard.constants import (
+    APP_VERSION,
+    GIT_SHA,
+    MODEL_DISPLAY_NAME,
+    format_rubric_path,
+)
 from src.dashboard.dimensions import DIMENSION_MAP, pluralize
 from src.dashboard.pdf_exporter import generate_case_pdf
 from src.dashboard.utils import esc
@@ -24,11 +29,15 @@ from src.pipeline.orchestrator import PatientReport
 logger = logging.getLogger("dashboard.views.step4")
 
 
-def render_dimensions_grid(dims: Dict[str, Any], report: Optional[PatientReport] = None):
+def render_dimensions_grid(
+    dims: Dict[str, Any], report: Optional[PatientReport] = None
+):
     """Render 7-dimension clinical findings in clean cards with provenance affordances."""
     col1, col2, col3, col4 = st.columns(4)
 
-    prov_hint = "Extracted from clinical dialogue and mapped to Kent totality dimensions"
+    prov_hint = (
+        "Extracted from clinical dialogue and mapped to Kent totality dimensions"
+    )
     if report and report.matched_rubrics:
         top_cand = report.matched_rubrics[0]
         cand_path = top_cand.get("path") or top_cand.get("name") or "Repertory rubric"
@@ -49,8 +58,8 @@ def render_dimensions_grid(dims: Dict[str, Any], report: Optional[PatientReport]
         if ent_meta.get("is_unanimous"):
             badge_extra = ' <span style="font-size: 9.5px; background: rgba(16,185,129,0.22); color: #34D399; border: 1px solid rgba(16,185,129,0.4); border-radius: 3px; padding: 1px 4px; margin-left: 4px; font-weight: 700;">4/4 Unanimous</span>'
         elif ent_meta.get("votes") and ent_meta.get("total_models"):
-            votes = ent_meta['votes']
-            total = ent_meta['total_models']
+            votes = ent_meta["votes"]
+            total = ent_meta["total_models"]
             badge_extra = f' <span style="font-size: 9.5px; background: rgba(59,130,246,0.22); color: #93C5FD; border: 1px solid rgba(59,130,246,0.4); border-radius: 3px; padding: 1px 4px; margin-left: 4px; font-weight: 600;">{votes}/{total} agreed</span>'
         elif ent_meta.get("confidence"):
             conf_pct = int(ent_meta["confidence"] * 100)
@@ -58,7 +67,7 @@ def render_dimensions_grid(dims: Dict[str, Any], report: Optional[PatientReport]
 
         return (
             f'<span class="badge {badge_cls}" tabindex="0" aria-label="Dimension: {dim_label} ({dim_code}) | Finding: {val}" data-tip="Dimension: {dim_label} ({dim_code}) | Finding: {val}&#10;Provenance: {prov_hint}" title="Dimension: {dim_label} ({dim_code}) | Finding: {val}&#10;Provenance: {prov_hint}">'
-            f'{val}{badge_extra}</span>'
+            f"{val}{badge_extra}</span>"
         )
 
     d_loc = DIMENSION_MAP["location"]
@@ -72,38 +81,91 @@ def render_dimensions_grid(dims: Dict[str, Any], report: Optional[PatientReport]
     with col1:
         st.markdown(f"**{d_loc.label} ({d_loc.code}):**")
         locs = dims.get("location") or dims.get("LOC", [])
-        st.html("".join(format_badge(l, d_loc.badge_class, d_loc.code, d_loc.label) for l in locs) if locs else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>")
+        st.html(
+            "".join(
+                format_badge(loc, d_loc.badge_class, d_loc.code, d_loc.label)
+                for loc in locs
+            )
+            if locs
+            else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>"
+        )
 
         st.markdown(f"**{d_sen.label} ({d_sen.code}):**")
         sens = dims.get("sensation") or dims.get("SEN", [])
-        st.html("".join(format_badge(s, d_sen.badge_class, d_sen.code, d_sen.label) for s in sens) if sens else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>")
+        st.html(
+            "".join(
+                format_badge(s, d_sen.badge_class, d_sen.code, d_sen.label)
+                for s in sens
+            )
+            if sens
+            else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>"
+        )
 
     with col2:
         st.markdown(f"**{d_agg.label} ({d_agg.code}):**")
         aggs = dims.get("modality_agg") or dims.get("MOD_AGG", [])
-        st.html("".join(format_badge(a, d_agg.badge_class, d_agg.code, d_agg.label) for a in aggs) if aggs else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>")
+        st.html(
+            "".join(
+                format_badge(a, d_agg.badge_class, d_agg.code, d_agg.label)
+                for a in aggs
+            )
+            if aggs
+            else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>"
+        )
 
         st.markdown(f"**{d_amel.label} ({d_amel.code}):**")
         amels = dims.get("modality_amel") or dims.get("MOD_AMEL", [])
-        st.html("".join(format_badge(a, d_amel.badge_class, d_amel.code, d_amel.label) for a in amels) if amels else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>")
+        st.html(
+            "".join(
+                format_badge(a, d_amel.badge_class, d_amel.code, d_amel.label)
+                for a in amels
+            )
+            if amels
+            else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>"
+        )
 
     with col3:
         st.markdown(f"**{d_temp.label} ({d_temp.code}):**")
         temps = dims.get("temporal") or dims.get("TEMP", [])
-        st.html("".join(format_badge(t, d_temp.badge_class, d_temp.code, d_temp.label) for t in temps) if temps else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>")
+        st.html(
+            "".join(
+                format_badge(t, d_temp.badge_class, d_temp.code, d_temp.label)
+                for t in temps
+            )
+            if temps
+            else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>"
+        )
 
         st.markdown(f"**{d_conc.label} ({d_conc.code}):**")
         concs = dims.get("concomitant") or dims.get("CONC", [])
-        st.html("".join(format_badge(c, d_conc.badge_class, d_conc.code, d_conc.label) for c in concs) if concs else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>")
+        st.html(
+            "".join(
+                format_badge(c, d_conc.badge_class, d_conc.code, d_conc.label)
+                for c in concs
+            )
+            if concs
+            else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>"
+        )
 
     with col4:
         st.markdown(f"**{d_ment.label} ({d_ment.code}):**")
         ments = dims.get("mental") or dims.get("MENT", [])
-        st.html("".join(format_badge(m, d_ment.badge_class, d_ment.code, d_ment.label) for m in ments) if ments else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>")
+        st.html(
+            "".join(
+                format_badge(m, d_ment.badge_class, d_ment.code, d_ment.label)
+                for m in ments
+            )
+            if ments
+            else "<span style='color:#8492A6; font-size:13px;'>None recorded</span>"
+        )
 
         st.markdown("**Negated / Excluded:**")
         negs = dims.get("negated") or dims.get("NEG", [])
-        st.html("".join(format_badge(n, "badge-neg", "NEG", "Negated") for n in negs) if negs else "<span style='color:#8492A6; font-size:13px;'>None</span>")
+        st.html(
+            "".join(format_badge(n, "badge-neg", "NEG", "Negated") for n in negs)
+            if negs
+            else "<span style='color:#8492A6; font-size:13px;'>None</span>"
+        )
 
 
 def render_repertorization_chart(remedies: List[Dict[str, Any]]):
@@ -128,7 +190,10 @@ def render_repertorization_chart(remedies: List[Dict[str, Any]]):
                 showscale=False,
                 line=dict(color="rgba(255,255,255,0.15)", width=1),
             ),
-            text=[f"Score: {s:.2f} ({pluralize(c, 'rubric', 'rubrics')})" for s, c in zip(df["score"], df["rubric_count"])],
+            text=[
+                f"Score: {s:.2f} ({pluralize(c, 'rubric', 'rubrics')})"
+                for s, c in zip(df["score"], df["rubric_count"])
+            ],
             textposition="auto",
             hoverinfo="text",
         )
@@ -155,30 +220,46 @@ def render_repertorization_chart(remedies: List[Dict[str, Any]]):
     st.plotly_chart(fig, width="stretch")
 
 
-def render_report_view(report: PatientReport, db: KentDB, case: Optional[ClinicalCase] = None):
+def render_report_view(
+    report: PatientReport, db: KentDB, case: Optional[ClinicalCase] = None
+):
     """Render comprehensive clinical repertorization decision-support report."""
     with st.container(border=True, key="report_card"):
         col_rep_head, col_rep_dl = st.columns([3, 1])
         with col_rep_head:
-            st.html(
-                f"""
+            st.html(f"""
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                     {get_icon('clinical_notes', size=24, color='#10B981')}
                     <h3 style="margin: 0;">Case Repertorization Report &mdash; <code>{esc(report.patient_id)}</code></h3>
                 </div>
-                """
-            )
+                """)
             if case:
-                demo_info = f" ({case.demographics_string})" if (case.demographics_string and case.demographics_string != "Unspecified") else ""
-                st.markdown(f"**Patient**: {case.patient_name}{demo_info} &nbsp;&middot;&nbsp; **Chief Complaint**: {case.chief_complaint or 'Clinical Consultation'} &nbsp;&middot;&nbsp; **Engine**: {MODEL_DISPLAY_NAME} (v{APP_VERSION})")
+                demo_info = (
+                    f" ({case.demographics_string})"
+                    if (
+                        case.demographics_string
+                        and case.demographics_string != "Unspecified"
+                    )
+                    else ""
+                )
+                st.markdown(
+                    f"**Patient**: {case.patient_name}{demo_info} &nbsp;&middot;&nbsp; **Chief Complaint**: {case.chief_complaint or 'Clinical Consultation'} &nbsp;&middot;&nbsp; **Engine**: {MODEL_DISPLAY_NAME} (v{APP_VERSION})"
+                )
         with col_rep_dl:
             if case:
                 pdf_key = f"rep_pdf_{case.case_id}_{case.updated_at}"
                 pdf_bytes = st.session_state.get(pdf_key)
                 if not pdf_bytes:
                     slot_pdf = st.empty()
-                    if slot_pdf.button("Prepare PDF Export", key="btn_prep_rep_pdf", width="stretch"):
-                        with busy_slot(slot_pdf, "Compiling PDF...", key="btn_prep_rep_pdf", type="secondary"):
+                    if slot_pdf.button(
+                        "Prepare PDF Export", key="btn_prep_rep_pdf", width="stretch"
+                    ):
+                        with busy_slot(
+                            slot_pdf,
+                            "Compiling PDF...",
+                            key="btn_prep_rep_pdf",
+                            type="secondary",
+                        ):
                             with st.spinner("Compiling PDF report...", show_time=True):
                                 skel = st.empty()
                                 with skel.container():
@@ -207,17 +288,19 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
             )
         st.markdown("---")
 
-        summary_to_show = getattr(report, "clinical_summary", "") or (case.clinical_summary if case else "")
+        summary_to_show = getattr(report, "clinical_summary", "") or (
+            case.clinical_summary if case else ""
+        )
         if not summary_to_show and case and case.is_ready_for_repertorization:
             try:
                 from src.pipeline.case_summarizer import CaseSummarizer
+
                 summary_to_show = CaseSummarizer().generate_summary(case, use_llm=False)
             except Exception:
                 pass
 
         if summary_to_show:
-            st.html(
-                f"""
+            st.html(f"""
                 <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(16, 185, 129, 0.35); border-left: 4px solid #10B981; border-radius: 8px; padding: 14px 16px; margin: 10px 0 16px 0;">
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
                         {get_icon('clinical_notes', size=18, color='#10B981')}
@@ -227,17 +310,14 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
                         {esc(summary_to_show)}
                     </div>
                 </div>
-                """
-            )
+                """)
 
-        st.html(
-            f"""
+        st.html(f"""
             <div style="display: flex; align-items: center; gap: 8px; margin: 12px 0 8px 0;">
                 {get_icon('account_tree', size=20, color='#06B6D4')}
                 <h4 style="margin: 0;">1. Validated 7-Dimension Clinical Totality</h4>
             </div>
-            """
-        )
+            """)
         render_dimensions_grid(report.dimensions, report=report)
 
     remedies = report.ranked_remedies
@@ -250,24 +330,40 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
             margin_html = f"<span style='color: #9CA3AF; font-size: 13px; margin-left: 8px;'>Score advantage: <b>+{margin:.2f}</b> over candidate #2 ({remedies[1].get('abbreviation')})</span>"
 
         # Explainability for why Rank #1 leads
-        g3_count = sum(1 for cov in top_rem.get("rubrics_covered", []) if cov.get("grade") == 3)
-        g2_count = sum(1 for cov in top_rem.get("rubrics_covered", []) if cov.get("grade") == 2)
-        g3_items = [esc((cov.get("path") or "").split(" › ")[-1]) for cov in top_rem.get("rubrics_covered", []) if cov.get("grade") == 3 and cov.get("path")]
-        
+        g3_count = sum(
+            1 for cov in top_rem.get("rubrics_covered", []) if cov.get("grade") == 3
+        )
+        g2_count = sum(
+            1 for cov in top_rem.get("rubrics_covered", []) if cov.get("grade") == 2
+        )
+        g3_items = [
+            esc((cov.get("path") or "").split(" › ")[-1])
+            for cov in top_rem.get("rubrics_covered", [])
+            if cov.get("grade") == 3 and cov.get("path")
+        ]
+
         why_items = []
         if g3_count > 0:
             preview_str = ", ".join(f"<i>'{name}'</i>" for name in g3_items[:2])
-            why_items.append(f"<b>Keynote Affinity:</b> High-grade match in {g3_count} keynote rubrics (including {preview_str})")
+            why_items.append(
+                f"<b>Keynote Affinity:</b> High-grade match in {g3_count} keynote rubrics (including {preview_str})"
+            )
         if len(remedies) > 1:
             margin_val = top_rem.get("score", 0.0) - remedies[1].get("score", 0.0)
             if margin_val > 0:
-                why_items.append(f"<b>Totality Margin:</b> Holds a +{margin_val:.2f} score advantage over candidate #2 ({esc(remedies[1].get('abbreviation'))})")
-        cov_pct_num = top_rem.get('coverage_ratio', 0) * 100
-        why_items.append(f"<b>Broad Symptom Coverage:</b> Spans {top_rem.get('rubric_count')} of {len(active_rubrics)} patient totality rubrics ({cov_pct_num:.0f}%)")
+                why_items.append(
+                    f"<b>Totality Margin:</b> Holds a +{margin_val:.2f} score advantage over candidate #2 ({esc(remedies[1].get('abbreviation'))})"
+                )
+        cov_pct_num = top_rem.get("coverage_ratio", 0) * 100
+        why_items.append(
+            f"<b>Broad Symptom Coverage:</b> Spans {top_rem.get('rubric_count')} of {len(active_rubrics)} patient totality rubrics ({cov_pct_num:.0f}%)"
+        )
 
         why_html = ""
         if why_items:
-            bullets = "".join(f"<li style='margin-bottom: 3px;'>{item}</li>" for item in why_items)
+            bullets = "".join(
+                f"<li style='margin-bottom: 3px;'>{item}</li>" for item in why_items
+            )
             why_html = f"""
             <div class="hero-why-box" style="margin-top: 12px; padding: 10px 14px; background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10B981; border-radius: 4px;">
                 <div style="font-size: 11.5px; font-weight: 700; color: #34D399; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px;">
@@ -279,8 +375,7 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
             </div>
             """
 
-        st.html(
-            f"""
+        st.html(f"""
             <div class="hero-simillimum">
                 <div style="font-size: 12px; text-transform: uppercase; color: #34D399; font-weight: 700; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;">
                     {get_icon('verified', size=16, color='#34D399')}
@@ -298,19 +393,16 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
                     Clinical decision-support indication based on Dr. Kent's Repertory; verify keynotes and constitutional picture before prescription.
                 </div>
             </div>
-            """
-        )
+            """)
 
-        st.html(
-            f"""
+        st.html(f"""
             <div style="display: flex; align-items: center; justify-content: space-between; margin: 16px 0 8px 0;">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     {get_icon('bar_chart', size=20, color='#10B981')}
                     <h4 style="margin: 0;">2. Remedy Totality Ranking</h4>
                 </div>
             </div>
-            """
-        )
+            """)
         render_repertorization_chart(remedies)
         st.markdown(
             "<div style='font-size: 11.5px; color: #9CA3AF; margin-top: 4px; margin-bottom: 8px;'>"
@@ -323,43 +415,39 @@ def render_report_view(report: PatientReport, db: KentDB, case: Optional[Clinica
             table_data = []
             for idx, r in enumerate(remedies[:10], start=1):
                 cov_pct = f"{r.get('coverage_ratio', 0)*100:.0f}%"
-                table_data.append({
-                    "Rank": f"#{idx}",
-                    "Remedy": r.get("abbreviation"),
-                    "Full Name": r.get("full_name"),
-                    "Score": r.get("score"),
-                    "Coverage": f"{r.get('rubric_count')}/{len(active_rubrics)} ({cov_pct})",
-                })
+                table_data.append(
+                    {
+                        "Rank": f"#{idx}",
+                        "Remedy": r.get("abbreviation"),
+                        "Full Name": r.get("full_name"),
+                        "Score": r.get("score"),
+                        "Coverage": f"{r.get('rubric_count')}/{len(active_rubrics)} ({cov_pct})",
+                    }
+                )
             st.dataframe(pd.DataFrame(table_data), width="stretch", hide_index=True)
 
-        st.html(
-            f"""
+        st.html(f"""
             <div style="display: flex; align-items: center; gap: 8px; margin: 20px 0 8px 0;">
                 {get_icon('grid_on', size=20, color='#FBBF24')}
                 <h4 style="margin: 0;">3. Classical Repertorization Matrix (Remedies &times; Rubrics)</h4>
             </div>
-            """
-        )
+            """)
         render_classical_totality_matrix(report, db, case=case, allow_toggles=True)
 
-    st.html(
-        f"""
+    st.html(f"""
         <div style="display: flex; align-items: center; gap: 8px; margin: 20px 0 8px 0;">
             {get_icon('format_list_bulleted', size=20, color='#34D399')}
             <h4 style="margin: 0;">4. Matched Kent Repertory Rubrics ({len(active_rubrics)})</h4>
         </div>
-        """
-    )
+        """)
     for r in active_rubrics:
         render_rubric_card(r, db)
 
-    st.html(
-        """
+    st.html("""
         <div class="report-paper-disclaimer" style="margin-top: 24px; padding: 12px 16px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-left: 4px solid var(--accent, #10B981); border-radius: 6px; font-size: 12.5px; color: var(--text-muted, #A3B0C2); line-height: 1.55;">
             <b>Clinical Decision-Support Notice:</b> Kent-AI is an investigational software platform for classical homeopathic repertorization. It does not provide medical diagnoses, treatment directives, or autonomous prescriptions. All repertory indications, totality scores, and remedy differentials must be clinically evaluated by a qualified practitioner alongside primary literature and clinical judgment.
         </div>
-        """
-    )
+        """)
 
 
 def render_step4_report(current_case: ClinicalCase, db: KentDB) -> None:
@@ -368,9 +456,13 @@ def render_step4_report(current_case: ClinicalCase, db: KentDB) -> None:
     if not report and current_case.report_data:
         try:
             report = PatientReport(
-                patient_id=current_case.report_data.get("patient_id", current_case.case_id),
+                patient_id=current_case.report_data.get(
+                    "patient_id", current_case.case_id
+                ),
                 transcript=current_case.report_data.get("transcript", ""),
-                dimensions=current_case.report_data.get("dimensions", current_case.dimensions),
+                dimensions=current_case.report_data.get(
+                    "dimensions", current_case.dimensions
+                ),
                 matched_rubrics=current_case.report_data.get("matched_rubrics", []),
                 ranked_remedies=current_case.report_data.get("ranked_remedies", []),
                 search_queries=current_case.report_data.get("search_queries", []),
@@ -389,7 +481,9 @@ def render_step4_report(current_case: ClinicalCase, db: KentDB) -> None:
 
         render_report_view(report, db, case=current_case)
     else:
-        st.warning("No report generated for this case yet. Please complete Steps 1 & 2 first.")
+        st.warning(
+            "No report generated for this case yet. Please complete Steps 1 & 2 first."
+        )
         if st.button("Go to Step 1 (Intake)", type="primary"):
             st.session_state.workspace_step = 1
             st.rerun()

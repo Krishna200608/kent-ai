@@ -28,7 +28,7 @@ class SymptomNER:
         device: Optional[str] = None,
     ) -> None:
         """Initialize symptom NER model or deterministic mock mode.
-        
+
         Args:
             model_path: Directory containing fine-tuned model weights and tokenizer.
             config: Model configuration dictionary.
@@ -39,19 +39,31 @@ class SymptomNER:
         self.mock_mode = mock_mode
 
         root = get_project_root()
-        default_dir = root / self.config.get("model", {}).get("output_dir", "data/models/clinicalbert_homeoNER")
+        default_dir = root / self.config.get("model", {}).get(
+            "output_dir", "data/models/clinicalbert_homeoNER"
+        )
         self.model_path = Path(model_path or default_dir)
 
-        self.tags = self.config.get("labels", {}).get("tags", [
-            "O",
-            "B-LOC", "I-LOC",
-            "B-SEN", "I-SEN",
-            "B-MOD_AGG", "I-MOD_AGG",
-            "B-MOD_AMEL", "I-MOD_AMEL",
-            "B-CONC", "I-CONC",
-            "B-TEMP", "I-TEMP",
-            "B-MENT", "I-MENT",
-        ])
+        self.tags = self.config.get("labels", {}).get(
+            "tags",
+            [
+                "O",
+                "B-LOC",
+                "I-LOC",
+                "B-SEN",
+                "I-SEN",
+                "B-MOD_AGG",
+                "I-MOD_AGG",
+                "B-MOD_AMEL",
+                "I-MOD_AMEL",
+                "B-CONC",
+                "I-CONC",
+                "B-TEMP",
+                "I-TEMP",
+                "B-MENT",
+                "I-MENT",
+            ],
+        )
         self.id2label = {i: tag for i, tag in enumerate(self.tags)}
         self.label2id = {tag: i for i, tag in enumerate(self.tags)}
 
@@ -65,33 +77,47 @@ class SymptomNER:
         self.model = None
 
         # Check if fine-tuned weights exist
-        weights_exist = (
-            self.model_path.exists()
-            and any(self.model_path.glob("*.bin")) or any(self.model_path.glob("*.safetensors"))
+        weights_exist = self.model_path.exists() and (
+            any(self.model_path.glob("*.bin"))
+            or any(self.model_path.glob("*.safetensors"))
         )
 
         if not self.mock_mode and weights_exist:
             try:
                 from transformers import AutoModelForTokenClassification, AutoTokenizer
 
-                logger.info("Loading fine-tuned ClinicalBERT model from %s on %s...", self.model_path, self.device)
-                self.tokenizer = AutoTokenizer.from_pretrained(str(self.model_path), use_fast=True)
-                self.model = AutoModelForTokenClassification.from_pretrained(str(self.model_path))
+                logger.info(
+                    "Loading fine-tuned ClinicalBERT model from %s on %s...",
+                    self.model_path,
+                    self.device,
+                )
+                self.tokenizer = AutoTokenizer.from_pretrained(
+                    str(self.model_path), use_fast=True
+                )
+                self.model = AutoModelForTokenClassification.from_pretrained(
+                    str(self.model_path)
+                )
                 self.model.to(self.device)
                 self.model.eval()
             except Exception as err:
-                logger.warning("Failed to load fine-tuned model (%s). Falling back to mock extractor.", err)
+                logger.warning(
+                    "Failed to load fine-tuned model (%s). Falling back to mock extractor.",
+                    err,
+                )
                 self.mock_mode = True
         else:
             self.mock_mode = True
-            logger.info("SymptomNER initialized in mock mode (fine-tuned model not found at %s).", self.model_path)
+            logger.info(
+                "SymptomNER initialized in mock mode (fine-tuned model not found at %s).",
+                self.model_path,
+            )
 
     def extract_entities(self, text: str) -> List[Dict[str, Any]]:
         """Extract labeled clinical symptom spans from input text.
-        
+
         Args:
             text: Patient transcript or clinical narrative sentence.
-            
+
         Returns:
             List of entity dictionaries with keys:
             - 'text': Extracted entity text substring
@@ -132,7 +158,9 @@ class SymptomNER:
         current_end: Optional[int] = None
         current_confs: List[float] = []
 
-        for idx, (token_id, pred_idx, conf) in enumerate(zip(input_ids[0], pred_indices, confidence_scores)):
+        for idx, (token_id, pred_idx, conf) in enumerate(
+            zip(input_ids[0], pred_indices, confidence_scores)
+        ):
             start_char, end_char = offset_mapping[idx]
             # Skip special tokens
             if start_char == end_char:
@@ -142,15 +170,25 @@ class SymptomNER:
 
             if tag.startswith("B-"):
                 # Save previous entity
-                if current_label and current_start is not None and current_end is not None:
+                if (
+                    current_label
+                    and current_start is not None
+                    and current_end is not None
+                ):
                     ent_text = text[current_start:current_end]
-                    entities.append({
-                        "text": ent_text,
-                        "label": current_label,
-                        "start": current_start,
-                        "end": current_end,
-                        "confidence": float(sum(current_confs) / len(current_confs)) if current_confs else 1.0,
-                    })
+                    entities.append(
+                        {
+                            "text": ent_text,
+                            "label": current_label,
+                            "start": current_start,
+                            "end": current_end,
+                            "confidence": (
+                                float(sum(current_confs) / len(current_confs))
+                                if current_confs
+                                else 1.0
+                            ),
+                        }
+                    )
 
                 current_label = tag[2:]
                 current_start = int(start_char)
@@ -162,15 +200,25 @@ class SymptomNER:
                 current_confs.append(float(conf))
 
             else:
-                if current_label and current_start is not None and current_end is not None:
+                if (
+                    current_label
+                    and current_start is not None
+                    and current_end is not None
+                ):
                     ent_text = text[current_start:current_end]
-                    entities.append({
-                        "text": ent_text,
-                        "label": current_label,
-                        "start": current_start,
-                        "end": current_end,
-                        "confidence": float(sum(current_confs) / len(current_confs)) if current_confs else 1.0,
-                    })
+                    entities.append(
+                        {
+                            "text": ent_text,
+                            "label": current_label,
+                            "start": current_start,
+                            "end": current_end,
+                            "confidence": (
+                                float(sum(current_confs) / len(current_confs))
+                                if current_confs
+                                else 1.0
+                            ),
+                        }
+                    )
                 current_label = None
                 current_start = None
                 current_end = None
@@ -179,25 +227,77 @@ class SymptomNER:
         # Flush trailing entity
         if current_label and current_start is not None and current_end is not None:
             ent_text = text[current_start:current_end]
-            entities.append({
-                "text": ent_text,
-                "label": current_label,
-                "start": current_start,
-                "end": current_end,
-                "confidence": float(sum(current_confs) / len(current_confs)) if current_confs else 1.0,
-            })
+            entities.append(
+                {
+                    "text": ent_text,
+                    "label": current_label,
+                    "start": current_start,
+                    "end": current_end,
+                    "confidence": (
+                        float(sum(current_confs) / len(current_confs))
+                        if current_confs
+                        else 1.0
+                    ),
+                }
+            )
 
         return entities
 
     def _mock_extract(self, text: str) -> List[Dict[str, Any]]:
         """Deterministic keyword-based entity extraction for testing without fine-tuned weights."""
         patterns = {
-            "LOC": ["head", "forehead", "temple", "stomach", "chest", "throat", "right side", "left side"],
-            "SEN": ["throbbing", "burning", "stitching", "pressing", "sharp pain", "dull ache", "heaviness"],
-            "MOD_AGG": ["worse morning", "worse alone", "worse cold", "worse motion", "worse night", "worse dark"],
-            "MOD_AMEL": ["better rest", "better pressure", "better fresh air", "better open air", "better warm"],
-            "TEMP": ["morning", "night", "midnight", "evening", "twilight", "afternoon"],
-            "MENT": ["anxiety", "fear", "restless", "weeping", "irritable", "absent-minded", "depressed", "grief"],
+            "LOC": [
+                "head",
+                "forehead",
+                "temple",
+                "stomach",
+                "chest",
+                "throat",
+                "right side",
+                "left side",
+            ],
+            "SEN": [
+                "throbbing",
+                "burning",
+                "stitching",
+                "pressing",
+                "sharp pain",
+                "dull ache",
+                "heaviness",
+            ],
+            "MOD_AGG": [
+                "worse morning",
+                "worse alone",
+                "worse cold",
+                "worse motion",
+                "worse night",
+                "worse dark",
+            ],
+            "MOD_AMEL": [
+                "better rest",
+                "better pressure",
+                "better fresh air",
+                "better open air",
+                "better warm",
+            ],
+            "TEMP": [
+                "morning",
+                "night",
+                "midnight",
+                "evening",
+                "twilight",
+                "afternoon",
+            ],
+            "MENT": [
+                "anxiety",
+                "fear",
+                "restless",
+                "weeping",
+                "irritable",
+                "absent-minded",
+                "depressed",
+                "grief",
+            ],
             "CONC": ["nausea", "vertigo", "chills", "sweat", "trembling"],
         }
 
@@ -211,13 +311,15 @@ class SymptomNER:
                     idx = text_lower.find(kw, start_idx)
                     if idx == -1:
                         break
-                    extracted.append({
-                        "text": text[idx : idx + len(kw)],
-                        "label": label,
-                        "start": idx,
-                        "end": idx + len(kw),
-                        "confidence": 0.95,
-                    })
+                    extracted.append(
+                        {
+                            "text": text[idx : idx + len(kw)],
+                            "label": label,
+                            "start": idx,
+                            "end": idx + len(kw),
+                            "confidence": 0.95,
+                        }
+                    )
                     start_idx = idx + len(kw)
 
         # Sort by character start offset

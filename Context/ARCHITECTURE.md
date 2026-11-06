@@ -1,7 +1,7 @@
 # Kent-AI — Architecture Context
 
-> Last updated: 2026-11-02 by Antigravity
-> Phase: Complete through Phase 21 (Repertory Scope Lock to MIND, Chat Suggestions Sync, FSM Greeting Fix; 195 Unit & Integration Tests Passing across 22 Test Modules, 0 Errors)
+> Last updated: 2026-11-06 by Antigravity
+> Phase: Complete through Phase 22 (Master Repository Audit & Master Workflows Integration; 200 Unit, Integration & Smoke Tests Passing across 23 Test Modules, 0 Errors)
 
 ---
 
@@ -147,7 +147,8 @@ kent-ai/
 │   ├── 01_eda_repertory.ipynb     # EDA: sections, MIND depths, grades, search demo
 │   └── 02_case_generation_demo.ipynb # Interactive case generation & BIO inspection
 │
-├── tests/                         # ★ 195 passing unit & integration tests across 22 test modules (0 errors, 0 warnings)
+├── tests/                         # ★ 200 passing unit & integration tests across 23 test modules (0 errors, 0 warnings)
+│   ├── test_master_workflows.py   # Master end-to-end integration workflows A to E (5 tests)
 │   ├── test_kent_db.py            # SQLite reader, views, FTS5 queries (13 tests)
 │   ├── test_case.py               # ClinicalCase model, extraction_meta, bulk operations, serialization & case_store SQLite CRUD (21 tests)
 │   ├── test_case_section_id.py    # Robust section_id & scope_chapter normalization, AttributeError resilience (4 tests)

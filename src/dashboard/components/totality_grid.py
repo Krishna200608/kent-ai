@@ -20,11 +20,13 @@ from src.dashboard.utils import esc
 from src.data.case_store import save_case
 from src.data.kent_db import KentDB
 from src.models.case import ClinicalCase
+
 try:
     from src.pipeline.orchestrator import PatientReport, rescore_report
 except ImportError:
     import importlib
     import src.pipeline.orchestrator as _orch_mod
+
     importlib.reload(_orch_mod)
     from src.pipeline.orchestrator import PatientReport, rescore_report
 
@@ -67,7 +69,11 @@ def render_classical_totality_matrix(
             "Visible Matrix Remedies:",
             options=col_options,
             index=default_idx,
-            format_func=lambda n: f"Top {n} Candidates" if n != total_candidates else f"All {n} Candidates",
+            format_func=lambda n: (
+                f"Top {n} Candidates"
+                if n != total_candidates
+                else f"All {n} Candidates"
+            ),
             key=f"sel_matrix_cols_{report.patient_id}",
             help="Choose how many candidate remedies to display as columns in the totality matrix.",
         )
@@ -92,7 +98,9 @@ def render_classical_totality_matrix(
 
     # Optional interactive mute / eliminate toggles
     if allow_toggles and case is not None:
-        with st.expander("Filter & Weight Rubrics (Mute / Eliminatory)", expanded=False):
+        with st.expander(
+            "Filter & Weight Rubrics (Mute / Eliminatory)", expanded=False
+        ):
             st.markdown(
                 "<div style='font-size: 12px; color: #9CA3AF; margin-bottom: 8px;'>"
                 "<b>Mute:</b> Exclude symptom from scoring without deleting it. &nbsp;|&nbsp; "
@@ -103,11 +111,20 @@ def render_classical_totality_matrix(
             with st.form("form_filter_rubrics", border=False):
                 c_header = st.columns([6, 2, 2])
                 with c_header[0]:
-                    st.markdown("<span style='font-size:11.5px; font-weight:700; color:#9CA3AF;'>Rubric</span>", unsafe_allow_html=True)
+                    st.markdown(
+                        "<span style='font-size:11.5px; font-weight:700; color:#9CA3AF;'>Rubric</span>",
+                        unsafe_allow_html=True,
+                    )
                 with c_header[1]:
-                    st.markdown("<span style='font-size:11.5px; font-weight:700; color:#9CA3AF;'>Status</span>", unsafe_allow_html=True)
+                    st.markdown(
+                        "<span style='font-size:11.5px; font-weight:700; color:#9CA3AF;'>Status</span>",
+                        unsafe_allow_html=True,
+                    )
                 with c_header[2]:
-                    st.markdown("<span style='font-size:11.5px; font-weight:700; color:#9CA3AF;'>Eliminatory</span>", unsafe_allow_html=True)
+                    st.markdown(
+                        "<span style='font-size:11.5px; font-weight:700; color:#9CA3AF;'>Eliminatory</span>",
+                        unsafe_allow_html=True,
+                    )
 
                 new_muted: List[int] = []
                 new_elim: List[int] = []
@@ -120,22 +137,35 @@ def render_classical_totality_matrix(
 
                     cols = st.columns([6, 2, 2])
                     with cols[0]:
-                        st.markdown(f"<div style='font-size:12px; color:#F3F4F6;'>{r_path}</div>", unsafe_allow_html=True)
+                        st.markdown(
+                            f"<div style='font-size:12px; color:#F3F4F6;'>{r_path}</div>",
+                            unsafe_allow_html=True,
+                        )
                     with cols[1]:
-                        m_val = st.checkbox("Mute", value=is_muted, key=f"mute_chk_{r_id}")
+                        m_val = st.checkbox(
+                            "Mute", value=is_muted, key=f"mute_chk_{r_id}"
+                        )
                         if m_val:
                             new_muted.append(r_id)
                     with cols[2]:
-                        e_val = st.checkbox("Must Have", value=is_elim, key=f"elim_chk_{r_id}", disabled=m_val)
+                        e_val = st.checkbox(
+                            "Must Have",
+                            value=is_elim,
+                            key=f"elim_chk_{r_id}",
+                            disabled=m_val,
+                        )
                         if e_val and not m_val:
                             new_elim.append(r_id)
 
-                apply_btn = st.form_submit_button("Apply filters", type="primary", width="stretch")
+                apply_btn = st.form_submit_button(
+                    "Apply filters", type="primary", width="stretch"
+                )
                 if apply_btn:
                     case.muted_rubric_ids = new_muted
                     case.eliminatory_rubric_ids = new_elim
                     st.session_state.current_report = rescore_report(
-                        st.session_state.pipeline.ranker, report, case)
+                        st.session_state.pipeline.ranker, report, case
+                    )
                     save_case(case)
                     st.toast("Filters applied and scores recomputed.")
                     st.rerun()
@@ -156,7 +186,7 @@ def render_classical_totality_matrix(
             f'<th scope="col" style="min-width: 58px; text-align: center;" tabindex="0" aria-label="#{rank} {esc(name)} (Score: {score:.2f})" data-tip="#{rank} {esc(name)}&#10;Score: {score:.2f}" title="#{rank} {esc(name)}&#10;Score: {score:.2f}">'
             f'<div style="font-size: 13px; font-weight: 800; color: #10B981;">{esc(abbr)}</div>'
             f'<div style="font-size: 11px; color: #9CA3AF; font-weight: normal;">#{rank}</div>'
-            f'</th>'
+            f"</th>"
         )
 
     # Table Body: Rubrics as Rows
@@ -182,18 +212,22 @@ def render_classical_totality_matrix(
         # Badges
         status_badges = []
         if r_id in elim_set:
-            status_badges.append('<span class="status-pill" style="color:#EF4444; border-color:#EF4444; font-size:11px;">ELIM</span>')
+            status_badges.append(
+                '<span class="status-pill" style="color:#EF4444; border-color:#EF4444; font-size:11px;">ELIM</span>'
+            )
         if r_id in muted_set:
-            status_badges.append('<span class="status-pill" style="color:#9CA3AF; font-size:11px;">MUTED</span>')
+            status_badges.append(
+                '<span class="status-pill" style="color:#9CA3AF; font-size:11px;">MUTED</span>'
+            )
         badge_str = " ".join(status_badges)
 
         row_tds = [
             f'<th scope="row" style="position: sticky; left: 0; background: #111827; z-index: 1; font-weight: normal; text-align: left;">'
             f'<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">'
-            f'<div>{breadcrumb_html}</div>'
-            f'<div>{badge_str}</div>'
-            f'</div>'
-            f'</th>',
+            f"<div>{breadcrumb_html}</div>"
+            f"<div>{badge_str}</div>"
+            f"</div>"
+            f"</th>",
             f'<td style="text-align: center; font-size: 11px; color: #34D399;">{sim:.2f}</td>',
         ]
 
@@ -203,13 +237,21 @@ def render_classical_totality_matrix(
             grade = rubric_remedy_map.get(r_id, {}).get(abbr_clean)
 
             if grade == 3:
-                row_tds.append('<td style="text-align: center;"><span class="grade-3" tabindex="0" aria-label="Grade 3 (Characteristic Keynote)" data-tip="Grade 3 (Characteristic Keynote)" title="Grade 3 (Characteristic Keynote)">3</span></td>')
+                row_tds.append(
+                    '<td style="text-align: center;"><span class="grade-3" tabindex="0" aria-label="Grade 3 (Characteristic Keynote)" data-tip="Grade 3 (Characteristic Keynote)" title="Grade 3 (Characteristic Keynote)">3</span></td>'
+                )
             elif grade == 2:
-                row_tds.append('<td style="text-align: center;"><span class="grade-2" tabindex="0" aria-label="Grade 2 (Well-Verified)" data-tip="Grade 2 (Well-Verified)" title="Grade 2 (Well-Verified)">2</span></td>')
+                row_tds.append(
+                    '<td style="text-align: center;"><span class="grade-2" tabindex="0" aria-label="Grade 2 (Well-Verified)" data-tip="Grade 2 (Well-Verified)" title="Grade 2 (Well-Verified)">2</span></td>'
+                )
             elif grade == 1:
-                row_tds.append('<td style="text-align: center;"><span class="grade-1" tabindex="0" aria-label="Grade 1 (Clinical)" data-tip="Grade 1 (Clinical)" title="Grade 1 (Clinical)">1</span></td>')
+                row_tds.append(
+                    '<td style="text-align: center;"><span class="grade-1" tabindex="0" aria-label="Grade 1 (Clinical)" data-tip="Grade 1 (Clinical)" title="Grade 1 (Clinical)">1</span></td>'
+                )
             else:
-                row_tds.append('<td style="text-align: center; color: #9CA3AF;">&middot;</td>')
+                row_tds.append(
+                    '<td style="text-align: center; color: #9CA3AF;">&middot;</td>'
+                )
 
         row_opacity = "opacity: 0.45;" if r_id in muted_set else ""
         tbody_rows.append(f'<tr style="{row_opacity}">{"".join(row_tds)}</tr>')
@@ -217,17 +259,21 @@ def render_classical_totality_matrix(
     # Summary Rows: Totality Score & Rubric Count
     score_tds = [
         '<th scope="row" style="position: sticky; left: 0; background: #0F172A; font-weight: 700; color: #F9FAFB; text-align: left;">Total Weighted Score</th>',
-        '<td></td>',
+        "<td></td>",
     ]
     count_tds = [
         '<th scope="row" style="position: sticky; left: 0; background: #0F172A; font-weight: 700; color: #F9FAFB; text-align: left;">Rubric Coverage (Hits)</th>',
-        '<td></td>',
+        "<td></td>",
     ]
 
     active_count = len(rubrics) - len(muted_set)
     for rem in remedies:
-        score_tds.append(f'<td style="text-align: center; font-weight: 800; color: #10B981; font-size: 13px;">{rem.get("score", 0):.2f}</td>')
-        count_tds.append(f'<td style="text-align: center; font-weight: 700; color: #F3F4F6; font-size: 12px;">{rem.get("rubric_count", 0)}/{active_count}</td>')
+        score_tds.append(
+            f'<td style="text-align: center; font-weight: 800; color: #10B981; font-size: 13px;">{rem.get("score", 0):.2f}</td>'
+        )
+        count_tds.append(
+            f'<td style="text-align: center; font-weight: 700; color: #F3F4F6; font-size: 12px;">{rem.get("rubric_count", 0)}/{active_count}</td>'
+        )
 
     tfoot_html = f"""
     <tfoot>
@@ -262,11 +308,15 @@ def render_classical_totality_matrix(
     """
     st.html(table_html)
 
-    with st.expander(f"Active Matrix Candidates & 679-Remedy Catalog Reference", expanded=False):
-        tab_active_rems, tab_all_catalog = st.tabs([
-            f"Active Matrix Candidates ({len(remedies)})",
-            "Search Full Catalog (679 Remedies)",
-        ])
+    with st.expander(
+        "Active Matrix Candidates & 679-Remedy Catalog Reference", expanded=False
+    ):
+        tab_active_rems, tab_all_catalog = st.tabs(
+            [
+                f"Active Matrix Candidates ({len(remedies)})",
+                "Search Full Catalog (679 Remedies)",
+            ]
+        )
 
         with tab_active_rems:
             st.markdown(
@@ -282,7 +332,9 @@ def render_classical_totality_matrix(
                     r_abbr = rem.get("abbreviation", "")
                     r_full = rem.get("full_name", r_abbr)
                     r_sc = rem.get("score", 0.0)
-                    st.markdown(f"**{esc(r_abbr)}** &mdash; {esc(r_full)} (`{r_sc:.2f}`)")
+                    st.markdown(
+                        f"**{esc(r_abbr)}** &mdash; {esc(r_full)} (`{r_sc:.2f}`)"
+                    )
 
         with tab_all_catalog:
             st.markdown(

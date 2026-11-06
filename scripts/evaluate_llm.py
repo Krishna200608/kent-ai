@@ -22,7 +22,9 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 # Redirect HuggingFace caches to /DATA
 os.environ["HF_HOME"] = os.environ.get("HF_HOME", "/DATA/narya/cache/huggingface")
-os.environ["TRANSFORMERS_CACHE"] = os.environ.get("TRANSFORMERS_CACHE", "/DATA/narya/cache/huggingface")
+os.environ["TRANSFORMERS_CACHE"] = os.environ.get(
+    "TRANSFORMERS_CACHE", "/DATA/narya/cache/huggingface"
+)
 os.environ["TMPDIR"] = os.environ.get("TMPDIR", "/DATA/narya/tmp")
 os.environ["HF_HUB_DISABLE_XET"] = "1"
 
@@ -107,9 +109,11 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def calculate_set_overlap(pred_set: Set[str], gold_set: Set[str]) -> Tuple[int, int, int]:
+def calculate_set_overlap(
+    pred_set: Set[str], gold_set: Set[str]
+) -> Tuple[int, int, int]:
     """Calculate true positives, false positives, false negatives for entity strings.
-    
+
     Uses token-level Jaccard matching (threshold 0.5) to accommodate minor boundary shifts.
     """
     tp = 0
@@ -182,9 +186,15 @@ def main():
     logger.info("Connecting to ChromaDB persistent vector index (74,513 rubrics)...")
     try:
         vector_store = RubricVectorStore()
-        logger.info("ChromaDB vector store connected successfully (%d rubrics indexed).", vector_store.count())
+        logger.info(
+            "ChromaDB vector store connected successfully (%d rubrics indexed).",
+            vector_store.count(),
+        )
     except Exception as err:
-        logger.warning("Could not initialize ChromaDB vector store: %s. Retrieval metrics will be skipped.", err)
+        logger.warning(
+            "Could not initialize ChromaDB vector store: %s. Retrieval metrics will be skipped.",
+            err,
+        )
         vector_store = None
 
     # 4. Load Test Dataset
@@ -198,9 +208,7 @@ def main():
     total_grounded_entities = 0
     total_extracted_entities = 0
 
-    dim_metrics = {
-        dim: {"tp": 0, "fp": 0, "fn": 0} for dim in CANONICAL_DIMENSIONS
-    }
+    dim_metrics = {dim: {"tp": 0, "fp": 0, "fn": 0} for dim in CANONICAL_DIMENSIONS}
 
     retrieval_ranks: List[Optional[int]] = []
     latencies: List[float] = []
@@ -216,7 +224,9 @@ def main():
         # Build prompt using chat template
         messages = format_case_to_messages(case)[:2]  # system + user only
         try:
-            prompt_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            prompt_text = tokenizer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
         except Exception:
             # Fallback for models without separate system role (e.g. BioMistral)
             merged_messages = [
@@ -225,7 +235,9 @@ def main():
                     "content": f"{messages[0]['content']}\n\n{messages[1]['content']}",
                 }
             ]
-            prompt_text = tokenizer.apply_chat_template(merged_messages, tokenize=False, add_generation_prompt=True)
+            prompt_text = tokenizer.apply_chat_template(
+                merged_messages, tokenize=False, add_generation_prompt=True
+            )
         inputs = tokenizer(prompt_text, return_tensors="pt").to(model.device)
 
         # Refinement #4: Deterministic Greedy Decoding (temperature=0.0, do_sample=False)
@@ -289,7 +301,9 @@ def main():
                     for r_idx, item in enumerate(ret_results, start=1):
                         r_id = item.get("rubric_id")
                         r_path = item.get("rubric_path") or item.get("text", "")
-                        if r_id == true_rubric_id or (true_rubric_path and true_rubric_path in r_path):
+                        if r_id == true_rubric_id or (
+                            true_rubric_path and true_rubric_path in r_path
+                        ):
                             if matched_rank is None or r_idx < matched_rank:
                                 matched_rank = r_idx
                 retrieval_ranks.append(matched_rank)
@@ -301,9 +315,17 @@ def main():
             retrieval_ranks.append(None)
 
     # 6. Aggregate Metrics Computation
-    json_validity_rate = (json_parse_success / total_cases) * 100 if total_cases > 0 else 0.0
-    clean_syntax_rate = (clean_syntax_count / total_cases) * 100 if total_cases > 0 else 0.0
-    grounding_rate = (total_grounded_entities / total_extracted_entities) * 100 if total_extracted_entities > 0 else 100.0
+    json_validity_rate = (
+        (json_parse_success / total_cases) * 100 if total_cases > 0 else 0.0
+    )
+    clean_syntax_rate = (
+        (clean_syntax_count / total_cases) * 100 if total_cases > 0 else 0.0
+    )
+    grounding_rate = (
+        (total_grounded_entities / total_extracted_entities) * 100
+        if total_extracted_entities > 0
+        else 100.0
+    )
     hallucination_rate = 100.0 - grounding_rate
 
     dim_results = {}
@@ -336,18 +358,32 @@ def main():
     macro_f1 = sum(f1_list) / len(f1_list) if f1_list else 0.0
     micro_prec = total_tp / (total_tp + total_fp) if (total_tp + total_fp) > 0 else 0.0
     micro_rec = total_tp / (total_tp + total_fn) if (total_tp + total_fn) > 0 else 0.0
-    micro_f1 = (2 * micro_prec * micro_rec) / (micro_prec + micro_rec) if (micro_prec + micro_rec) > 0 else 0.0
+    micro_f1 = (
+        (2 * micro_prec * micro_rec) / (micro_prec + micro_rec)
+        if (micro_prec + micro_rec) > 0
+        else 0.0
+    )
 
     # Downstream Retrieval Metrics
     valid_ranks = [r for r in retrieval_ranks if r is not None]
-    r_at_1 = sum(1 for r in valid_ranks if r <= 1) / total_cases if total_cases > 0 else 0.0
-    r_at_5 = sum(1 for r in valid_ranks if r <= 5) / total_cases if total_cases > 0 else 0.0
-    r_at_10 = sum(1 for r in valid_ranks if r <= 10) / total_cases if total_cases > 0 else 0.0
-    r_at_20 = sum(1 for r in valid_ranks if r <= 20) / total_cases if total_cases > 0 else 0.0
+    r_at_1 = (
+        sum(1 for r in valid_ranks if r <= 1) / total_cases if total_cases > 0 else 0.0
+    )
+    r_at_5 = (
+        sum(1 for r in valid_ranks if r <= 5) / total_cases if total_cases > 0 else 0.0
+    )
+    r_at_10 = (
+        sum(1 for r in valid_ranks if r <= 10) / total_cases if total_cases > 0 else 0.0
+    )
+    r_at_20 = (
+        sum(1 for r in valid_ranks if r <= 20) / total_cases if total_cases > 0 else 0.0
+    )
     mrr = sum(1.0 / r for r in valid_ranks) / total_cases if total_cases > 0 else 0.0
 
     avg_latency_ms = (sum(latencies) / len(latencies)) * 1000 if latencies else 0.0
-    throughput = len(latencies) / sum(latencies) if (latencies and sum(latencies) > 0) else 0.0
+    throughput = (
+        len(latencies) / sum(latencies) if (latencies and sum(latencies) > 0) else 0.0
+    )
 
     # Compile Final Structured JSON
     metrics_summary = {
@@ -408,13 +444,13 @@ def generate_markdown_report(report_path: Path, m: Dict[str, Any]):
 
 | Metric Category | Metric | Score | Publication Threshold | Status |
 | :--- | :--- | :---: | :---: | :---: |
-| **JSON Schema Integrity** | Parse Validity Rate | **{m['json_parse_validity_percent']}%** | $\ge 95.0\%$ | {'PASSED' if m['json_parse_validity_percent'] >= 95 else 'FLAGGED'} |
-| **Clinical Grounding** | Verbatim Substring Grounding | **{m['grounding_rate_percent']}%** | $\ge 90.0\%$ | {'PASSED' if m['grounding_rate_percent'] >= 90 else 'FLAGGED'} |
-| **Hallucination Rate** | Fabricated Entities | **{m['hallucination_rate_percent']}%** | $\le 10.0\%$ | {'PASSED' if m['hallucination_rate_percent'] <= 10 else 'FLAGGED'} |
-| **Extraction Performance** | Micro Precision | **{m['micro_precision']}** | $\ge 0.50$ | PASSED |
-| | Micro Recall | **{m['micro_recall']}** | $\ge 0.50$ | PASSED |
-| | **Micro F1** | **{m['micro_f1']}** | $\ge 0.50$ | PASSED |
-| | Macro F1 | **{m['macro_f1']}** | $\ge 0.40$ | PASSED |
+| **JSON Schema Integrity** | Parse Validity Rate | **{m['json_parse_validity_percent']}%** | $\\ge 95.0\\%$ | {'PASSED' if m['json_parse_validity_percent'] >= 95 else 'FLAGGED'} |
+| **Clinical Grounding** | Verbatim Substring Grounding | **{m['grounding_rate_percent']}%** | $\\ge 90.0\\%$ | {'PASSED' if m['grounding_rate_percent'] >= 90 else 'FLAGGED'} |
+| **Hallucination Rate** | Fabricated Entities | **{m['hallucination_rate_percent']}%** | $\\le 10.0\\%$ | {'PASSED' if m['hallucination_rate_percent'] <= 10 else 'FLAGGED'} |
+| **Extraction Performance** | Micro Precision | **{m['micro_precision']}** | $\\ge 0.50$ | PASSED |
+| | Micro Recall | **{m['micro_recall']}** | $\\ge 0.50$ | PASSED |
+| | **Micro F1** | **{m['micro_f1']}** | $\\ge 0.50$ | PASSED |
+| | Macro F1 | **{m['macro_f1']}** | $\\ge 0.40$ | PASSED |
 
 ---
 
@@ -445,11 +481,11 @@ def generate_markdown_report(report_path: Path, m: Dict[str, Any]):
 
 | Metric | Score | Clinical Interpretation | Target Baseline |
 | :--- | :---: | :--- | :---: |
-| **Recall@1** | **{ret['recall_at_1'] * 100:.1f}%** | Exact rubric retrieved at rank 1 | $\ge 25.0\%$ |
-| **Recall@5** | **{ret['recall_at_5'] * 100:.1f}%** | True rubric within Top 5 recommendations | $\ge 60.0\%$ |
-| **Recall@10** | **{ret['recall_at_10'] * 100:.1f}%** | True rubric within Top 10 recommendations | $\ge 75.0\%$ |
-| **Recall@20** | **{ret['recall_at_20'] * 100:.1f}%** | True rubric within clinician consideration tray | $\ge 85.0\%$ |
-| **MRR** | **{ret['mrr']}** | Mean Reciprocal Rank across test queries | $\ge 0.50$ |
+| **Recall@1** | **{ret['recall_at_1'] * 100:.1f}%** | Exact rubric retrieved at rank 1 | $\\ge 25.0\\%$ |
+| **Recall@5** | **{ret['recall_at_5'] * 100:.1f}%** | True rubric within Top 5 recommendations | $\\ge 60.0\\%$ |
+| **Recall@10** | **{ret['recall_at_10'] * 100:.1f}%** | True rubric within Top 10 recommendations | $\\ge 75.0\\%$ |
+| **Recall@20** | **{ret['recall_at_20'] * 100:.1f}%** | True rubric within clinician consideration tray | $\\ge 85.0\\%$ |
+| **MRR** | **{ret['mrr']}** | Mean Reciprocal Rank across test queries | $\\ge 0.50$ |
 
 ---
 

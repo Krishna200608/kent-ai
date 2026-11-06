@@ -4,7 +4,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![HuggingFace](https://img.shields.io/badge/HuggingFace-Transformers-yellow.svg)](https://huggingface.co/)
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-74%2C513%20Rubrics-blueviolet.svg)](data/embeddings/kent_rubrics/)
-[![Tests Status](https://img.shields.io/badge/tests-195%20passed-success.svg)](tests/)
+[![Tests Status](https://img.shields.io/badge/tests-200%20passed-success.svg)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
 [![Institution](https://img.shields.io/badge/IIIT%20Allahabad-Department%20of%20IT-darkred.svg)](https://www.iiita.ac.in/)
 
@@ -186,7 +186,7 @@ A pilot sample of 100 clinical cases across 25 representative MIND rubrics (4 cl
 
 ### 3. Automated Software Test Suite
 - **Framework**: `pytest 9.1` on Python 3.12
-- **Pass Rate**: **195 / 195 tests passing** (100% pass rate across 22 test modules)
+- **Pass Rate**: **200 / 200 tests passing** (100% pass rate across 23 test modules)
 - **Coverage**: Full regression testing covering dialogue FSM transitions, streaming Ollama parsing, slot heuristic extraction, token-level BIO sequence tagging, multi-encoder pipeline orchestration, totality rankers, ReportLab PDF generation, and Streamlit components.
 
 ---
@@ -286,7 +286,7 @@ kent-ai/
 │   ├── models/                 # Biomedical NER models, EnsembleNER, HybridPipeline
 │   ├── pipeline/               # Pipeline orchestrator, PatientReport, CaseSummarizer
 │   └── search/                 # RubricEmbedder, RubricVectorStore, RemedyRanker
-└── tests/                      # Automated test suite (195 passed tests across 22 modules)
+└── tests/                      # Automated test suite (200 passed tests across 23 modules)
 ```
 
 ---
@@ -325,7 +325,7 @@ pip install -e ".[dev]"
 python -c "from src.data.kent_db import get_mind_rubrics; print(f'MIND Rubrics Loaded: {len(get_mind_rubrics())}')"
 # Expected output: MIND Rubrics Loaded: 4933
 
-# Execute the automated test suite (195 tests)
+# Execute the automated test suite (200 tests)
 pytest tests/ -v
 ```
 
@@ -392,7 +392,7 @@ The runner verifies GPU availability, starts the Ollama daemon, downloads `llama
 | **Phase 8** | **Multi-Model Benchmark** | Complete | BioLinkBERT (34.86% BIO F1), PubMedBERT (41.56% Recall@20), comparative study |
 | **Phase 9** | **Generative QLoRA PEFT** | Complete | Qwen 2.5 7B & BioMistral 7B (100% JSON validity, 99.7% grounding, SOTA F1) |
 | **Phase 10** | **Ensemble & Hybrid Pipeline** | Complete | Weighted majority voting & two-stage hybrid encoder-mining + LLM arbitration |
-| **Phases 11–21** | **Clinician UI/UX Overhaul & Scope Lock** | Complete | Single source constants, busy.js runtime, MIND scope lock with Coming Soon badges; 195 tests |
+| **Phases 11–21** | **Clinician UI/UX Overhaul & Scope Lock** | Complete | Single source constants, busy.js runtime, MIND scope lock with Coming Soon badges; 200 tests across 23 modules |
 | **Phase 22** | **Evaluation & Defense** | In Progress | Final semester defense, thesis manuscript, and clinical practitioner validation |
 
 ---

@@ -15,7 +15,7 @@ import signal
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Optional, Set
 
 # Ensure project root is on sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -65,8 +65,15 @@ class GenerationRunner:
         root = get_project_root()
 
         self.cases_per_rubric = cases_per_rubric or tgt_cfg.get("cases_per_rubric", 4)
-        self.output_path = root / (output_file or tgt_cfg.get("output_file", "data/processed/mind_cases.jsonl"))
-        self.checkpoint_path = root / (checkpoint_file or tgt_cfg.get("checkpoint_file", "data/processed/generation_checkpoint.json"))
+        self.output_path = root / (
+            output_file or tgt_cfg.get("output_file", "data/processed/mind_cases.jsonl")
+        )
+        self.checkpoint_path = root / (
+            checkpoint_file
+            or tgt_cfg.get(
+                "checkpoint_file", "data/processed/generation_checkpoint.json"
+            )
+        )
         self.checkpoint_interval = tgt_cfg.get("checkpoint_interval", 25)
 
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -84,7 +91,9 @@ class GenerationRunner:
         signal.signal(signal.SIGTERM, self._handle_signal)
 
     def _handle_signal(self, signum, frame):
-        logger.warning("Interrupt signal received! Finishing current item and saving checkpoint...")
+        logger.warning(
+            "Interrupt signal received! Finishing current item and saving checkpoint..."
+        )
         self.interrupted = True
 
     def load_checkpoint(self) -> None:
@@ -123,7 +132,9 @@ class GenerationRunner:
         """Execute case generation loop over MIND rubrics."""
         logger.info("=" * 60)
         logger.info("Starting Case Generation Pipeline (Phase 1)")
-        logger.info("Backend: %s | Model: %s", self.generator.backend, self.generator.model)
+        logger.info(
+            "Backend: %s | Model: %s", self.generator.backend, self.generator.model
+        )
         logger.info("Output: %s", self.output_path)
         logger.info("Checkpoint: %s", self.checkpoint_path)
         logger.info("=" * 60)
@@ -135,7 +146,9 @@ class GenerationRunner:
             mind_rubrics = mind_rubrics[: self.limit]
 
         total_rubrics = len(mind_rubrics)
-        pending_rubrics = [r for r in mind_rubrics if r["id"] not in self.completed_rubric_ids]
+        pending_rubrics = [
+            r for r in mind_rubrics if r["id"] not in self.completed_rubric_ids
+        ]
 
         logger.info(
             "Total Target Rubrics: %d | Pending: %d | Cases per Rubric: %d (Target Total: ~%d cases)",
@@ -170,8 +183,12 @@ class GenerationRunner:
                             case_idx=c_idx,
                             variation_instruction=VARIATION_STYLES.get(c_idx),
                         )
-                        case.metadata["variation_style"] = VARIATION_STYLES.get(c_idx, "Standard")
-                        out_file.write(json.dumps(case.to_dict(), ensure_ascii=False) + "\n")
+                        case.metadata["variation_style"] = VARIATION_STYLES.get(
+                            c_idx, "Standard"
+                        )
+                        out_file.write(
+                            json.dumps(case.to_dict(), ensure_ascii=False) + "\n"
+                        )
                         self.cases_generated_count += 1
                         cases_in_this_session += 1
                     except Exception as err:

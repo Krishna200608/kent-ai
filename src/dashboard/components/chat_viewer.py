@@ -35,7 +35,9 @@ logger = logging.getLogger("chat_viewer")
 _ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 _ASSISTANT_SVG = _ASSETS_DIR / "assistant_avatar.svg"
 _USER_SVG = _ASSETS_DIR / "user_avatar.svg"
-ASSISTANT_AVATAR = str(_ASSISTANT_SVG.resolve()) if _ASSISTANT_SVG.is_file() else "assistant"
+ASSISTANT_AVATAR = (
+    str(_ASSISTANT_SVG.resolve()) if _ASSISTANT_SVG.is_file() else "assistant"
+)
 USER_AVATAR = str(_USER_SVG.resolve()) if _USER_SVG.is_file() else "user"
 
 # Re-exports for 100% backward compatibility
@@ -60,7 +62,9 @@ def render_chat_interface(dm: DialogueManager) -> None:
     active_case = st.session_state.get("current_case")
 
     # 1. Dialogue Console Header Row
-    is_llm_online = check_ollama_online(getattr(dm, "api_base", "http://127.0.0.1:11434"))
+    is_llm_online = check_ollama_online(
+        getattr(dm, "api_base", "http://127.0.0.1:11434")
+    )
     if is_llm_online and hasattr(dm, "api_base"):
         dm.api_base = "http://127.0.0.1:11434"
 
@@ -85,19 +89,30 @@ def render_chat_interface(dm: DialogueManager) -> None:
         if dm.state_machine.current_state == IntakeState.DONE:
             actions = dm.get_action_options()
             if actions:
-                st.markdown("<div style='margin: 8px 0;'></div>", unsafe_allow_html=True)
+                st.markdown(
+                    "<div style='margin: 8px 0;'></div>", unsafe_allow_html=True
+                )
                 cols = st.columns(len(actions))
                 for idx, act in enumerate(actions):
                     act_id = act.get("id")
                     act_label = act.get("label", "")
-                    act_type = "primary" if act.get("type") == "primary" else "secondary"
+                    act_type = (
+                        "primary" if act.get("type") == "primary" else "secondary"
+                    )
                     with cols[idx]:
-                        if st.button(act_label, type=act_type, width="stretch", key=f"btn_done_act_{act_id}"):
+                        if st.button(
+                            act_label,
+                            type=act_type,
+                            width="stretch",
+                            key=f"btn_done_act_{act_id}",
+                        ):
                             if act_id == "continue_review":
                                 st.session_state.workspace_step = 2
                                 st.rerun(scope="app")
                             elif act_id == "add_detail":
-                                dm.state_machine.current_state = IntakeState.CLARIFICATION
+                                dm.state_machine.current_state = (
+                                    IntakeState.CLARIFICATION
+                                )
                                 dm.prepare_turn("I would like to add another detail.")
                                 if active_case:
                                     dm.sync_to_case(active_case)
@@ -107,9 +122,13 @@ def render_chat_interface(dm: DialogueManager) -> None:
                                 dm.reset()
                                 dm.get_greeting()
                                 if active_case:
-                                    active_case.dimensions = {k: [] for k in active_case.dimensions}
+                                    active_case.dimensions = {
+                                        k: [] for k in active_case.dimensions
+                                    }
                                     active_case.dialogue_history = []
-                                    active_case.extraction_meta = {"intake_mode": dm.intake_mode}
+                                    active_case.extraction_meta = {
+                                        "intake_mode": dm.intake_mode
+                                    }
                                     dm.sync_to_case(active_case)
                                     save_case(active_case)
                                 st.toast("Started new consultation.")
@@ -143,15 +162,14 @@ def render_chat_interface(dm: DialogueManager) -> None:
 
             with st.chat_message("assistant", avatar=ASSISTANT_AVATAR):
                 st.html(
-                    f"<div class='chat-msg-header' style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;'>"
-                    f"<span style='font-size: 11.5px; font-weight: 700; color: var(--accent, #10B981); letter-spacing: 0.02em;'>"
-                    f"Kent-AI"
-                    f"</span>"
-                    f"</div>"
+                    "<div class='chat-msg-header' style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;'>"
+                    "<span style='font-size: 11.5px; font-weight: 700; color: var(--accent, #10B981); letter-spacing: 0.02em;'>"
+                    "Kent-AI"
+                    "</span>"
+                    "</div>"
                 )
                 thinking_box = st.empty()
-                thinking_box.html(
-                    f"""
+                thinking_box.html(f"""
                     <div class="skeleton-thinking-bubble">
                         <div style="font-size: 11.5px; color: var(--accent, #10B981); font-weight: 700; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
                             <span class="status-dot"></span> {get_icon('sparkles', size=13, color='var(--accent, #10B981)')} Kent-AI is reflecting...
@@ -160,8 +178,7 @@ def render_chat_interface(dm: DialogueManager) -> None:
                         <div class="skeleton-shimmer-line line-2"></div>
                         <div class="skeleton-shimmer-line line-3"></div>
                     </div>
-                    """
-                )
+                    """)
 
                 prompt = dm.prepare_turn(input_to_process)
 
@@ -179,7 +196,11 @@ def render_chat_interface(dm: DialogueManager) -> None:
 
                 st.session_state.chat_is_streaming = True
                 try:
-                    st.write_stream(_stream_with_thinking(dm.visible_only(dm.stream_reply(prompt), raw)))
+                    st.write_stream(
+                        _stream_with_thinking(
+                            dm.visible_only(dm.stream_reply(prompt), raw)
+                        )
+                    )
                 except Exception as err:
                     logger.warning("Error streaming assistant reply: %s", err)
                     dm.last_call_failed = True

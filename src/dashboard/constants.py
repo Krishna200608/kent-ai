@@ -15,9 +15,8 @@ import os
 from pathlib import Path
 import re
 import subprocess
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 import yaml
-
 
 # -----------------------------------------------------------------------------
 # App Version & Git Short SHA
@@ -48,7 +47,9 @@ GIT_SHA = _get_git_sha()
 # -----------------------------------------------------------------------------
 def _load_model_display_name() -> str:
     """Derive clean human-readable model name from configured chatbot.yaml."""
-    cfg_path = Path(__file__).resolve().parent.parent.parent / "configs" / "chatbot.yaml"
+    cfg_path = (
+        Path(__file__).resolve().parent.parent.parent / "configs" / "chatbot.yaml"
+    )
     model_raw = "llama3:8b"
     if cfg_path.is_file():
         try:
@@ -112,7 +113,6 @@ EVALUATION_METRICS: Dict[str, Dict[str, str]] = {
 }
 
 
-
 # -----------------------------------------------------------------------------
 # Scope Definitions (Single Source of Truth)
 # -----------------------------------------------------------------------------
@@ -127,7 +127,7 @@ SCOPE_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "label": "MIND focus",
         "short_label": "MIND",
         "count": SCOPE_MIND_COUNT,
-        "caption": f"4,933 rubrics",
+        "caption": "4,933 rubrics",
         "full_label": "MIND Chapter Focus (4,933 rubrics)",
         "chapter_id": 1,
     },
@@ -135,7 +135,7 @@ SCOPE_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "label": "All chapters",
         "short_label": "All Chapters",
         "count": SCOPE_ALL_COUNT,
-        "caption": f"74,513 rubrics",
+        "caption": "74,513 rubrics",
         "full_label": "All 37 Chapters (74,513 rubrics)",
         "chapter_id": None,
     },
@@ -156,7 +156,6 @@ def get_rubric_specificity(remedy_count: int) -> str:
     elif remedy_count >= SPECIFICITY_BROAD_MIN:
         return "Broad"
     return "Moderate"
-
 
 
 # -----------------------------------------------------------------------------
@@ -263,7 +262,15 @@ def get_canonical_dimensions(scope: str = SCOPE_MIND) -> List[CanonicalDimension
         return CANONICAL_DIMENSIONS_ORDERED
     else:
         # Standard physical-generals sequence: Location, Sensation, Worse, Better, Concomitant, Time, Mental
-        order = ["location", "sensation", "worse", "better", "concomitant", "time", "mental"]
+        order = [
+            "location",
+            "sensation",
+            "worse",
+            "better",
+            "concomitant",
+            "time",
+            "mental",
+        ]
         return [CANONICAL_DIMENSION_MAP[k] for k in order]
 
 
@@ -271,7 +278,9 @@ def get_canonical_dimensions(scope: str = SCOPE_MIND) -> List[CanonicalDimension
 # Rubric Hierarchy Path Formatter
 # Resolves breadcrumbs with ' › ' and repairs dropped trailing dot (e.g. '4 a.m' -> '4 a.m.')
 # -----------------------------------------------------------------------------
-_TIME_ABBR_RE = re.compile(r"\b([0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.m|p\.m))\b(?!\.)", re.IGNORECASE)
+_TIME_ABBR_RE = re.compile(
+    r"\b([0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.m|p\.m))\b(?!\.)", re.IGNORECASE
+)
 
 
 def format_rubric_path(path: str) -> str:

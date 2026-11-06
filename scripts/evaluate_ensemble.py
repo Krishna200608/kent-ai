@@ -28,12 +28,16 @@ from src.models.llm_dataset import (
 from src.search.embedder import RubricEmbedder
 from src.search.vector_store import RubricVectorStore
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
 logger = logging.getLogger("evaluate_ensemble")
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Evaluate Multi-Model Ensemble on Test Cases.")
+    parser = argparse.ArgumentParser(
+        description="Evaluate Multi-Model Ensemble on Test Cases."
+    )
     parser.add_argument(
         "--test-file",
         type=str,
@@ -67,7 +71,9 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def calculate_set_overlap(pred_set: Set[str], gold_set: Set[str]) -> Tuple[int, int, int]:
+def calculate_set_overlap(
+    pred_set: Set[str], gold_set: Set[str]
+) -> Tuple[int, int, int]:
     """Calculate true positives, false positives, false negatives with token Jaccard matching."""
     tp = 0
     matched_gold = set()
@@ -103,7 +109,9 @@ def main() -> None:
     if not test_path.exists():
         raise FileNotFoundError(f"Test split not found at {test_path}")
 
-    logger.info("Initializing Multi-Model Ensemble (BioLinkBERT, PubMedBERT, ClinicalBERT, DeBERTa)...")
+    logger.info(
+        "Initializing Multi-Model Ensemble (BioLinkBERT, PubMedBERT, ClinicalBERT, DeBERTa)..."
+    )
     ensemble = EnsembleNER()
 
     logger.info("Initializing ChromaDB Rubric Vector Store (74,513 rubrics)...")
@@ -185,7 +193,9 @@ def main() -> None:
             retrieved_paths = [r.get("rubric_path", "").lower() for r in results]
 
             rank = None
-            for r_idx, (r_id, r_path) in enumerate(zip(retrieved_ids, retrieved_paths), start=1):
+            for r_idx, (r_id, r_path) in enumerate(
+                zip(retrieved_ids, retrieved_paths), start=1
+            ):
                 if (true_rubric_id and r_id == true_rubric_id) or (
                     true_rubric_path and r_path == true_rubric_path.lower()
                 ):
@@ -201,8 +211,12 @@ def main() -> None:
     total_fp = sum(m["fp"] for m in dim_metrics.values())
     total_fn = sum(m["fn"] for m in dim_metrics.values())
 
-    micro_precision = total_tp / (total_tp + total_fp) if (total_tp + total_fp) > 0 else 0.0
-    micro_recall = total_tp / (total_tp + total_fn) if (total_tp + total_fn) > 0 else 0.0
+    micro_precision = (
+        total_tp / (total_tp + total_fp) if (total_tp + total_fp) > 0 else 0.0
+    )
+    micro_recall = (
+        total_tp / (total_tp + total_fn) if (total_tp + total_fn) > 0 else 0.0
+    )
     micro_f1 = (
         (2 * micro_precision * micro_recall) / (micro_precision + micro_recall)
         if (micro_precision + micro_recall) > 0
@@ -225,15 +239,39 @@ def main() -> None:
 
     # Downstream Retrieval Metrics
     total_queries = len(retrieval_ranks)
-    r1 = sum(1 for r in retrieval_ranks if r is not None and r <= 1) / total_queries if total_queries else 0.0
-    r5 = sum(1 for r in retrieval_ranks if r is not None and r <= 5) / total_queries if total_queries else 0.0
-    r10 = sum(1 for r in retrieval_ranks if r is not None and r <= 10) / total_queries if total_queries else 0.0
-    r20 = sum(1 for r in retrieval_ranks if r is not None and r <= 20) / total_queries if total_queries else 0.0
-    mrr = sum(1.0 / r for r in retrieval_ranks if r is not None) / total_queries if total_queries else 0.0
+    r1 = (
+        sum(1 for r in retrieval_ranks if r is not None and r <= 1) / total_queries
+        if total_queries
+        else 0.0
+    )
+    r5 = (
+        sum(1 for r in retrieval_ranks if r is not None and r <= 5) / total_queries
+        if total_queries
+        else 0.0
+    )
+    r10 = (
+        sum(1 for r in retrieval_ranks if r is not None and r <= 10) / total_queries
+        if total_queries
+        else 0.0
+    )
+    r20 = (
+        sum(1 for r in retrieval_ranks if r is not None and r <= 20) / total_queries
+        if total_queries
+        else 0.0
+    )
+    mrr = (
+        sum(1.0 / r for r in retrieval_ranks if r is not None) / total_queries
+        if total_queries
+        else 0.0
+    )
 
     avg_latency_ms = (sum(latencies) / len(latencies)) * 1000.0 if latencies else 0.0
     throughput = len(latencies) / sum(latencies) if sum(latencies) > 0 else 0.0
-    grounding_rate = (total_grounded / total_entities_extracted * 100.0) if total_entities_extracted else 100.0
+    grounding_rate = (
+        (total_grounded / total_entities_extracted * 100.0)
+        if total_entities_extracted
+        else 100.0
+    )
 
     # Output JSON Metrics
     eval_payload = {
@@ -241,7 +279,14 @@ def main() -> None:
         "paradigm": "Paradigm 1: Weighted Majority Voting",
         "total_test_cases": len(test_cases),
         "total_entities_extracted": total_entities_extracted,
-        "unanimous_rate_percent": round((total_unanimous / total_entities_extracted * 100.0) if total_entities_extracted else 0.0, 2),
+        "unanimous_rate_percent": round(
+            (
+                (total_unanimous / total_entities_extracted * 100.0)
+                if total_entities_extracted
+                else 0.0
+            ),
+            2,
+        ),
         "grounding_rate_percent": round(grounding_rate, 2),
         "vote_distribution": vote_distribution,
         "micro_precision": round(micro_precision, 4),
@@ -285,7 +330,7 @@ def main() -> None:
 | **Micro Recall** | **{micro_recall:.4f}** | $\\ge 0.50$ | {'PASSED' if micro_recall >= 0.50 else 'ACCEPTABLE'} |
 | **Micro F1** | **{micro_f1:.4f}** | $\\ge 0.50$ | {'PASSED' if micro_f1 >= 0.50 else 'ACCEPTABLE'} |
 | **Macro F1** | **{macro_f1:.4f}** | $\\ge 0.40$ | {'PASSED' if macro_f1 >= 0.40 else 'ACCEPTABLE'} |
-| **Grounding Rate** | **{grounding_rate:.2f}%** | $\\ge 90.0\%$ | PASSED |
+| **Grounding Rate** | **{grounding_rate:.2f}%** | $\\ge 90.0\\%$ | PASSED |
 | **Unanimous Agreement (4/4)** | **{eval_payload['unanimous_rate_percent']:.2f}%** | Reference | PASSED |
 
 ---
@@ -308,10 +353,10 @@ def main() -> None:
 
 | Metric | Score | Target Baseline | Status |
 | :--- | :---: | :---: | :---: |
-| **Recall@1** | **{r1 * 100:.1f}%** | $\\ge 25.0\%$ | Reference |
-| **Recall@5** | **{r5 * 100:.1f}%** | $\\ge 60.0\%$ | Reference |
-| **Recall@10** | **{r10 * 100:.1f}%** | $\\ge 75.0\%$ | Reference |
-| **Recall@20** | **{r20 * 100:.1f}%** | $\\ge 85.0\%$ | Reference |
+| **Recall@1** | **{r1 * 100:.1f}%** | $\\ge 25.0\\%$ | Reference |
+| **Recall@5** | **{r5 * 100:.1f}%** | $\\ge 60.0\\%$ | Reference |
+| **Recall@10** | **{r10 * 100:.1f}%** | $\\ge 75.0\\%$ | Reference |
+| **Recall@20** | **{r20 * 100:.1f}%** | $\\ge 85.0\\%$ | Reference |
 | **MRR** | **{mrr:.4f}** | $\\ge 0.50$ | Reference |
 
 ---
@@ -330,9 +375,10 @@ def main() -> None:
     with open(out_md, "w", encoding="utf-8") as f:
         f.write(report_md)
 
-    logger.info("Evaluation complete! Report written to %s and JSON to %s", out_md, out_json)
+    logger.info(
+        "Evaluation complete! Report written to %s and JSON to %s", out_md, out_json
+    )
 
 
 if __name__ == "__main__":
     main()
-

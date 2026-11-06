@@ -3,13 +3,13 @@
 \chapter{Complete Test Suite Verification Matrix}
 \label{AppendixC}
 
-This appendix provides the comprehensive verification matrix of all \textbf{195 automated unit, integration, and smoke tests across 22 test modules} in the Kent-AI test suite. All tests execute with a 100\% pass rate under continuous integration without GPU or Ollama dependencies.
+This appendix provides the comprehensive verification matrix of all \textbf{200 automated unit, integration, and smoke tests across 23 test modules} in the Kent-AI test suite. All tests execute with a 100\% pass rate under continuous integration without GPU or Ollama dependencies.
 
 %----------------------------------------------------------------------------------------
 
 \section{Test Module Inventory and Coverage}
 
-Table~\ref{tab:test_inventory} documents the complete test execution inventory of all 195 automated tests across the 22 test modules comprising the Kent-AI test suite. Each module is listed alongside its architectural subsystem, test count, runtime duration, and verified clinical functionality.
+Table~\ref{tab:test_inventory} documents the complete test execution inventory of all 200 automated tests across the 23 test modules comprising the Kent-AI test suite. Each module is listed alongside its architectural subsystem, test count, runtime duration, and verified clinical functionality.
 
 \begin{table}[H]
 \caption[Test Suite Execution Summary]{Kent-AI Test Suite Verification Inventory.}
@@ -42,8 +42,9 @@ Table~\ref{tab:test_inventory} documents the complete test execution inventory o
 \texttt{tests/test\_evaluation.py} & Benchmark & 7 & 0.28s & SeqEval F1, Recall@K, MRR, Simillimum accuracy metrics \\
 \texttt{tests/test\_busy.py} & UI Feedback & 9 & 0.18s & Loading indicators, aria-busy accessibility feedback \\
 \texttt{tests/test\_ui\_overhaul.py} & UI Theme & 18 & 0.45s & Canonical dimensions, pluralization, high-contrast footer \\
+\texttt{tests/test\_master\_workflows.py} & Master Workflows & 5 & 0.22s & End-to-end Workflows A--E: Consultation, Narrative, Persistence, Practitioner, Recovery \\
 \midrule
-\textbf{Total Test Suite} & \textbf{22 Modules} & \textbf{195} & \textbf{$\sim$4.4s} & \textbf{100\% Pass Rate (0 Failures, 0 Errors)} \\
+\textbf{Total Test Suite} & \textbf{23 Modules} & \textbf{200} & \textbf{$\sim$4.6s} & \textbf{100\% Pass Rate (0 Failures, 0 Errors)} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -57,5 +58,5 @@ The entire test suite is verified via the following command:
 
 \begin{lstlisting}[style=python, caption={Test Suite Verification Command}]
 pytest tests/ -v --durations=10
-# Expected output: 195 passed in 4.42s (100% pass rate)
+# Expected output: 200 passed in 4.62s (100% pass rate)
 \end{lstlisting}

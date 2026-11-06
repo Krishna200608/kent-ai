@@ -1,7 +1,7 @@
 # Kent-AI — Gotchas & Known Quirks
 
-> Last updated: 2026-11-01 by Antigravity
-> Phase: Complete through Phase 15 (Comprehensive Clinician UI/UX Overhaul, Phases 1–10; 168 Unit & Integration Tests Passing across 18 Test Modules, 0 Errors)
+> Last updated: 2026-11-06 by Antigravity
+> Phase: Complete through Phase 22 (Master Repository Audit & Stabilization; 200 Unit, Integration & Smoke Tests Passing across 23 Test Modules, 0 Errors)
 
 ---
 
@@ -66,6 +66,11 @@ The project lives at `d:\Research Project\kent-ai` — note the space in "Resear
 ### 3.4 Hardlink vs. Symlink
 
 `data/raw/repertory.sqlite` and `data/raw/kent_public_edition/repertory.sqlite` are hardlinked. Both paths refer to the same inode. The upstream public edition bundle is permanently organized under `data/raw/kent_public_edition/`. There is also a directory junction at `d:\Research Project\Kent` → `d:\Research Project\kent-ai`.
+
+### 3.5 Python 3.12 Escape Sequence Enforcement
+
+In Python 3.12+, unescaped backslashes in standard string literals (e.g., `\%`, `\g`, `\l` in Markdown/LaTeX reports) emit `SyntaxWarning: invalid escape sequence` and will become hard syntax errors in future Python releases.
+- **Solution**: Always escape LaTeX math symbols with double backslashes (e.g. `$\\ge$`, `\\%`) or use raw strings (`rf"""..."""`).
 
 ---
 

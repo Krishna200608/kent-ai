@@ -69,3 +69,19 @@ python_functions = ["test_*"]
 include = ["src", "tests"]
 extraPaths = ["."]
 
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = [
+    "E501",  # Line length handled by black and long clinical prompt strings
+    "E402",  # Module level import not at top of file (scripts adjust sys.path for standalone run)
+    "F401",  # Unused imports across test fixtures and package __init__ files
+    "F841",  # Local variable assigned but unused
+    "E722",  # Bare except in legacy error catch blocks
+    "W291",  # Trailing whitespace
+    "W293",  # Blank line contains whitespace
+]
+

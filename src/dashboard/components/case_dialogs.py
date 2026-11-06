@@ -7,6 +7,8 @@ Provides:
 
 from __future__ import annotations
 
+from typing import Any
+
 import streamlit as st
 
 from src.dashboard.components.busy import busy_slot
@@ -46,8 +48,12 @@ def show_patient_info_dialog(case: ClinicalCase) -> None:
         )
     with c_sex:
         sex_opts = ["Unspecified", "Female", "Male", "Other"]
-        curr_idx = sex_opts.index(case.patient_sex) if case.patient_sex in sex_opts else 0
-        new_sex = st.selectbox("Biological Sex:", sex_opts, index=curr_idx, key="dlg_pt_sex")
+        curr_idx = (
+            sex_opts.index(case.patient_sex) if case.patient_sex in sex_opts else 0
+        )
+        new_sex = st.selectbox(
+            "Biological Sex:", sex_opts, index=curr_idx, key="dlg_pt_sex"
+        )
 
     new_chief = st.text_area(
         "Chief Complaint / Reason for Encounter:",
@@ -60,7 +66,9 @@ def show_patient_info_dialog(case: ClinicalCase) -> None:
     c_save, c_cancel = st.columns([1.2, 1])
     with c_save:
         slot_save = st.empty()
-        if slot_save.button("Save Demographics", type="primary", width="stretch", key="dlg_btn_save"):
+        if slot_save.button(
+            "Save Demographics", type="primary", width="stretch", key="dlg_btn_save"
+        ):
             with busy_slot(slot_save, "Saving...", key="dlg_btn_save", type="primary"):
                 case.patient_name = new_name.strip() or "Anonymous Patient"
                 case.patient_age = int(new_age) if new_age else None
@@ -98,10 +106,19 @@ def show_first_run_disclaimer_dialog() -> None:
         unsafe_allow_html=True,
     )
 
-    dont_show = st.checkbox("Remember my acknowledgement on this machine", value=True, key="chk_persist_disclaimer")
+    dont_show = st.checkbox(
+        "Remember my acknowledgement on this machine",
+        value=True,
+        key="chk_persist_disclaimer",
+    )
     c_ack, c_dismiss = st.columns([1.5, 1])
     with c_ack:
-        if st.button("I Acknowledge & Understand", type="primary", width="stretch", key="dlg_ack_disclaimer"):
+        if st.button(
+            "I Acknowledge & Understand",
+            type="primary",
+            width="stretch",
+            key="dlg_ack_disclaimer",
+        ):
             st.session_state["has_acknowledged_disclaimer"] = True
             if dont_show:
                 set_app_setting("has_acknowledged_disclaimer", True)
@@ -128,9 +145,14 @@ def show_remedy_dialog(remedy_id_or_abbr: int | str, db: Any) -> None:
     rem = None
     with db.connect() as conn:
         cur = conn.cursor()
-        is_num = isinstance(remedy_id_or_abbr, int) or (isinstance(remedy_id_or_abbr, str) and remedy_id_or_abbr.isdigit())
+        is_num = isinstance(remedy_id_or_abbr, int) or (
+            isinstance(remedy_id_or_abbr, str) and remedy_id_or_abbr.isdigit()
+        )
         if is_num:
-            cur.execute("SELECT id, abbreviation, full_name, normalized FROM remedies WHERE id = ?", (int(remedy_id_or_abbr),))
+            cur.execute(
+                "SELECT id, abbreviation, full_name, normalized FROM remedies WHERE id = ?",
+                (int(remedy_id_or_abbr),),
+            )
         else:
             s_val = str(remedy_id_or_abbr).strip()
             cur.execute(
@@ -142,7 +164,9 @@ def show_remedy_dialog(remedy_id_or_abbr: int | str, db: Any) -> None:
             rem = dict(row)
 
     if not rem:
-        st.error(f"Remedy '{esc(str(remedy_id_or_abbr))}' was not found in Kent's Repertory.")
+        st.error(
+            f"Remedy '{esc(str(remedy_id_or_abbr))}' was not found in Kent's Repertory."
+        )
         return
 
     rem_id = rem["id"]
@@ -151,13 +175,17 @@ def show_remedy_dialog(remedy_id_or_abbr: int | str, db: Any) -> None:
 
     with db.connect() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM rubric_remedies WHERE remedy_id = ?", (rem_id,))
+        cur.execute(
+            "SELECT COUNT(*) FROM rubric_remedies WHERE remedy_id = ?", (rem_id,)
+        )
         total_count = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(*) FROM rubric_remedies rr JOIN rubrics r ON rr.rubric_id = r.id WHERE rr.remedy_id = ? AND r.section_id = 1", (rem_id,))
+        cur.execute(
+            "SELECT COUNT(*) FROM rubric_remedies rr JOIN rubrics r ON rr.rubric_id = r.id WHERE rr.remedy_id = ? AND r.section_id = 1",
+            (rem_id,),
+        )
         mind_count = cur.fetchone()[0]
 
-    st.html(
-        f"""
+    st.html(f"""
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid var(--line, #243243); padding-bottom: 10px;">
             <div>
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -170,12 +198,18 @@ def show_remedy_dialog(remedy_id_or_abbr: int | str, db: Any) -> None:
                 <b>{total_count:,}</b> rubrics cataloged &middot; <span style="color: var(--accent, #10B981); font-weight: 700;">{mind_count:,} in MIND</span>
             </div>
         </div>
-        """
-    )
+        """)
 
     st.markdown("##### Characteristic Keynotes (Grade 3 Confirmed Symptoms)")
     try:
-        keynotes = get_remedy_rubrics(rem_id, min_grade=3, prioritize_mind=True, rank_by_specificity=True, limit=8, db_path=db.db_path)
+        keynotes = get_remedy_rubrics(
+            rem_id,
+            min_grade=3,
+            prioritize_mind=True,
+            rank_by_specificity=True,
+            limit=8,
+            db_path=db.db_path,
+        )
     except Exception:
         keynotes = []
 
@@ -190,32 +224,42 @@ def show_remedy_dialog(remedy_id_or_abbr: int | str, db: Any) -> None:
 
             c_text, c_btn = st.columns([5, 1.2], vertical_alignment="center")
             with c_text:
-                st.html(
-                    f"""
+                st.html(f"""
                     <div style="font-family: var(--font-rubric, Georgia, serif); font-size: 13.5px; color: var(--text, #E8EDF3); margin-bottom: 2px;">
                         {esc(disp_path)}
                         <span style="font-family: var(--font-ui, sans-serif); font-size: 11px; color: var(--text-muted, #A3B0C2); margin-left: 6px;">({r_count} remedies)</span>
                     </div>
-                    """
-                )
+                    """)
             with c_btn:
-                tray = st.session_state.get("case_tray", {"rubrics": [], "remedies": []})
-                in_tray = any(item.get("id") == kn_id for item in tray.get("rubrics", []))
+                tray = st.session_state.get(
+                    "case_tray", {"rubrics": [], "remedies": []}
+                )
+                in_tray = any(
+                    item.get("id") == kn_id for item in tray.get("rubrics", [])
+                )
                 if in_tray:
                     st.caption("Added")
                 else:
-                    if st.button("+ Add", key=f"dlg_add_kn_{rem_id}_{kn_id}", width="stretch"):
+                    if st.button(
+                        "+ Add", key=f"dlg_add_kn_{rem_id}_{kn_id}", width="stretch"
+                    ):
                         if "case_tray" not in st.session_state:
                             st.session_state.case_tray = {"rubrics": [], "remedies": []}
-                        leaf = disp_path.split(" › ")[-1] if " › " in disp_path else disp_path
-                        st.session_state.case_tray["rubrics"].append({
-                            "id": kn_id,
-                            "rubric_id": kn_id,
-                            "path": r_path,
-                            "name": leaf,
-                            "similarity": 1.0,
-                            "remedy_count": r_count,
-                        })
+                        leaf = (
+                            disp_path.split(" › ")[-1]
+                            if " › " in disp_path
+                            else disp_path
+                        )
+                        st.session_state.case_tray["rubrics"].append(
+                            {
+                                "id": kn_id,
+                                "rubric_id": kn_id,
+                                "path": r_path,
+                                "name": leaf,
+                                "similarity": 1.0,
+                                "remedy_count": r_count,
+                            }
+                        )
                         cur_c = st.session_state.get("current_case")
                         if cur_c is not None:
                             if kn_id not in cur_c.selected_rubric_ids:
@@ -230,5 +274,3 @@ def show_remedy_dialog(remedy_id_or_abbr: int | str, db: Any) -> None:
     st.markdown("---")
     if st.button("Close", width="stretch", key="dlg_btn_close_rem"):
         st.rerun()
-
-
