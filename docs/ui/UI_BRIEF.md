@@ -17,7 +17,7 @@ This brief comes from a UI/UX audit of screenshots. Implement it in the phases b
 6. **Keep the research disclaimer.** Consolidate it; never delete it.
 7. **No new heavy dependencies.** The app must keep working offline. Self-host fonts (`server.enableStaticServing = true`, files under `static/`) with system-font fallbacks.
 8. **Work phase by phase.** After each phase: run the app, fix errors, run existing tests, list changed files, and commit (`ui: phase N – <summary>`). No single giant diff.
-9. **If something is ambiguous**, choose the safer option, record it under "Assumptions" in `docs/UI_CHANGELOG.md`, and keep going.
+9. **If something is ambiguous**, choose the safer option, record it under "Assumptions" in `docs/ui/UI_CHANGELOG.md`, and keep going.
 
 ---
 
@@ -85,7 +85,7 @@ Map existing internal keys onto these; do not rename DB fields. Keep existing "r
 
 ## Phase 0: Audit (no code edits)
 
-Write `docs/UI_AUDIT_MAP.md` (≤1 page):
+Write `docs/ui/UI_AUDIT_MAP.md` (≤1 page):
 - For each screen: file/function, session_state keys, CSS hooks, DB tables used.
 - Streamlit version and how navigation currently works (`st.tabs` vs other).
 - Every place that currently renders: repertory scope, engine status, disclaimer, branding, the "x/7" count, the 7-dimension list, export/copy controls, patient details, and totality principles.
@@ -325,8 +325,8 @@ Audit these against the same rules: no duplicate chrome, tokens, sticky action b
 ## Deliverables
 
 - Commits per phase.
-- `docs/UI_CHANGELOG.md` with Assumptions, backend changes, and deferred items.
-- `docs/UI_AUDIT_MAP.md`.
+- `docs/ui/UI_CHANGELOG.md` with Assumptions, backend changes, and deferred items.
+- `docs/ui/UI_AUDIT_MAP.md`.
 - Before/after screenshots in `docs/screens/`.
 - A final summary listing every changed file by phase and any open questions.
 </USER_REQUEST>

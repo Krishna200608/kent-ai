@@ -26,7 +26,7 @@
 | Unit tests | ✅ Done | `tests/test_kent_db.py` (13 passing tests) |
 | Stub modules for all phases | ✅ Done | All `src/` modules with typed interfaces |
 | EDA notebook | ✅ Done | `notebooks/01_eda_repertory.ipynb` |
-| Architecture & Context docs | ✅ Done | `Context/ARCHITECTURE.md`, `docs/Next_Steps.md`, `docs/GPU_SETUP_GUIDE.md` |
+| Architecture & Context docs | ✅ Done | `Context/ARCHITECTURE.md`, `docs/planning/Next_Steps.md`, `docs/guides/GPU_SETUP_GUIDE.md` |
 | Context files | ✅ Done | `Context/` directory (6 files + rules) |
 
 ### Exit Criteria Verification
@@ -108,7 +108,7 @@ python scripts/generate_cases.py --mock --limit 20 --cases-per-rubric 4 --resume
 
 ### Production GPU Launch Instructions
 
-See full guide in [`docs/GPU_SETUP_GUIDE.md`](docs/GPU_SETUP_GUIDE.md).
+See full guide in [`docs/guides/GPU_SETUP_GUIDE.md`](docs/guides/GPU_SETUP_GUIDE.md).
 
 ```bash
 # On College GPU Server (Turnkey Automated Runner):
@@ -264,7 +264,7 @@ pytest tests/ -v
 
 | Task | Status | Key File(s) |
 |---|---|---|
-| Design System Specification | ✅ Done | `docs/DESIGN.md` (Google Stitch UI/UX design tokens, colors, typography, glassmorphism, badge hierarchy) |
+| Design System Specification | ✅ Done | `docs/ui/DESIGN.md` (Google Stitch UI/UX design tokens, colors, typography, glassmorphism, badge hierarchy) |
 | Stitch CSS Theme Injection | ✅ Done | `src/dashboard/styles.py` (Midnight canvas `#0A0F1D`, pulse-glowing status indicators, 7-dimension badges, custom scrollbars, repertory matrix styling) |
 | Live Chat Viewer Component | ✅ Done | `src/dashboard/components/chat_viewer.py` (7-dimension live HUD, state progress bar, contextual quick-reply suggestion chips) |
 | Rubric Card & Remedy Inspector | ✅ Done | `src/dashboard/components/rubric_tree.py` (Similarity badges, expandable remedy grades inspector for Grade 3/2/1) |
@@ -306,7 +306,7 @@ streamlit run src/dashboard/app.py --server.headless true --server.port 8503
 | Task | Status | Key File(s) |
 |---|---|---|
 | Supervisor Consultation & Literature Review | ✅ Done | `Context/research_llm_comparative_study_and_ensemble_2026-10-29.md` (Literature citations: Hu et al. JAMIA 2024, PMID 39923968, PMID 40775967, PMID 41758143; BLURB SOTA analysis) |
-| Publication Roadmap Document (v2.0) | ✅ Done | `docs/Next_Steps.md` (Comprehensive supervisor review doc: completed baseline, model candidate selection, 4 standardized paper tables, 3 ensemble paradigms, GPU commands, and 4-week timeline) |
+| Publication Roadmap Document (v2.0) | ✅ Done | `docs/planning/Next_Steps.md` (Comprehensive supervisor review doc: completed baseline, model candidate selection, 4 standardized paper tables, 3 ensemble paradigms, GPU commands, and 4-week timeline) |
 | Multi-Model CLI Training Support | ✅ Done | `scripts/train_ner.py` (Added `--model-name` argument to dynamically train `PubMedBERT`, `BioLinkBERT`, `DeBERTa-v3`, `BioBERT` on 15 BIO tag set) |
 | Multi-Model GPU Fine-Tuning Suite | ✅ Done | `scripts/run_gpu_multi_train.sh` (Automated pipeline training PubMedBERT, BioLinkBERT, DeBERTa-v3 with BF16 precision and automated 4-way evaluation on test.jsonl) |
 | 4-Model Held-Out Test Evaluation | ✅ Done | `docs/Evaluation/` (`eval_clinicalbert.md`, `eval_pubmedbert.md`, `eval_biolinkbert.md`, `eval_deberta.md`, `COMPARATIVE_BENCHMARK.md`; N=1,973 test cases) |

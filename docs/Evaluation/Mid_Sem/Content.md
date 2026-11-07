@@ -403,7 +403,7 @@ Because no training dataset exists, we designed a ground-truth-driven reverse pi
 * Integrated compassionate bedside dialogue manager ([`src/chatbot/dialogue_manager.py`](file:///d:/Research%20Project/kent-ai/src/chatbot/dialogue_manager.py)) with local LLaMA 3.
 
 ### 7.7 Phase 7: Streamlit Clinical Dashboard
-* Implemented doctor-facing portal ([`src/dashboard/app.py`](file:///d:/Research%20Project/kent-ai/src/dashboard/app.py)) following clinical design system specifications (`docs/DESIGN.md`):
+* Implemented doctor-facing portal ([`src/dashboard/app.py`](file:///d:/Research%20Project/kent-ai/src/dashboard/app.py)) following clinical design system specifications (`docs/ui/DESIGN.md`):
   * **Midnight Canvas Theme (`#0A0F1D`)** with pulse-glow status indicators and glassmorphism.
   * **Confined Scrollable Chat Console** with custom emerald scrollbars.
   * **Dynamic Clinical Quick-Reply Suggestion Chips** powered by zero-hardcode NLP question intent classification.

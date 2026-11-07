@@ -24,7 +24,7 @@ This document records architectural decisions, assumptions, backend changes, and
 ## Phase Execution Log
 
 ### Phase 0: Audit & Architecture Mapping (Complete)
-- **Files Created**: `docs/UI_AUDIT_MAP.md`, `docs/UI_CHANGELOG.md`.
+- **Files Created**: `docs/ui/UI_AUDIT_MAP.md`, `docs/ui/UI_CHANGELOG.md`.
 - **Audit Findings**: Identified 8 duplicated UI elements, Streamlit 1.64.0 capabilities, and session state dependencies across all 5 workspace areas.
 
 ---

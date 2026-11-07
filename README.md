@@ -247,11 +247,14 @@ kent-ai/
 │   ├── processed/              # Pilot cases (pilot_100_cases.jsonl) & generation checkpoints
 │   └── embeddings/             # Persistent ChromaDB rubric vectors (74,513 indexed)
 ├── docs/                       # Project documentation, evaluation milestones, and guides
+│   ├── README.md               # Documentation map and table of contents
 │   ├── PROJECT_STATUS_REPORT.md# Comprehensive full project status report for faculty review
 │   ├── screenshots/            # High-resolution UI captures across all 9 dashboard views
-│   ├── GPU_SETUP_GUIDE.md      # Step-by-step SSH & College GPU cluster execution guide
-│   ├── DESIGN.md               # Google Stitch UI/UX design tokens & glassmorphism theme
-│   └── Next_Steps.md           # Supervisor meeting brief & roadmap
+│   ├── ui/                     # Design tokens (DESIGN.md), UI briefs & audit maps
+│   ├── guides/                 # Step-by-step GPU cluster & infrastructure guides
+│   ├── planning/               # Supervisor meeting roadmaps (Next_Steps.md) & milestone plans
+│   ├── Evaluation/             # Empirical model benchmarks & academic semester reports
+│   └── Progress/               # Periodic milestone progress briefs
 ├── scripts/                    # Production execution pipelines
 │   ├── audit_pilot.py          # Statistical auditor (BIO slice accuracy, Jaccard overlap)
 │   ├── build_embeddings.py     # ChromaDB batch indexer across 74,513 rubrics
@@ -390,7 +393,7 @@ tail -f logs/generation.log
 
 The runner verifies GPU availability, starts the Ollama daemon, downloads `llama3:8b`, and executes `scripts/generate_cases.py --split --resume` with atomic checkpoints. Upon completion, it automatically stratifies the dataset into `train.jsonl` (80%), `val.jsonl` (10%), and `test.jsonl` (10%).
 
-> Detailed instructions regarding SSH disconnect handling, `tmux` sessions, and checkpoint resumption are provided in [docs/GPU_SETUP_GUIDE.md](docs/GPU_SETUP_GUIDE.md).
+> Detailed instructions regarding SSH disconnect handling, `tmux` sessions, and checkpoint resumption are provided in [docs/guides/GPU_SETUP_GUIDE.md](docs/guides/GPU_SETUP_GUIDE.md).
 
 ---
 

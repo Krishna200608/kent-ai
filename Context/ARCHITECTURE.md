@@ -173,13 +173,17 @@ kent-ai/
 │   └── test_ui_overhaul.py        # Design tokens, breadcrumbs, hybrid search, totality ring, dialogs, scope lock & demo case (18 tests)
 │
 ├── docs/
-│   ├── Next_Steps.md              # Supervisor meeting briefing & roadmap (Dr. Arya)
-│   ├── GPU_SETUP_GUIDE.md         # College GPU cluster SSH execution guide
-│   ├── DESIGN.md                  # Google Stitch UI/UX design tokens & CSS spec
+│   ├── README.md                  # Documentation catalog and directory map
+│   ├── PROJECT_STATUS_REPORT.md   # Comprehensive full project status report for faculty review
+│   ├── screenshots/               # High-resolution clinical dashboard screenshots & catalog
+│   ├── ui/                        # Google Stitch design tokens (DESIGN.md), UI briefs & audit maps
+│   ├── guides/                    # College GPU cluster SSH execution guide (GPU_SETUP_GUIDE.md)
+│   ├── planning/                  # Supervisor meeting roadmap (Next_Steps.md) & implementation plans
 │   ├── Evaluation/                # Mid-semester evaluation, thesis materials & pilot study
 │   │   ├── Pilot/                 # 100-case pilot evaluation report & generation log
 │   │   ├── Mid_Sem/               # Mid-semester presentation, reports, and PDFs
 │   │   └── End_Sem/               # Final semester thesis and evaluation suite
+│   ├── Progress/                  # Periodic milestone progress briefs
 │   ├── Papers/                    # Academic literature & reference papers
 │   └── Proposals/                 # Original project proposals
 
