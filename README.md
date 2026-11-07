@@ -193,11 +193,26 @@ A pilot sample of 100 clinical cases across 25 representative MIND rubrics (4 cl
 
 ## Doctor-in-the-Loop Workstation & PDF Suite
 
+<p align="center">
+  <img src="docs/screenshots/01_step1_intake_chat.png" alt="Kent-AI Conversational Clinical Intake" width="90%" />
+  <br />
+  <em>Figure 1: Step 1 Patient Clinical Intake with Bedside Dialogue, dynamic intent suggestion chips, and sticky 7-dimension totality tracking rail.</em>
+</p>
+
 ### 1. 4-Step Consultation Workflow
 - **Step 1: Patient Clinical Intake**: Dual-modality input allowing either Bedside Dialogue with the AI chatbot (streamed quick-reply chips and live 7-dimension totality strip) or free-form Clinical Narrative pasting with pre-loaded clinical vignettes.
 - **Step 2: Clinical Review & 7-Dimension Validation**: Interactive HUD cards allowing physicians to validate, add, or delete symptoms per dimension, inspect Kentian totality completeness advice, and review the automated Clinical Case Summary.
 - **Step 3: Repertory Rubric Curation & Filtering**: Interactive Rubric × Remedy Matrix with individual **Mute** toggles to suppress noisy rubrics and **Eliminatory** toggles to enforce mandatory keynote coverage, followed by real-time totality score recomputation.
 - **Step 4: Clinical Report & Decision Support**: Full decision-support view highlighting leading candidate remedies with score advantages, Plotly horizontal totality charts, coverage breakdowns, and one-click PDF / Markdown export.
+
+<p align="center">
+  <img src="docs/screenshots/04_step3_analysis_matrix.png" alt="Kent-AI Classical Repertorization Totality Matrix" width="90%" />
+  <br />
+  <em>Figure 2: Step 3 Classical Repertorization Totality Matrix with rubrics as rows, candidate remedies as columns, typographic grade weights, and eliminatory toggles.</em>
+</p>
+
+> [!TIP]
+> For a complete visual tour of all 9 consultation and knowledge views, see the [**Dashboard Screenshot Catalog**](docs/screenshots/README.md) and the comprehensive [**Project Status Report**](docs/PROJECT_STATUS_REPORT.md).
 
 ### 2. Publication-Grade PDF Clinical Report
 Generated via ReportLab Platypus Flowables with clean styling:
@@ -232,6 +247,8 @@ kent-ai/
 │   ├── processed/              # Pilot cases (pilot_100_cases.jsonl) & generation checkpoints
 │   └── embeddings/             # Persistent ChromaDB rubric vectors (74,513 indexed)
 ├── docs/                       # Project documentation, evaluation milestones, and guides
+│   ├── PROJECT_STATUS_REPORT.md# Comprehensive full project status report for faculty review
+│   ├── screenshots/            # High-resolution UI captures across all 9 dashboard views
 │   ├── GPU_SETUP_GUIDE.md      # Step-by-step SSH & College GPU cluster execution guide
 │   ├── DESIGN.md               # Google Stitch UI/UX design tokens & glassmorphism theme
 │   └── Next_Steps.md           # Supervisor meeting brief & roadmap
