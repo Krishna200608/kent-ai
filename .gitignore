@@ -76,3 +76,8 @@ runs/
 .coverage
 htmlcov/
 .ipynb_checkpoints/
+
+# Local report drafts & evaluation archives
+docs/Evaluation/End_Sem/Final_Report_pre_humanized_backup/
+docs/Evaluation/End_Sem/Final_Report_new(not_used)/
+
