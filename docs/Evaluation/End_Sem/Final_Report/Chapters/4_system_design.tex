@@ -3,13 +3,13 @@
 \chapter{System Design}
 \label{Chapter4}
 
-This chapter presents the architectural and structural design of Kent-AI. It details the high-level layered architecture, data flow diagrams (Levels 0, 1, and 2), database schemas and entity-relationship models, UML use case, class, and sequence diagrams, formal algorithmic specifications, and user interface structural wireframes.
+This chapter articulates the structural decomposition, data pathways, and formal algorithmic foundations of the Kent-AI platform. It presents the multi-tiered software architecture, data flow diagrams (spanning Levels 0 through 2), dual SQLite database schemas, Unified Modeling Language (UML) specifications, consensus and scoring algorithms, and the ergonomic layout of the clinician workstation.
 
 %----------------------------------------------------------------------------------------
 
 \section{System Architecture Overview}
 
-Kent-AI is structured into a \textbf{seven-tier modular architecture}, separating conversational intake, sequence labeling, clinical reasoning, retrieval, remedy ranking, case orchestration, and clinician presentation.
+Kent-AI is architected as a \textbf{seven-tier modular processing pipeline}. This separation of concerns isolates conversational intake, token classification, clinical resolution, vector search, repertorial ranking, case persistence, and the presentation layer into distinct, independently testable boundaries.
 
 \begin{figure}[htbp]
 \centering
@@ -71,7 +71,7 @@ Kent-AI is structured into a \textbf{seven-tier modular architecture}, separatin
 \section{Data Flow Diagrams}
 
 \subsection{Level 0: Context Diagram}
-At the highest abstraction level, Kent-AI interfaces with three primary entities: the Patient (who provides natural language symptom descriptions), the Clinician (who reviews, modifies, and validates clinical findings), and the Local Repository Knowledge Base (storing the digitized 1897 Repertory).
+At the highest conceptual boundary, Kent-AI interfaces directly with three external entities: the Patient (originating colloquial health descriptions), the Supervising Clinician (auditing and overriding repertorial derivations), and the Local Knowledge Base (supplying authoritative 1897 Kent Repertory records).
 
 \begin{figure}[htbp]
 \centering
@@ -97,7 +97,7 @@ At the highest abstraction level, Kent-AI interfaces with three primary entities
 \end{figure}
 
 \subsection{Level 1: Subsystem Data Flow}
-Figure \ref{fig:dfd1} decomposes the system into its five principal processing sub-processes:
+Figure \ref{fig:dfd1} decomposes the runtime pipeline into five interconnected processing modules along with their supporting persistence layers:
 
 \begin{figure}[htbp]
 \centering
@@ -131,18 +131,18 @@ Figure \ref{fig:dfd1} decomposes the system into its five principal processing s
 \end{figure}
 
 \subsection{Level 2: Retrieval and Repertorization Flow}
-In Level 2, an extracted symptom triplet $[d, \text{text}, \text{context}]$ is transformed into an embedding query $\mathbf{q} \in \mathbb{R}^{384}$. The vector store computes cosine similarities against HNSW graph vertices:
+During Level 2 processing, each resolved symptom tuple $[d, \text{text}, \text{context}]$ is mapped into a normalized embedding vector $\mathbf{q} \in \mathbb{R}^{384}$. The vector engine traverses HNSW proximity graph vertices to calculate metric cosine similarities:
 $$\cos(\mathbf{q}, \mathbf{r}_i) = \frac{\mathbf{q} \cdot \mathbf{r}_i}{\|\mathbf{q}\|_2 \|\mathbf{r}_i\|_2}$$
-The top-20 nearest rubrics are retrieved, filtered by section constraints, and joined in SQLite against \texttt{rubric\_remedies} to fetch candidate remedies and their respective bibliographic grades (1, 2, or 3).
+Section-level masking filters the retrieved candidates before they are joined with \texttt{rubric\_remedies} in SQLite to identify remedies and retrieve their historical bibliographic weights.
 
 %----------------------------------------------------------------------------------------
 
 \section{Database Schema and Entity-Relationship Design}
 
-Kent-AI uses two separate SQLite databases to decouple static reference knowledge from dynamic patient session data.
+Kent-AI decouples canonical archival reference data from dynamic consultation sessions by maintaining two isolated SQLite databases.
 
 \subsection{Repertory Knowledge Base (\texttt{repertory.sqlite})}
-The static repertory database encodes Kent's 1897 taxonomic structure:
+The static reference store models Kent's 1897 taxonomy across four relational tables:
 
 \begin{table}[htbp]
 \caption[Repertory Database Schema]{Repertory Database (\texttt{repertory.sqlite}) Schema.}
@@ -176,7 +176,7 @@ The static repertory database encodes Kent's 1897 taxonomic structure:
 \end{table}
 
 \subsection{Clinical Case Store (\texttt{cases.sqlite})}
-The dynamic consultation store persists clinical consultations:
+Patient sessions and doctor-approved rubrics are recorded within a dedicated consultation database:
 
 \begin{table}[htbp]
 \caption[Case Store Schema]{Clinical Case Store (\texttt{cases.sqlite}) Schema.}
@@ -211,7 +211,7 @@ The dynamic consultation store persists clinical consultations:
 \section{Unified Modeling Language (UML) Design}
 
 \subsection{UML Use Case Model}
-The system supports two primary actors: the Patient and the Clinician.
+Operational boundaries encompass two interacting actors: the Patient seeking care and the Supervising Clinician directing repertorization.
 
 \begin{figure}[htbp]
 \centering
@@ -246,7 +246,7 @@ The system supports two primary actors: the Patient and the Clinician.
 \end{figure}
 
 \subsection{UML Class Diagram}
-The domain architecture is anchored around the immutable \texttt{ClinicalCase} dataclass, interacting with decoupled service modules:
+The domain architecture is anchored around the \texttt{ClinicalCase} dataclass, interacting with decoupled service modules:
 
 \begin{figure}[htbp]
 \centering
@@ -336,7 +336,7 @@ The domain architecture is anchored around the immutable \texttt{ClinicalCase} d
 \end{figure}
 
 \subsection{UML Sequence Diagram}
-Figure \ref{fig:seq_diag} details the interaction sequence during consultation repertorization:
+Figure \ref{fig:seq_diag} traces the lifecycle of a single repertorization request triggered from the user interface:
 
 \begin{figure}[p]
 \centering
@@ -381,7 +381,7 @@ Figure \ref{fig:seq_diag} details the interaction sequence during consultation r
 \section{Algorithms and Flowcharts}
 
 \subsection{Algorithm 1: Weighted Majority Voting with IoU Span Clustering}
-The ensemble reconciles token sequences predicted across multiple fine-tuned models:
+The ensemble reconciles character boundaries and class decisions predicted by distinct fine-tuned transformer encoders:
 
 \begin{algorithm}[H]
 \caption{Weighted Majority Voting and Span Clustering}
@@ -416,7 +416,7 @@ The ensemble reconciles token sequences predicted across multiple fine-tuned mod
 \end{algorithm}
 
 \subsection{Algorithm 2: Kentian Grade-Weighted Totality Scorer}
-Given a set of active rubrics $\mathcal{R}_{\text{active}}$ and their cosine similarity scores $S(r)$, the score of candidate remedy $R$ is formulated as:
+Given active repertorial rubrics $\mathcal{R}_{\text{active}}$ and their metric cosine scores $S(r)$, candidate remedy $R$ is prioritized according to:
 
 \begin{equation}
 \text{TotalityScore}(R) = \sum_{r \in \mathcal{R}_{\text{active}}} \text{Grade}(R, r) \cdot S(r) \cdot \log\left(\frac{N}{\text{RemedyCount}(r) + 1}\right) \cdot W(\operatorname{Dim}(r))
@@ -425,22 +425,21 @@ Given a set of active rubrics $\mathcal{R}_{\text{active}}$ and their cosine sim
 
 where:
 \begin{itemize}
-  \item $\text{Grade}(R, r) \in \{3.0, 2.0, 1.0, 0.0\}$ is Kent's typographic grade (Bold=3, Italic=2, Roman=1, Absent=0).
-  \item $S(r) \in [0, 1]$ is the dense vector cosine similarity score.
-  \item $\log(N / (\text{RemedyCount}(r) + 1))$ is the inverse rubric frequency, awarding higher weights to specific rubrics over generic ones.
-  \item $W(\operatorname{Dim}(r))$ is the Kentian clinical dimension multiplier ($\text{MENT} = 3.0$, $\text{MOD} = 2.0$, $\text{SEN} = 2.0$, $\text{LOC} = 1.0$).
+  \item $\text{Grade}(R, r) \in \{3.0, 2.0, 1.0, 0.0\}$ corresponds to Kent's canonical typographical weight (Bold=3, Italic=2, Roman=1, Absent=0).
+  \item $S(r) \in [0, 1]$ denotes semantic cosine similarity derived from dense vector retrieval.
+  \item $\log(N / (\text{RemedyCount}(r) + 1))$ penalizes overly common rubrics while rewarding diagnostic specificity.
+  \item $W(\operatorname{Dim}(r))$ enforces Kentian clinical weighting ($\text{MENT} = 3.0$, $\text{MOD} = 2.0$, $\text{SEN} = 2.0$, $\text{LOC} = 1.0$).
 \end{itemize}
 
 %----------------------------------------------------------------------------------------
 
 \section{User Interface Wireframes and Layouts}
 
-The workstation enforces a structured \textbf{4-step stepper}:
+The clinical workstation layout enforces an ergonomic \textbf{4-stage sequential workflow}:
 
 \begin{enumerate}
-  \item \textbf{Step 1 --- Clinical Intake}: 7:3 asymmetric grid. Left 70\%: chat dialogue console with message history and dynamic quick-reply chips. Right 30\%: live Case Snapshot displaying completed symptom slots (0/7 Captured).
-  \item \textbf{Step 2 --- Review and Edit}: Extracted entity spans grouped into the 7 dimensions. Clinician can modify text, adjust boundaries, or delete spurious entities before search execution.
-  \item \textbf{Step 3 --- Analysis and Matrix}: Classical Repertory Totality Matrix (Remedies $\times$ Rubrics) with colour-coded grade badges (Grade 3 in emerald, Grade 2 in cyan, Grade 1 in slate) with per-rubric Mute and Eliminatory toggles.
-  \item \textbf{Step 4 --- Report and Export}: Physician narrative brief, Matplotlib totality score bar chart, and 1-click ReportLab PDF generation.
+  \item \textbf{Step 1 --- Clinical Intake}: Displays a 7:3 asymmetric grid. The primary 70\% panel contains a streaming chat console featuring turn history and contextual reply chips. The complementary 30\% panel hosts a live Case Snapshot tracking completed symptom axes (0/7 Captured).
+  \item \textbf{Step 2 --- Review and Edit}: Presents extracted entity spans grouped across the 7 symptom dimensions. Practitioners can modify wording, tweak character boundaries, or purge false-positive extractions prior to vector search execution.
+  \item \textbf{Step 3 --- Analysis and Matrix}: Renders an interactive Totality Matrix (Remedies $\times$ Rubrics) enriched with color-coded grade badges (Grade 3 in emerald, Grade 2 in cyan, Grade 1 in slate) alongside individual Mute and Eliminatory toggles.
+  \item \textbf{Step 4 --- Report and Export}: Summarizes the clinical encounter through a diagnostic brief, dynamic score visualizations, and one-click PDF generation via ReportLab.
 \end{enumerate}
-

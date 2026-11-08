@@ -3,64 +3,64 @@
 \chapter{Implementation}
 \label{Chapter5}
 
-This chapter details the technical implementation of Kent-AI. It provides a module-by-module walkthrough of the codebase, presents key code snippets implementing core algorithms, details the model training pipelines, and documents five major engineering challenges encountered during development along with their verified solutions.
+This chapter details the engineering realization of the Kent-AI pipeline. It provides a structural tour across the eight core subsystems comprising \texttt{src/}, presents annotated implementation snippets embodying key mathematical operations, outlines model training procedures, and details five significant technical bottlenecks surmounted during development alongside verified architectural remedies.
 
 %----------------------------------------------------------------------------------------
 
 \section{Module-by-Module Walkthrough}
 
-The system implementation is organized across eight modular subsystems within the \texttt{src/} package:
+The software architecture organizes clinical logic into eight decoupled subsystems situated within \texttt{src/}:
 
 \subsection{1. Synthetic Data Generation and BIO Alignment (\texttt{src/data/})}
 \begin{itemize}
-  \item \textbf{\texttt{case\_generator.py}}: Orchestrates synthetic case generation using the LLaMA 3 8B model via the Ollama HTTP REST API. Includes a deterministic mock generator (\texttt{--mock}) for continuous integration testing.
-  \item \textbf{\texttt{bio\_tagger.py}}: Implements tokenization, BIO label generation, and the subword alignment repair algorithm that eliminates character offset drift.
-  \item \textbf{\texttt{splitter.py}}: Implements stratified deficit-balancing to partition the 19,732 cases into 80/10/10 train/val/test splits, guaranteeing that every rubric is represented in evaluation splits.
-  \item \textbf{\texttt{kent\_db.py}}: Provides high-performance SQLite data access layers (DAL) with connection pooling and cached prepared statements for querying rubrics, remedies, and cross-references.
+  \item \textbf{\texttt{case\_generator.py}}: Drives synthetic case synthesis through quantized LLaMA 3 8B instances exposed via Ollama's local HTTP endpoints. It includes a deterministic offline generator flag (\texttt{--mock}) to support automated continuous integration pipelines.
+  \item \textbf{\texttt{bio\_tagger.py}}: Governs tokenization, BIO label assignment, and our subword alignment algorithm to guarantee zero character offset drift.
+  \item \textbf{\texttt{splitter.py}}: Enforces stratified, deficit-balanced partitioning of the 19,732 generated encounters into 80/10/10 train, validation, and testing cohorts, ensuring balanced rubric coverage across evaluation splits.
+  \item \textbf{\texttt{kent\_db.py}}: Implements thread-safe SQLite data access wrappers utilizing prepared query caches to rapidly retrieve rubrics, remedies, and cross-references.
 \end{itemize}
 
 \subsection{2. Multi-Encoder Sequence Labeling Models (\texttt{src/models/})}
 \begin{itemize}
-  \item \textbf{\texttt{symptom\_ner.py}}: Encapsulates HuggingFace \texttt{AutoModelForTokenClassification} behind a clean interface. Converts subword token predictions back into word-level character spans with associated clinical dimensions.
+  \item \textbf{\texttt{symptom\_ner.py}}: Provides a unified interface to Hugging Face token-classification models and rebuilds subword predictions as character-indexed spans tagged by Kentian dimension.
   \item \textbf{\texttt{trainer.py}}: Encapsulates the PyTorch training loop with mixed-precision FP16, AdamW optimizer, linear warmup scheduler, SeqEval F1 validation callbacks, and early stopping.
 \end{itemize}
 
 \subsection{3. QLoRA Large Language Model Fine-Tuning}
 \begin{itemize}
-  \item \textbf{\texttt{llm\_dataset.py}}: Formats synthetic clinical cases into instruction-following prompt templates with structured JSON target outputs.
-  \item \textbf{\texttt{scripts/train\_llm\_qlora.py}}: Executes 4-bit NormalFloat (NF4) quantized fine-tuning using BitsAndBytes and HuggingFace PEFT on BioMistral 7B and Qwen 2.5 7B.
+  \item \textbf{\texttt{llm\_dataset.py}}: Serializes clinical symptom narratives into instruction-following prompt templates bound to rigid JSON target schemas.
+  \item \textbf{\texttt{scripts/train\_llm\_qlora.py}}: Orchestrates 4-bit NormalFloat (NF4) quantized parameter-efficient adaptation using BitsAndBytes and HuggingFace PEFT across BioMistral 7B and Qwen 2.5 7B.
 \end{itemize}
 
 \subsection{4. Dense Vector Semantic Retrieval (\texttt{src/search/})}
 \begin{itemize}
-  \item \textbf{\texttt{embedder.py}}: Wraps \texttt{sentence-transformers/all-MiniLM-L6-v2}. Employs lazy model loading and produces 384-dimensional L2 unit-normalized dense vectors.
-  \item \textbf{\texttt{vector\_store.py}}: Manages the persistent ChromaDB collection. Configures the HNSW index with cosine distance metric, batch upserts vectors in chunks of 256, and executes metadata-filtered queries.
+  \item \textbf{\texttt{embedder.py}}: Loads \texttt{sentence-transformers/all-MiniLM-L6-v2} on demand and maps symptom text to normalized 384-dimensional embeddings.
+  \item \textbf{\texttt{vector\_store.py}}: Manages persistent ChromaDB vector collections, configuring HNSW cosine graphs, batch-upserting records in chunks of 256, and executing section-constrained nearest-neighbor queries.
 \end{itemize}
 
 \subsection{5. Multi-Model Ensemble and Hybrid Pipeline}
 \begin{itemize}
-  \item \textbf{\texttt{ensemble.py}}: Implements Algorithm \ref{alg:ensemble} (weighted majority voting and span clustering across BioLinkBERT, PubMedBERT, Bio\_ClinicalBERT, and DeBERTa-v3).
-  \item \textbf{\texttt{hybrid\_pipeline.py}}: Combines the 4-model ensemble (as a candidate span miner) with a local LLaMA 3.1 LLM arbitrator to resolve label ambiguities and enforce JSON schema compliance.
+  \item \textbf{\texttt{ensemble.py}}: Realizes Algorithm \ref{alg:ensemble}, executing weighted majority voting and intersection-over-union (IoU) span clustering across BioLinkBERT, PubMedBERT, Bio\_ClinicalBERT, and DeBERTa-v3.
+  \item \textbf{\texttt{hybrid\_pipeline.py}}: Couples the four-encoder ensemble (as an extraction candidate miner) with a local LLaMA 3.1 LLM arbitrator to resolve boundary conflicts while guaranteeing valid JSON schemas.
 \end{itemize}
 
 \subsection{6. Conversational Dialogue Engine (\texttt{src/chatbot/})}
 \begin{itemize}
-  \item \textbf{\texttt{state\_machine.py}}: Implements the 10-state clinical intake finite state machine with automatic transition logic, adaptive slot skipping, and explicit symptom denial tracking.
-  \item {\raggedright \textbf{\texttt{dialogue\_manager.py}}: Tracks consultation turns, coordinates slot extraction, integrates Ollama-based responses, and supports undo and resume.\par}
-  \item \textbf{\texttt{suggestions.py}}: Classifies physician/patient query intent and streams dynamic quick-reply suggestion chips.
+  \item \textbf{\texttt{state\_machine.py}}: Governs a 10-state deterministic finite state machine handling automated slot progression, adaptive question skipping, and explicit symptom negation tracking.
+  \item {\raggedright \textbf{\texttt{dialogue\_manager.py}}: Coordinates consultation turns, triggers slot parsing, manages local Ollama conversational synthesis, and maintains undo/resume history stacks.\par}
+  \item \textbf{\texttt{suggestions.py}}: Classifies conversational intent in real time to stream context-sensitive interactive reply chips.
 \end{itemize}
 
 \subsection{7. Remedy Totality Ranker and Orchestration (\texttt{src/pipeline/})}
 \begin{itemize}
-  \item \textbf{\texttt{ranker.py}}: Computes the mathematical totality score (Equation \ref{eq:totality_exact}) across active rubrics, constructing the complete remedies $\times$ rubrics grid.
-  \item \textbf{\texttt{orchestrator.py}}: Coordinates the end-to-end pipeline from conversation transcript to final clinical report.
+  \item \textbf{\texttt{ranker.py}}: Computes mathematical totality scores (Equation \ref{eq:totality_exact}) across active clinical rubrics, populating the full remedy-by-rubric differential matrix.
+  \item \textbf{\texttt{orchestrator.py}}: Manages end-to-end data flow from raw dialogue intake to structured clinical summary generation.
 \end{itemize}
 
 \subsection{8. Streamlit Clinical Workstation (\texttt{src/dashboard/})}
 \begin{itemize}
-  \item \textbf{\texttt{app.py}}: Main Streamlit portal with 6 navigation tabs and the 4-step consultation stepper.
-  \item \textbf{\texttt{pdf\_exporter.py}}: Generates professional clinical reports using ReportLab Flowables, custom table styles, and Matplotlib visualizations.
-  \item \textbf{\texttt{totality\_grid.py}}: Displays the Repertory Totality Matrix with controls to mute or eliminate rubric rows.
+  \item \textbf{\texttt{app.py}}: Central presentation portal featuring six navigation views and the primary four-stage consultation stepper.
+  \item \textbf{\texttt{pdf\_exporter.py}}: Compiles comprehensive clinical reports with ReportLab canvas primitives, customized typography, and dynamic Matplotlib totality charts.
+  \item \textbf{\texttt{totality\_grid.py}}: Renders the interactive Totality Matrix, providing doctors with real-time controls to mute, activate, or enforce hard eliminatory filters.
 \end{itemize}
 
 %----------------------------------------------------------------------------------------
@@ -155,24 +155,24 @@ class NumberedCanvas(canvas.Canvas):
 \section{Technical Challenges and Solutions}
 
 \subsection{Challenge 1: Character Offset Drift in LLM-Generated Annotations}
-\textbf{Problem}: When large language models generate entity character start and end indices directly, they frequently exhibit small counting errors ($\pm 1$--3 characters) due to subword tokenization boundaries, producing corrupted span references.  
-\textbf{Solution}: We designed the \texttt{bio\_tagger.py} subword alignment repair module (Snippet 1). The generator outputs raw entity text strings, and the Python-side tagger deterministically matches them against the source narrative using exact substring index search and expands them to whole-token boundaries, achieving \textbf{zero offset drift across 99,854 entities}.
+\textbf{Problem}: When large language models directly predict numerical character indices, subword boundary fragmentation frequently introduces indexing discrepancies ($\pm 1$--3 characters), corrupting span extractions.  
+\textbf{Solution}: We implemented the deterministic alignment repair algorithm in \texttt{bio\_tagger.py} (Snippet 1). The language model extracts literal entity phrases, which the Python runtime maps back to source texts via exact substring search and expands to whole-token spans. This mechanism achieved \textbf{zero offset drift across 99,854 entities}.
 
 \subsection{Challenge 2: Domain Vocabulary Fragmentation in ClinicalBERT}
-\textbf{Problem}: Bio\_ClinicalBERT was pre-trained on MIMIC-III ICU notes. When applied to classical homeopathic symptom descriptions (e.g., \textit{``grief'', ``forsaken'', ``scanty'', ``ameliorated''}), its tokenizer broke words into fine-grained fragments, degrading token-level BIO classification to 33.40\% F1.  
-\textbf{Solution}: We adopted PubMedBERT, which was pre-trained from scratch on biomedical literature with a domain-specific vocabulary. PubMedBERT represents descriptive clinical concepts with significantly fewer fragments, yielding a \textbf{+4.03\% improvement in anatomical location extraction (LOC)}.
+\textbf{Problem}: Pre-trained on MIMIC-III intensive care records, Bio\_ClinicalBERT split archaic clinical terms (such as \textit{``grief''}, \textit{``forsaken''}, \textit{``scanty''}, and \textit{``ameliorated''}) into many subword pieces. This reduced token-level sequence classification to 33.40\% F1.
+
+\textbf{Solution}: We integrated PubMedBERT, which was pre-trained \textit{ab initio} over biomedical publications using a domain-specific WordPiece lexicon. PubMedBERT preserves symptom roots without excessive splitting, driving a \textbf{+4.03\% improvement in anatomical location extraction (LOC)}.
 
 \subsection{Challenge 3: GPU Memory Saturation During 7B LLM Fine-Tuning}
-\textbf{Problem}: Fine-tuning a 7-billion-parameter model with full 16-bit weights requires over 28 GB of VRAM solely for model parameters, leaving insufficient memory for activations and optimizer states during training on a 32GB GPU.  
-\textbf{Solution}: We implemented \textbf{4-bit NormalFloat (NF4) QLoRA} with double quantization and paged optimizers via BitsAndBytes. Trainable parameters were restricted to rank-16 low-rank adapter matrices (78--81MB), reducing peak training VRAM to \textbf{under 14 GB} and enabling 100\% local fine-tuning on the institutional NVIDIA RTX 5000 Ada GPU.
+\textbf{Problem}: Standard 16-bit parameter backpropagation across a 7-billion-parameter foundation model demands more than 28 GB of VRAM solely for weight tensors, causing out-of-memory faults during activation forward-passes on a 32GB GPU.  
+\textbf{Solution}: We deployed \textbf{4-bit NormalFloat (NF4) QLoRA} with double quantization and paged optimizers via BitsAndBytes. By constraining gradient updates to rank-16 low-rank adapter matrices (78--81MB), peak training memory remained \textbf{under 14 GB}, allowing complete on-premises adaptation on our NVIDIA RTX 5000 Ada workstation.
 
 \subsection{Challenge 4: Lexical Divergence Between Patient Language and Repertory}
-\textbf{Problem}: Patients express distress metaphorically (\textit{``feels like a tight band around my temples''}), whereas Kent's 1897 repertory stores rigid taxonomic phrasing (\texttt{HEAD > PAIN > band or hoop, as from a}). Keyword search fails completely.  
-\textbf{Solution}: We constructed a 384-dimensional dense semantic vector index over all 74,513 rubrics using \texttt{all-MiniLM-L6-v2} and ChromaDB HNSW cosine similarity. The dense representation projects colloquial metaphors and taxonomic entries into a shared semantic latent space, achieving \textbf{41.56\% Top-20 recall and $<$18ms retrieval latency}.
+\textbf{Problem}: Patients describe their pain using idiomatic imagery (\textit{``feels like a tight band around my temples''}), whereas Kent's 1897 catalog utilizes terse taxonomic structures (\texttt{HEAD > PAIN > band or hoop, as from a}). Pure keyword search fails entirely.  
+\textbf{Solution}: We indexed all 74,513 rubrics as 384-dimensional dense vectors using \texttt{all-MiniLM-L6-v2} embedded in a ChromaDB HNSW graph. This dense projection bridges colloquial descriptions and classical medical rubrics in a shared semantic space, delivering \textbf{41.56\% Top-20 recall and $<$18ms retrieval latency}.
 
 \subsection{Challenge 5: Session State Volatility in Streamlit Workstation}
 {\raggedright
-\textbf{Problem}: Streamlit executes the entire script on every user interaction, causing widget state resets, repeated model inferences, and dialogue history loss.\par
-\textbf{Solution}: We established a \textbf{strict session state architecture} in \texttt{src/dashboard/app.py}. All case data is bound to an immutable \texttt{ClinicalCase} dataclass persisted in \texttt{st.session\_state["current\_case"]}, with an embedded SQLite database (\texttt{cases.sqlite}) providing disk-level persistence across browser refreshes and session restarts.\par
+\textbf{Problem}: Streamlit's reactive execution model re-runs entire scripts upon every UI event, which risks clearing conversational history, resetting interactive widgets, and triggering redundant model inferences.\par
+\textbf{Solution}: We implemented an \textbf{immutable session state pattern} in \texttt{src/dashboard/app.py}. All clinical case variables are encapsulated within an immutable \texttt{ClinicalCase} dataclass anchored in \texttt{st.session\_state["current\_case"]}, backed by transactional local SQLite persistence (\texttt{cases.sqlite}) to survive browser reloads.\par
 }
-

@@ -3,13 +3,13 @@
 \chapter{Installation and Deployment Guide}
 \label{AppendixB}
 
-This appendix provides complete instructions for installing, configuring, and running Kent-AI in a local or server environment.
+This appendix provides practical guidance for provisioning, configuring, and deploying Kent-AI within local development workstations or dedicated enterprise GPU environments.
 
 %----------------------------------------------------------------------------------------
 
 \section{System Requirements}
 
-The hardware and software prerequisites for running Kent-AI across client workstation, inference server, and GPU training environments are summarized in Table~\ref{tab:sysreq}.
+Table~\ref{tab:sysreq} specifies the baseline and recommended computational specifications required for runtime inference and deep learning training workflows.
 
 \begin{table}[H]
 \caption[System Requirements]{Kent-AI Minimum and Recommended System Requirements.}
@@ -81,14 +81,14 @@ streamlit run src/dashboard/app.py
 
 \begin{lstlisting}[style=python, caption={Test Suite Execution}]
 pytest tests/ -q
-# Expected output: 195 passed in ~25s
+# Expected output: 200 passed in ~25s
 \end{lstlisting}
 
 %----------------------------------------------------------------------------------------
 
 \section{GPU Server Deployment}
 
-For production deployment on the IIIT Allahabad GPU server:
+For production deployment on the institutional GPU server:
 
 \begin{lstlisting}[style=python, caption={GPU Server Deployment}]
 # Generate full training dataset:
@@ -112,7 +112,7 @@ python scripts/evaluate.py --models all --output docs/Evaluation/
 
 \section{Repository Structure}
 
-The key directories and files in the Kent-AI repository:
+The structural hierarchy of the primary codebase:
 
 \begin{verbatim}
 kent-ai/
@@ -129,7 +129,6 @@ kent-ai/
 |   +-- pipeline/         # Orchestrator, ranker, report generator
 |   `-- dashboard/        # Streamlit app, components, views
 +-- scripts/              # Training, evaluation, generation CLIs
-+-- tests/                # 195 unit and integration tests
++-- tests/                # 200 unit and integration tests
 `-- docs/                 # Evaluation reports, design docs
 \end{verbatim}
-

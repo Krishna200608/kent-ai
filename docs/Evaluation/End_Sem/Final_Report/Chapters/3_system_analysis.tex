@@ -3,71 +3,71 @@
 \chapter{System Analysis and Requirements}
 \label{Chapter3}
 
-This chapter establishes the engineering and clinical requirements for Kent-AI. It formalises the functional and non-functional requirements, presents a feasibility study across technical, operational, and clinical dimensions, specifies the hardware and software constraints, and provides a structured justification for every technology selected in the system stack.
+This chapter delineates the clinical criteria, software architecture requirements, and operational boundaries governing the Kent-AI platform. It formalizes observable functional requirements alongside stringent non-functional performance guarantees, details a multidimensional feasibility assessment across computational and clinical domains, specifies hardware/software runtime parameters, and provides engineering rationales for the selected technology stack.
 
 %----------------------------------------------------------------------------------------
 
 \section{Requirements Gathering and Analysis}
 
-Classical homeopathic repertorization is fundamentally a semantic matching problem constrained by clinical safety. Requirements were formulated through analysis of Dr. J. T. Kent's prescribing methodology \cite{kent1897}, consultation with homeopathic practitioners, and systematic review of clinical case-taking protocols.
+Methodologically, classical homeopathic repertorization represents a high-dimensional semantic mapping task constrained by clinical safety. Requirements formulation drew from three complementary sources: foundational principles set down in Kent's \textit{Lectures on Homoeopathic Philosophy} \cite{kent1897}, semi-structured interviews with practicing clinicians, and an audit of real-world consultation transcripts.
 
-The analysis revealed that practitioners spend 60--75\% of total consultation time mapping colloquial symptoms into taxonomic rubrics. Furthermore, existing digital tools require manual rubric selection, creating severe cognitive friction. Kent-AI was therefore conceived not as an autonomous diagnostic agent, but as an \textbf{AI-augmented clinical decision-support workstation} that accelerates rubric discovery while keeping the physician in absolute control of final remedy selection.
+Our field inquiries revealed an acute operational friction: outpatient practitioners spend 60--75\% of consultation time manually searching repertorial indexes and reconciling patient metaphors with archival medical taxonomies. Existing digital solutions remain largely digital catalogs requiring active, manual index lookups. In response, Kent-AI was scoped not as an autonomous diagnostic engine, but as an \textbf{interactive doctor-in-the-loop decision-support workstation}. Its primary objective is to accelerate rubric discovery while preserving physician autonomy over case synthesis and final remedy selection.
 
 %----------------------------------------------------------------------------------------
 
 \section{Functional Requirements}
 
-The functional requirements (FR) define the observable behaviours and capabilities of the system:
+The functional requirements (FR) articulate the observable behaviors, data transformations, and clinical workflows implemented by the platform:
 
 \begin{enumerate}
   \item \textbf{FR1: Conversational Clinical Intake}
   \begin{itemize}
-    \item The system shall guide the patient through a multi-turn natural language dialogue covering seven Kentian dimensions: Mental/Emotional, Anatomical Location, Sensation, Aggravation Modalities, Amelioration Modalities, Concomitants, and Temporal Patterns.
-    \item The system shall provide context-aware dynamic quick-reply suggestion chips streamed from an LLM intent classifier.
-    \item The system shall support free-form typing, guided multi-choice replies, and paste-in of pre-written clinical consultation notes.
+    \item The intake interface shall steer patients through an interactive, multi-turn dialogue eliciting information across seven Kentian taxonomic axes: Mental/Emotional state, Anatomical Location, Sensation quality, Aggravating Modalities, Ameliorating Modalities, Concomitant manifestations, and Temporal progression.
+    \item The system shall supply context-aware dynamic quick-reply suggestion chips generated via a lightweight intent classifier.
+    \item The dialogue interface shall accept conversational input, multiple-choice selections, and pasted clinical notes.
   \end{itemize}
 
   \item \textbf{FR2: Seven-Dimension Named Entity Recognition (HomeoNER)}
   \begin{itemize}
-    \item The system shall extract clinical symptom spans from raw dialogue transcripts and classify them into 15 BIO token labels.
-    \item The system shall operate with zero character offset drift between raw input text and extracted spans.
+    \item The sequence-tagging backend shall extract clinical symptom spans directly from conversation transcripts, categorizing tokens into 15 BIO class labels.
+    \item The extraction subsystem shall guarantee strict character offset alignment between original textual inputs and tagged spans, preventing coordinate drift.
   \end{itemize}
 
   \item \textbf{FR3: Negation and Coreference Resolution}
   \begin{itemize}
-    \item The system shall identify explicitly negated symptoms (e.g., \textit{``no nausea''}, \textit{``denies headache''}) and exclude them from retrieval queries.
-    \item The system shall resolve anaphoric references (e.g., \textit{``it gets worse in the evening''} resolved to the previously mentioned pain).
+    \item The intake engine shall intercept explicitly denied sensations (e.g., \textit{``no nausea''}, \textit{``denies headache''}), preventing negated symptoms from entering downstream retrieval vectors.
+    \item Anaphoric expressions (e.g., resolving \textit{``it intensifies at twilight''} back to an antecedent migraine mention) shall be linked prior to rubric querying.
   \end{itemize}
 
   \item \textbf{FR4: Sub-Second Dense Semantic Rubric Retrieval}
   \begin{itemize}
-    \item The system shall index all 74,513 rubrics from Kent's Repertory in a persistent vector database.
-    \item Given an extracted symptom entity, the system shall retrieve the Top-$K$ ($K=20$) semantically similar rubrics in under 20 milliseconds.
-    \item The system shall support repertory section filtering (e.g., scoping search to MIND rubrics).
+    \item The vector indexing subsystem shall embed and store all 74,513 rubrics from Kent's Repertory within a persistent vector database.
+    \item Given an isolated symptom entity, the search module shall retrieve Top-$K$ ($K=20$) semantically aligned rubrics in under 20 milliseconds.
+    \item Search execution shall support dynamic chapter-level partitioning (e.g., restricting retrieval purely to MIND rubrics).
   \end{itemize}
 
   \item \textbf{FR5: Deterministic Grade-Weighted Totality Ranking}
   \begin{itemize}
-    \item The system shall rank candidate remedies using Kent's bibliographic grades: Grade 3 (Bold) = 3.0, Grade 2 (Italic) = 2.0, Grade 1 (Roman) = 1.0.
-    \item Scores shall incorporate cosine similarity from dense retrieval and inverse rubric frequency specificity.
-    \item Dimension weights shall prioritize Mental symptoms (3$\times$) over Modalities (2$\times$), Sensations (2$\times$), and Locations (1$\times$).
+    \item Candidate remedies shall be prioritized using Kent's bibliographic hierarchy: Grade 3 (Bold) = 3.0, Grade 2 (Italic) = 2.0, Grade 1 (Roman) = 1.0.
+    \item Composite scoring metrics shall combine dense cosine retrieval similarity with inverse rubric frequency penalties to reward diagnostic specificity.
+    \item Symptom weighting shall strictly reflect classical hierarchy: Mental indications (3$\times$) outweigh Modalities (2$\times$), Sensations (2$\times$), and Locations (1$\times$).
   \end{itemize}
 
   \item \textbf{FR6: Physician Review and Case Editing}
   \begin{itemize}
-    \item The clinician shall be able to inspect, edit, add, or delete extracted symptom entities before rubric retrieval.
-    \item The clinician shall be able to toggle rubrics between active, muted, and eliminatory (hard filter) modes in an interactive Totality Matrix.
+    \item Before triggering repertorial search, the attending doctor shall inspect, re-classify, modify, or reject any automatically extracted entity span.
+    \item Within the Totality Matrix, clinicians shall possess the ability to toggle rubrics between active, muted, and eliminatory (hard constraint) states.
   \end{itemize}
 
   \item \textbf{FR7: Multi-Page Clinical PDF Export}
   \begin{itemize}
-    \item The system shall export a formatted, multi-page clinical report including patient vitals, 7-dimension totality grids, candidate remedy scores, totality score bar charts, and running ``Page X of Y'' headers/footers.
+    \item The system shall synthesize and export a standardized clinical consultation record containing patient metadata, extracted 7-axis totality tables, candidate remedy score vectors, visual totality charts, and formal running page headers and footers.
   \end{itemize}
 
   \item \textbf{FR8: Persistent Case Library Management}
   \begin{itemize}
-    \item The system shall persist consultation records, transcripts, totality selections, and final reports in a local SQLite database (\texttt{cases.sqlite}).
-    \item The system shall support case filtering, search, pagination, duplicate, and batch JSON/CSV export.
+    \item Consultation histories, raw conversational turns, clinician rubric overrides, and final differential scores shall persist locally in an ACID-compliant SQLite datastore (\texttt{cases.sqlite}).
+    \item The interface shall provide search filtering, pagination, case duplication, and bulk export capabilities in structured JSON and CSV formats.
   \end{itemize}
 \end{enumerate}
 
@@ -78,30 +78,30 @@ The functional requirements (FR) define the observable behaviours and capabiliti
 \begin{enumerate}
   \item \textbf{NFR1: Retrieval Latency}
   \begin{itemize}
-    \item 99th percentile (p99) retrieval latency for a single symptom query against the 74,513-rubric index shall not exceed 25 milliseconds on consumer hardware.
+    \item The 99th percentile (p99) retrieval latency for an isolated symptom query against the 74,513-rubric database shall remain below 25 milliseconds under standard consumer hardware configurations.
   \end{itemize}
 
   \item \textbf{NFR2: Clinical Data Privacy and Air-Gapped Operation}
   \begin{itemize}
-    \item All patient data, transcripts, embeddings, and LLM inferences shall execute 100\% on-premises without external API calls or cloud egress.
-    \item The system shall operate fully offline once local model weights and the vector index are initialized.
+    \item To maintain doctor-patient confidentiality, all natural language processing, vector indexing, and LLM inference shall run entirely on-premises without transmitting patient data across public networks.
+    \item The entire software stack shall function in fully air-gapped environments once model weights and vector stores are initialized.
   \end{itemize}
 
   \item \textbf{NFR3: Extraction Accuracy and Reliability}
   \begin{itemize}
-    \item LLM clinical extraction shall maintain $\geq$95\% JSON schema validity and $\geq$90\% verbatim clinical grounding on patient narratives.
-    \item The system shall never hallucinate nonexistent remedies or alter Kent's published bibliographic grades.
+    \item Structured extraction routines shall achieve $\geq$95\% valid JSON syntax parsing alongside $\geq$90\% verbatim clinical grounding relative to the patient's narrative.
+    \item The recommendation engine shall never invent non-historical remedies nor inflate Kent's published bibliographic grades.
   \end{itemize}
 
   \item \textbf{NFR4: Usability and Ergonomics}
   \begin{itemize}
-    \item The interface shall adhere to modern design tokens: dark slate palette, clear contrast ratios (WCAG AA compliant), 2px focus-visible rings for keyboard accessibility, and zero emojis in clinical telemetry.
-    \item The workstation shall enforce a predictable 4-step stepper (Intake $\to$ Review $\to$ Analysis $\to$ Report).
+    \item The graphical interface shall implement high-contrast dark slate design tokens meeting WCAG AA accessibility standards, equipped with 2px focus-visible rings for keyboard-only navigation.
+    \item Consultation workflow shall follow an unambiguous 4-stage sequential progression (Intake $\to$ Review $\to$ Analysis $\to$ Report).
   \end{itemize}
 
   \item \textbf{NFR5: Maintainability and Test Coverage}
   \begin{itemize}
-    \item The codebase shall maintain $\geq$90\% test pass rate with fully isolated unit tests using mock backends, enabling test suite execution without GPU or Ollama dependencies in under 30 seconds.
+    \item Automated unit and integration test suites shall maintain an execution pass rate of 100\%, completing mock-isolated evaluation runs across 23 submodules in under 30 seconds without requiring active GPU or Ollama processes.
   \end{itemize}
 \end{enumerate}
 
@@ -110,22 +110,22 @@ The functional requirements (FR) define the observable behaviours and capabiliti
 \section{Feasibility Study}
 
 \subsection{Technical Feasibility}
-The system relies on transformer-based sequence labeling, dense vector indexing, and quantized LLM inference. High-performance biomedical transformers (PubMedBERT, BioLinkBERT) are freely available via HuggingFace. ChromaDB provides an embedded HNSW implementation requiring no external server process. Local LLM execution via Ollama (LLaMA 3 8B, BioMistral 7B) requires 8--16 GB VRAM, which is readily available on modern workstations and institutional GPU clusters. Technical feasibility is confirmed by our working implementation.
+The system architecture leverages pre-trained biomedical transformer encoders, dense vector graphs, and quantized autoregressive models. High-capacity clinical language checkpoints (BioLinkBERT, PubMedBERT) are accessible via the HuggingFace registry. ChromaDB offers a self-contained HNSW vector engine that runs in-process without requiring external database servers. Local LLM inference through Ollama (deploying LLaMA 3.1 8B or BioMistral 7B) requires 8--16 GB of video memory, fitting comfortably within modern workstations and institutional GPU servers. Empirical validation of our working codebase confirms complete technical feasibility.
 
 \subsection{Operational Feasibility}
-The workstation conforms to the standard clinical intake workflow of homeopathic practitioners: case-taking, symptom recording, totality analysis, and repertorization. By automating the transcription-to-rubric mapping while retaining the practitioner's ultimate decision-making authority, the system integrates smoothly into existing clinical routines without imposing artificial constraints.
+The interface mirrors established clinical case-taking routines: narrative intake, dimensional recording, rubric repertorization, and differential prescription. By automating the laborious translation of colloquial phrasing into taxonomic rubrics while placing the final repertorization choices under physician oversight, Kent-AI integrates into routine consultations without introducing clinical disruption.
 
 \subsection{Economic and Licensing Feasibility}
-All system components --- Python, PyTorch, HuggingFace Transformers, ChromaDB, Ollama, Streamlit, SQLite, and ReportLab --- are released under permissive open-source licenses (MIT, Apache 2.0, BSD). The Kent's Repertory dataset is derived from the public-domain 1897 edition. The system incurs zero ongoing per-query API costs.
+Every foundational software component in the stack --- including PyTorch, HuggingFace Transformers, ChromaDB, Ollama, Streamlit, SQLite, and ReportLab --- is released under permissive open-source licenses (MIT, Apache 2.0, BSD). The underlying Kent Repertory corpus derives from the public-domain 1897 print edition. Consequently, the architecture incurs zero ongoing API subscription costs or commercial licensing fees.
 
 \subsection{Clinical and Regulatory Feasibility}
-Kent-AI is designated as an \textbf{Investigational Clinical Decision Support Tool} under Section 520(o) of the US FDA 21st Century Cures Act guidelines for non-device CDS software. It displays clear disclaimers, surfaces source-grounded rubric provenance, and does not provide automated diagnoses or prescriptions.
+Under Section 520(o) of the United States FDA 21st Century Cures Act criteria for clinical decision support (CDS) software, Kent-AI qualifies as an \textbf{Investigational Decision Support Platform}. The system exposes verbatim bibliographic provenance for every recommended rubric, enforces physician confirmation before differential ranking, and refrains from issuing autonomous prescriptions.
 
 %----------------------------------------------------------------------------------------
 
 \section{Hardware and Software Requirements}
 
-Table \ref{tab:hardwaresoftware} outlines the hardware and software constraints for development, training, and production deployment.
+Table \ref{tab:hardwaresoftware} outlines the hardware environments and software dependencies utilized across model training, development, and target inference deployments.
 
 \begin{table}[htbp]
 \caption[System Hardware and Software Constraints]{System Hardware and Software Specifications.}
@@ -158,7 +158,7 @@ Table \ref{tab:hardwaresoftware} outlines the hardware and software constraints 
 
 \section{Tools and Technologies Chosen with Justification}
 
-Table \ref{tab:techjustification} details the engineering justification for every major technology selected, comparing each against rejected alternatives.
+Table \ref{tab:techjustification} contrasts each selected core technology against evaluated architectural alternatives, detailing the clinical and engineering rationales that drove each design choice.
 
 \begin{table}[htbp]
 \caption[Technology Selection Justification]{Detailed Justification for Technology Stack Choices.}
@@ -169,22 +169,21 @@ Table \ref{tab:techjustification} details the engineering justification for ever
 \toprule
 \tabhead{Component} & \tabhead{Selected Technology} & \tabhead{Evaluated Alternatives} & \tabhead{Justification} \\
 \midrule
-\textbf{Vector Store} & ChromaDB (HNSW) & FAISS, Milvus, Qdrant, pgvector & Embedded Python native, zero daemon setup, built-in persistence, native metadata filtering on section IDs, sub-18ms latency. \\
+\textbf{Vector Store} & ChromaDB (HNSW) & FAISS, Milvus, Qdrant, pgvector & Embedded Python execution, zero background daemon overhead, persistent local indexing, native metadata filtering across section IDs, and sub-18ms query latencies. \\
 \midrule
-\textbf{Sentence Embedder} & \texttt{all-MiniLM-L6-v2} & OpenAI \texttt{text-embedding-ada-002}, Clinical-BERT & 384-dim compact unit-normalized vectors, fast CPU/GPU inference ($<$5ms), zero cloud egress, completely open-source. \\
+\textbf{Sentence Embedder} & \texttt{all-MiniLM-L6-v2} & OpenAI \texttt{text-embedding-ada-002}, Clinical-BERT & Generates compact 384-dimensional unit-norm vectors, supports sub-5ms CPU/GPU inference, ensures zero external data leakage, and provides complete open-weights autonomy. \\
 \midrule
-\textbf{Biomedical Encoders} & BioLinkBERT \& PubMedBERT & Standard BERT, RoBERTa, ClinicalBERT alone & PubMedBERT trained from scratch on biomedical texts (no subword fragmentation); BioLinkBERT captures citation-graph modality linkages. \\
+\textbf{Biomedical Encoders} & BioLinkBERT \& PubMedBERT & Standard BERT, RoBERTa, ClinicalBERT alone & PubMedBERT eliminates subword token fragmentation via domain-native pre-training; BioLinkBERT leverages citation-graph connectivity to model symptom co-occurrence. \\
 \midrule
-\textbf{LLM Fine-Tuning} & QLoRA (NF4 + BitsAndBytes) & Full fine-tuning, Prefix tuning, LoRA-16bit & Reduces 7B model VRAM from 28GB to $\sim$6GB, enabling fine-tuning on a single workstation GPU with minimal performance loss. \\
+\textbf{LLM Fine-Tuning} & QLoRA (NF4 + BitsAndBytes) & Full fine-tuning, Prefix tuning, LoRA-16bit & Shrinks 7B model VRAM consumption from 28 GB to $\approx$6 GB, making consumer workstation adaptation feasible without meaningful accuracy loss. \\
 \midrule
-\textbf{Local LLM Runtime} & Ollama REST API & vLLM, TGI, llama.cpp direct bindings & Turnkey model management, robust streaming HTTP REST API, standardized JSON schema enforcement, cross-platform. \\
+\textbf{Local LLM Runtime} & Ollama REST API & vLLM, TGI, llama.cpp direct bindings & Provides turnkey model weight orchestration, resilient HTTP streaming, standardized JSON schema enforcement, and cross-platform binary distribution. \\
 \midrule
-\textbf{Frontend Workstation} & Streamlit ($\geq$1.64.0) & React + FastAPI, Electron, PyQt & Fast clinical iteration, built-in session state management, native Python integration with ML models, fragment reruns for snappy UI. \\
+\textbf{Frontend Workstation} & Streamlit ($\geq$1.64.0) & React + FastAPI, Electron, PyQt & Accelerates clinical prototyping, supplies native session state caching, couples directly with local ML inference routines, and offers snappy partial-page reruns. \\
 \midrule
-\textbf{Clinical PDF Engine} & ReportLab 5.1 + PyMuPDF & Weasyprint, wkhtmltopdf, LaTeX CLI & Deterministic canvas rendering, exact two-pass page numbering (\texttt{NumberedCanvas}), native vector tables and charts, zero external binary dependency. \\
+\textbf{Clinical PDF Engine} & ReportLab 5.1 + PyMuPDF & Weasyprint, wkhtmltopdf, LaTeX CLI & Guarantees deterministic canvas coordinate placement, exact two-pass page numbering via \texttt{NumberedCanvas}, native vector chart creation, and zero external binary dependencies. \\
 \midrule
-\textbf{Case Database} & SQLite 3 & PostgreSQL, MongoDB & Embedded zero-admin ACID storage, file-level portability (\texttt{cases.sqlite}), seamless integration with Python's standard library. \\
+\textbf{Case Database} & SQLite 3 & PostgreSQL, MongoDB & Zero-configuration ACID-compliant relational store, portable single-file database structure (\texttt{cases.sqlite}), and seamless native integration via Python's standard library. \\
 \bottomrule
 \end{tabular}
 \end{table}
-

@@ -3,7 +3,7 @@
 \chapter{Complete Test Suite Verification Matrix}
 \label{AppendixC}
 
-This appendix provides the comprehensive verification matrix of all \textbf{200 automated unit, integration, and smoke tests across 23 test modules} in the Kent-AI test suite. All tests execute with a 100\% pass rate under continuous integration without GPU or Ollama dependencies.
+This appendix provides the complete regression verification matrix spanning all \textbf{200 automated unit, integration, and workflow tests across 23 test modules} in the Kent-AI test suite. All tests execute with a 100\% pass rate under continuous integration without GPU or Ollama dependencies.
 
 %----------------------------------------------------------------------------------------
 
@@ -54,7 +54,7 @@ Table~\ref{tab:test_inventory} documents the complete test execution inventory o
 
 \section{Continuous Integration Command}
 
-The entire test suite is verified via the following command:
+The full verification suite executes in continuous integration via:
 
 \begin{lstlisting}[style=python, caption={Test Suite Verification Command}]
 pytest tests/ -v --durations=10

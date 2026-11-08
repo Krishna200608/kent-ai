@@ -30,12 +30,14 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{mathpazo}
+\usepackage{microtype}
 {\fontencoding{T1}\fontfamily{ppl}\selectfont}
 \DeclareFontShape{T1}{ppl}{m}{scit}{<->ssub * ppl/m/sc}{}
 \DeclareFontShape{T1}{ppl}{m}{scsl}{<->ssub * ppl/m/sc}{}
 \usepackage[english]{babel}
 \usepackage[backend=biber,
   style=numeric,
+  sorting=none,
   bibencoding=utf8,
 ]{biblatex}
 \addbibresource{references.bib}
@@ -57,6 +59,11 @@
 \usepackage{pdfpages}
 \usepackage{url}
 \usepackage{hyperref}
+
+\makeatletter
+\patchcmd{\LT@output}{\vss}{\vskip 0pt plus \maxdimen minus \normalbaselineskip}{}{}
+\patchcmd{\LT@output}{\vss}{\vskip 0pt plus \maxdimen minus \normalbaselineskip}{}{}
+\makeatother
 
 \definecolor{KentNavy}{HTML}{18324B}
 \definecolor{KentBlue}{HTML}{326F9F}

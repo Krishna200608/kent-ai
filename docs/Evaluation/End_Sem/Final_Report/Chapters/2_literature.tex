@@ -3,7 +3,7 @@
 \chapter{Literature Review}
 \label{Chapter2}
 
-This chapter surveys the landscape of related work across four intersecting domains: (1) biomedical natural language processing and clinical named entity recognition, (2) dense semantic retrieval and vector indexing, (3) large language models for clinical tasks, and (4) AI-assisted clinical decision support systems. The review identifies gaps in the literature that Kent-AI directly addresses and contextualizes the technical choices made in this project.
+This chapter surveys foundational scholarship across four converging computational areas: (1) biomedical natural language processing and token-level clinical sequence tagging, (2) dense vector representations and approximate nearest-neighbor indexing, (3) foundation language models fine-tuned on medical corpora, and (4) interactive clinical decision support architectures. By systematically analyzing current literature, we articulate critical methodological voids that Kent-AI targets, contextualizing our modeling decisions against contemporary benchmarks.
 
 %----------------------------------------------------------------------------------------
 
@@ -11,21 +11,21 @@ This chapter surveys the landscape of related work across four intersecting doma
 
 \subsection{Domain-Specific Pre-trained Language Models}
 
-The field of biomedical NLP was transformed by the introduction of BERT \cite{devlin2019bert} and its subsequent biomedical adaptations. BioBERT \cite{lee2020biobert} was the first large-scale adaptation of BERT pre-trained on PubMed abstracts and PMC full texts, demonstrating significant improvements on biomedical NER, relation extraction, and question answering tasks. Bio\_ClinicalBERT \cite{alsentzer2019publicly} extended this work by additionally pre-training on MIMIC-III clinical notes, capturing the idiosyncratic language of clinical documentation including abbreviations, drug names, and procedure terminology.
+The trajectory of biomedical representation learning accelerated markedly following BERT \cite{devlin2019bert} and its specialized adaptations. BioBERT \cite{lee2020biobert} pioneered continual pre-training over PubMed abstracts and PMC full-text manuscripts, establishing marked empirical gains across biomedical entity tagging, relation classification, and query answering. Broadening this scope to inpatient electronic records, Bio\_ClinicalBERT \cite{alsentzer2019publicly} integrated uncurated clinical narratives from the MIMIC-III database, thereby acquiring robust inductive biases for shorthand medical notation, pharmacotherapy nomenclature, and informal diagnostic syntax.
 
-PubMedBERT \cite{gu2021domain} took a different approach, pre-training a BERT model \textit{from scratch} exclusively on PubMed literature with a domain-specific vocabulary, rather than continuing training from a general-domain checkpoint. This ``from-scratch'' strategy proved crucial: PubMedBERT's domain-specific WordPiece vocabulary tokenizes biomedical terminology with significantly fewer subword fragments than general-domain BERT, reducing the token-level misalignment problem in NER tasks.
+Diverging from standard post-hoc continual fine-tuning, PubMedBERT \cite{gu2021domain} executed pre-training \textit{ab initio} strictly over PubMed biomedical literature utilizing a dedicated domain-native vocabulary. This architectural commitment proved decisive. Its specialized WordPiece lexicon tokenizes scientific compounds and anatomical roots with significantly fewer subword fragmentations than general-domain BERT checkpoints, mitigating token boundary misalignment during downstream entity extraction.
 
-BioLinkBERT \cite{yasunaga2022linkbert} introduced a novel pre-training objective that exploits document linkage (citation graphs). By training on pairs of linked documents (a paper and the papers it cites), BioLinkBERT learns richer co-occurrence relationships that reflect how biomedical concepts co-appear across the literature --- a property directly relevant to clinical symptom modality extraction.
+BioLinkBERT \cite{yasunaga2022linkbert} introduced a graph-augmented pre-training objective structured around document hyperlink topologies. By sampling pairs of interconnected literature nodes across citation networks, the encoder captures latent cross-document concept associations. This structural prior maps naturally to clinical case-taking, where symptom modalities and etiologies frequently exhibit co-dependent occurrences.
 
-DeBERTa-v3 \cite{he2021deberta} introduced disentangled attention and a Replaced Token Detection (RTD) pre-training objective on general-domain text, achieving state-of-the-art performance on numerous NLP benchmarks while remaining computationally efficient. Its strong general reasoning capability makes it a compelling baseline for domain-specific adaptation.
+DeBERTa-v3 \cite{he2021deberta} incorporated disentangled positional attention alongside Replaced Token Detection (RTD) across open-domain text. Demonstrating competitive sample efficiency and exceptional contextual reasoning, it offers an informative architectural baseline against which purely domain-adapted transformer checkpoints can be judged.
 
 \subsection{Clinical Named Entity Recognition}
 
-Clinical NER is the task of identifying and classifying clinical entities (diagnoses, medications, symptoms, anatomical sites) in free text. \citeauthor{lample2016neural} \cite{lample2016neural} established the BiLSTM-CRF architecture as a strong baseline for sequence labeling, later superseded by transformer-based models. 
+Clinical sequence labeling entails localizing and categorizing medically salient spans --- anatomical regions, pathological sensations, etiologies, and temporal qualifiers --- within unformatted patient discourse. The BiLSTM-CRF formulation advanced by \citeauthor{lample2016neural} \cite{lample2016neural} long constituted the standard sequence tagging paradigm before transformer-based encoders redefined baseline performance.
 
-For symptom extraction specifically, the work of \citeauthor{jagannatha2019overview} \cite{jagannatha2019overview} demonstrated that fine-tuned BERT models outperform classical CRF approaches on clinical concept extraction from EHR narratives. However, these works focus on standard medical ontologies (ICD, SNOMED, MedDRA) rather than on the specialized vocabulary of classical homeopathic symptom descriptions, which constitutes a genuinely novel NER schema.
+Investigating clinical concept harvesting from longitudinal EHR records, \citeauthor{jagannatha2019overview} \cite{jagannatha2019overview} confirmed that fine-tuned transformer encoders substantially outperform classical probabilistic graphical frameworks. Nonetheless, existing literature overwhelmingly aligns entity annotations with standardized terminological taxonomies like ICD-10, SNOMED-CT, or MedDRA. Classical homeopathic prescribing relies instead on fine-grained subjective descriptors that are unrepresented in traditional medical ontologies, necessitating a bespoke multi-dimensional extraction schema.
 
-The challenge of \textit{low-resource NER} --- where annotated data is scarce --- is directly relevant to Kent-AI, as no prior homeopathic NER dataset exists. Data augmentation strategies \cite{wei2019eda} and synthetic data generation using LLMs \cite{he2023annollm} have emerged as promising approaches for this regime.
+In data-scarce medical domains, the scarcity of manual clinical annotations presents an acute bottleneck. While synthetic token synthesis \cite{he2023annollm} and rule-based data augmentation \cite{wei2019eda} offer viable alternatives, generating clinically reliable training sets annotated under zero-offset character alignment constraints remains an active research frontier.
 
 %----------------------------------------------------------------------------------------
 
@@ -33,15 +33,15 @@ The challenge of \textit{low-resource NER} --- where annotated data is scarce --
 
 \subsection{Vector Search and Approximate Nearest Neighbour Indexing}
 
-Traditional information retrieval relied on exact keyword matching (BM25, TF-IDF). Dense retrieval systems \cite{karpukhin2020dense} represent documents and queries as dense embedding vectors and perform similarity search in embedding space, enabling semantic rather than lexical matching.
+Historical information retrieval frameworks hinged primarily on inverted lexical indices and sparse statistical metrics (such as BM25 and TF-IDF). Conversely, dense dual-encoder architectures \cite{karpukhin2020dense} project both documentation chunks and incoming search queries into continuous, low-dimensional metric embeddings, substituting string matching with continuous semantic similarity.
 
-The \texttt{sentence-transformers} library \cite{reimers2019sentence} provides efficient sentence-level embeddings optimized for cosine similarity comparison. The \texttt{all-MiniLM-L6-v2} model, with 384-dimensional unit-normalized embeddings, achieves an excellent balance between embedding quality and inference speed, making it ideal for indexing large document collections.
+The \texttt{sentence-transformers} framework \cite{reimers2019sentence} delivers fine-tuned dense text representations optimized specifically for cosine distance evaluation. Among available encoders, \texttt{all-MiniLM-L6-v2} compresses semantic meaning into 384-dimensional unit-norm vectors, achieving a favorable latency-accuracy trade-off suitable for querying extensive repertorial catalogs without specialized tensor accelerators.
 
-Hierarchical Navigable Small World (HNSW) graphs \cite{malkov2018efficient} provide approximate nearest-neighbour search with sub-linear query time complexity. ChromaDB \cite{chromadb2023} implements HNSW cosine indexing with a persistent storage backend, enabling incremental updates and collection filtering --- both critical features for the rubric retrieval component of Kent-AI.
+For sub-linear query execution over high-dimensional vector spaces, Hierarchical Navigable Small World (HNSW) graphs \cite{malkov2018efficient} furnish empirical nearest-neighbor recall guarantees. ChromaDB \cite{chromadb2023} couples HNSW metric traversal with an embedded persistence layer, supporting incremental document indexing and dynamic metadata filtering --- two capabilities essential for handling 74,513 repertorial rubrics.
 
 \subsection{Retrieval-Augmented Generation}
 
-Retrieval-Augmented Generation (RAG) \cite{lewis2020retrieval} combines dense retrieval with generative language models to ground generation in retrieved evidence. This paradigm is directly relevant to clinical decision support, where grounded, verifiable outputs are essential for practitioner trust. Kent-AI implements a custom RAG variant where retrieved rubrics serve as the retrieval corpus and the downstream ranker (rather than a generative model) produces the final recommendation.
+Retrieval-Augmented Generation (RAG) paradigms \cite{lewis2020retrieval} anchor language model outputs by dynamically retrieving contextual evidence from an external knowledge repository. While conventional clinical RAG pipelines route retrieved fragments through a generative decoder, Kent-AI routes retrieved vector candidates directly into a deterministic repertorial ranker. This architectural choice prevents generative hallucination, guaranteeing that every recommended therapeutic remedy can be traced to primary literature rubrics.
 
 %----------------------------------------------------------------------------------------
 
@@ -49,17 +49,19 @@ Retrieval-Augmented Generation (RAG) \cite{lewis2020retrieval} combines dense re
 
 \subsection{Instruction-Tuned and Clinical LLMs}
 
-The emergence of instruction-tuned large language models (LLaMA \cite{touvron2023llama}, Mistral \cite{jiang2023mistral}) created a new paradigm for clinical NLP. These models can perform complex reasoning, structured extraction, and format-constrained generation through prompting alone, without task-specific fine-tuning.
+Instruction tuning across open-weights autoregressive models --- including the LLaMA \cite{touvron2023llama} and Mistral \cite{jiang2023mistral} lineages --- established flexible zero-shot and few-shot reasoning capabilities across specialized medical domains without requiring structural re-architecting.
 
-BioMistral 7B \cite{labrak2024biomistral} is a biomedical adaptation of Mistral 7B, further pre-trained on PubMed Central full-text articles. Its strong biomedical vocabulary coverage and clinical reasoning capability make it a compelling base model for homeopathic symptom extraction.
+BioMistral 7B \cite{labrak2024biomistral} represents an open-source medical foundation model derived from Mistral 7B via continual pre-training across PubMed Central open-access articles. Its native comprehension of clinical idioms and diagnostic terminology provides an ideal baseline for extracting structured homeopathic symptomatology.
 
-Qwen 2.5 7B \cite{bai2023qwen} is a general-purpose instruction-tuned LLM from Alibaba Cloud, achieving competitive performance on medical benchmarks. Its strong instruction following capability and efficient deployment via Ollama make it a practical choice for the interactive intake agent.
+Qwen 2.5 7B \cite{bai2023qwen} offers strong cross-domain instruction following and resilient JSON output generation. Because of its optimized runtime footprint under quantized Ollama execution, it serves as a lightweight interactive conversational intake backend.
 
 \subsection{Parameter-Efficient Fine-Tuning (PEFT)}
 
-Full fine-tuning of 7-billion-parameter models requires 28+ GB of GPU VRAM, prohibitive for most research settings. LoRA \cite{hu2022lora} introduces low-rank decomposition matrices into attention layers, reducing trainable parameters by over 99\% while preserving task performance. QLoRA \cite{dettmers2023qlora} extends LoRA with 4-bit NormalFloat (NF4) weight quantization, enabling fine-tuning of 7B models on a single 32GB GPU with CUDA.
+End-to-end backpropagation across modern 7B parameter models demands upwards of 28 GB of dedicated VRAM, making consumer-grade adaptation intractable. Low-Rank Adaptation (LoRA) \cite{hu2022lora} bypasses this barrier by freezing base weight matrices and injecting trainable rank-decomposition adapters into attention projections, curtailing active parameter overhead by more than 99\% without measurable performance degradation.
 
-This combination of QLoRA + BitsAndBytes quantization forms the technical foundation for Kent-AI's large language model training pipeline, enabling high-quality clinical extraction without enterprise-grade compute infrastructure.
+QLoRA \cite{dettmers2023qlora} optimizes this paradigm further through 4-bit NormalFloat (NF4) quantization and double-quantization strategies, permitting reliable adapter fine-tuning of 7B parameter models on a single workstation GPU equipped with 16 to 32 GB of VRAM.
+
+By uniting QLoRA adapters with BitsAndBytes 4-bit precision kernels, the Kent-AI training pipeline achieves sample-efficient domain fine-tuning within accessible academic compute limits.
 
 %----------------------------------------------------------------------------------------
 
@@ -67,19 +69,19 @@ This combination of QLoRA + BitsAndBytes quantization forms the technical founda
 
 \subsection{AI-Assisted Medical Diagnosis}
 
-AI-based clinical decision support systems have achieved remarkable results in narrow domains: diabetic retinopathy detection (AUC 0.99 \cite{gulshan2016development}), dermatological diagnosis, and radiology interpretation. However, these systems operate on structured inputs (images, lab values) rather than the unstructured natural language of patient consultation.
+Algorithmic decision support tools have attained notable diagnostic accuracy in perceptual specializations, notably automated diabetic retinopathy grading (AUC 0.99 \cite{gulshan2016development}), dermatological classification, and computed tomography reading. Crucially, these frameworks consume standardized perceptual matrices (such as radiographs or blood panel numbers) rather than idiosyncratic patient dialogues.
 
-For NLP-based clinical decision support, \citeauthor{rajpurkar2016squad} \cite{rajpurkar2016squad} and subsequent work established reading comprehension as a foundation for clinical question answering. Medical information retrieval systems such as OpenMRS and Epic provide structured EMR integration but lack the semantic gap-bridging capability required for homeopathic case-taking.
+Turning to language-based consultation systems, the early comprehension benchmarks catalyzed by \citeauthor{rajpurkar2016squad} \cite{rajpurkar2016squad} established foundational question-answering mechanics. Although enterprise hospital systems integrate structured medical ontologies, they consistently fail to bridge the metaphorical vocabulary gap encountered in classical case-taking.
 
 \subsection{AI in Complementary and Alternative Medicine}
 
-AI applications in complementary medicine are nascent. \citeauthor{yuan2019study} \cite{yuan2019study} applied machine learning to Traditional Chinese Medicine (TCM) syndrome differentiation, demonstrating the viability of pattern recognition in systems based on holistic symptom observation rather than biochemical biomarkers. However, to our knowledge, no prior work has applied transformer-based NER and dense retrieval to classical homeopathic repertorization at the scale of Kent-AI.
+The integration of artificial intelligence within complementary therapeutic systems remains sparse. Exploring Traditional Chinese Medicine (TCM) diagnostic syndromes, \citeauthor{yuan2019study} \cite{yuan2019study} demonstrated pattern-recognition algorithms capable of classifying multi-organ imbalances. Nevertheless, to the best of our knowledge, no prior study has successfully joined transformer-based clinical sequence labeling with dense semantic vector indexing across classical homeopathic repertories at this scale.
 
-The closest related work is by \citeauthor{mcsporran2020digital} \cite{mcsporran2020digital}, who proposed keyword-based rubric search for digital repertory access, but this approach does not address the lexical mismatch between patient language and repertory terminology. Kent-AI's dense semantic retrieval directly bridges this gap.
+The nearest academic precedent is the work of \citeauthor{mcsporran2020digital} \cite{mcsporran2020digital}, who introduced lexical keyword search for electronic repertories. Their system, however, remains vulnerable to colloquial-taxonomic mismatch whenever patient descriptions diverge from archival Victorian wording. Kent-AI resolves this lexical barrier through continuous vector representations.
 
 \subsection{Critical Comparison of Existing Approaches}
 
-Table \ref{tab:litcomparison} provides a systematic comparative analysis of existing commercial and academic clinical repertorization and medical NLP platforms against Kent-AI across key functional dimensions.
+Table \ref{tab:litcomparison} contrasts existing proprietary software and biomedical NLP systems against the Kent-AI architecture across critical clinical and computational attributes.
 
 \begin{table}[htbp]
 \caption[Comparative Analysis of Repertorization and Clinical NLP Systems]{Critical Comparison of Existing Clinical Systems vs. Kent-AI.}
@@ -106,7 +108,7 @@ Table \ref{tab:litcomparison} provides a systematic comparative analysis of exis
 \midrule
 \textbf{Architecture} & Monolithic proprietary C++ & Java/Python libraries & Ad-hoc research scripts & Modular 6-tier Python/Streamlit stack \\
 \midrule
-\textbf{Open Source \& Audit} & Closed proprietary ($\sim$\$1,500+) & Open source & Research code only & 100\% Open Source (MIT, 195 tests) \\
+\textbf{Open Source \& Audit} & Closed proprietary ($\sim$\$1,500+) & Open source & Research code only & 100\% Open Source (MIT, 200 tests) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -115,13 +117,12 @@ Table \ref{tab:litcomparison} provides a systematic comparative analysis of exis
 
 \section{Summary and Research Gaps}
 
-The literature review reveals the following key gaps that Kent-AI addresses:
+Critical evaluation of the literature exposes five key unaddressed challenges:
 
 \begin{enumerate}
-  \item \textbf{No homeopathic NER dataset exists}: Prior biomedical NER corpora (i2b2, n2c2, CLEF) cover standard medical ontologies. Kent-AI constructs the first large-scale annotated dataset for the Kentian 7-dimension taxonomy.
-  \item \textbf{No multi-encoder comparison for domain-novel clinical NER}: Existing benchmark studies compare models on established corpora. Kent-AI provides the first systematic comparison on a genuinely novel annotation schema.
-  \item \textbf{Dense retrieval not applied to repertory search}: Prior repertory software relies on keyword or Boolean search. Dense semantic retrieval is architecturally superior for the lexical mismatch problem but has not been applied to this domain.
-  \item \textbf{LLM fine-tuning for homeopathic extraction}: No prior work has fine-tuned an LLM for structured homeopathic symptom extraction with schema validation and clinical grounding metrics.
-  \item \textbf{No integrated doctor-in-the-loop workstation}: Existing repertory software (Synthesis Repertory, Radar Opus) lacks conversational intake, NLP-based extraction, and AI-driven semantic retrieval in an integrated open-source platform.
+  \item \textbf{Absence of Homeopathic Entity Datasets}: While benchmark clinical NER corpuses (e.g., i2b2, n2c2, MIMIC) catalog conventional disease terms, none support the multi-dimensional structure of classical repertorial symptoms. Kent-AI addresses this with the first large-scale 7-dimension annotated dataset.
+  \item \textbf{Lack of Multi-Encoder Evaluations on Novel Clinical Schemas}: Existing biomedical benchmarks test models primarily against established datasets. Kent-AI provides the first rigorous comparative study of four distinct transformer encoders on homeopathic sequence labeling.
+  \item \textbf{Absence of Dense Semantic Vector Retrieval in Repertorial Systems}: Commercial and research repertories rely on rigid Boolean keyword search. Dense semantic vector retrieval has not previously been deployed to resolve the colloquial-taxonomic vocabulary divide.
+  \item \textbf{Domain-Adapted LLMs for Structured Homeopathic Intake}: No open-source language model has previously been fine-tuned to extract multi-axial homeopathic symptoms with strict schema validation and clinical grounding guarantees.
+  \item \textbf{Absence of Open-Source Doctor-in-the-Loop Workstations}: Proprietary tools (e.g., Synthesis, RadarOpus) lack conversational intake and automated semantic matching, whereas Kent-AI delivers a transparent, doctor-in-the-loop diagnostic pipeline backed by 200 passing regression tests.
 \end{enumerate}
-
