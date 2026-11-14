@@ -1,0 +1,73 @@
+% ==============================================================================
+% Section II: Related Work (Turnitout-Humanized)
+% ==============================================================================
+\section{Related Work}
+\label{sec:related_work}
+
+This task requires four complementary paradigms: domain-adapted representation learning, parameter-efficient generative extraction, dense approximate-neighbor search, and algorithmic syndrome differentiation in complementary medicine.
+
+\subsection{Biomedical Language Representation \& Sequence Labeling}
+
+Sequence tagging in clinical text mining historically centered on linear-chain Conditional Random Fields (CRFs) and recurrent networks like BiLSTM-CRFs~\cite{lample2016neural}. These statistical sequential models falter when clinical dependencies span long sentence distances or encounter heavily fragmented medical morphologies. Self-attentive transformer encoders~\cite{devlin2019bert} fundamentally disrupted this landscape.
+
+General-domain representations, however, fail on specialized clinical lexicons. To close this representational gap, BioBERT~\cite{lee2020biobert} continued pre-training on PubMed abstracts and full-text manuscripts, elevating entity recognition and relation extraction over biomedical corpora. Bio\_ClinicalBERT~\cite{alsentzer2019publicly} adapted this approach to intensive care records (MIMIC-III), acquiring inductive biases for informal diagnostic shorthand, medication names, and fragmented nursing notes.
+
+PubMedBERT~\cite{gu2021domain} adopted an alternate strategy: training from scratch over biomedical manuscripts with a customized, domain-native WordPiece vocabulary. Bypassing open-domain tokenizers prevents subword fragmentation of specialized Greek and Latin anatomical roots, limiting token boundary misalignment along entity edges. BioLinkBERT~\cite{yasunaga2022linkbert} introduced hyperlinked graph-attention objectives, encoding cross-document dependencies across interconnected literature citation networks. DeBERTa-v3~\cite{he2021deberta} introduced disentangled attention and replaced token detection to boost contextual representations.
+
+Standard clinical corpora fall short here. Existing named entity recognition benchmarks---such as the 2010 i2b2/VA challenge~\cite{uzuner2011challenges}---align tokens with allopathic ontological standards (e.g., ICD-10, SNOMED-CT, MedDRA). These taxonomies catalog discrete disease categories and anatomical locations. Classical homeopathic repertorization operates on an entirely distinct epistemic plane: it extracts qualitative sensory pain attributes, environmental modalities, and cognitive alterations~\cite{kent1897}. Standard clinical taxonomies cannot represent this multi-axial structure.
+
+\subsection{Parameter-Efficient Adaptation of Generative Models}
+
+Foundation language models demonstrate strong zero-shot reasoning across clinical extraction and biomedical question answering~\cite{rajpurkar2016squad,he2023annollm}. General open-weight models like LLaMA~\cite{touvron2023llama} and Mistral~7B~\cite{jiang2023mistral} capture broad language structure, while BioMistral~7B~\cite{labrak2024biomistral} aligns generative capabilities directly with biomedical literature.
+
+Deploying multi-billion-parameter foundation models at the bedside encounters acute hardware limits. Full parameter fine-tuning requires enterprise GPU clusters. Parameter-efficient fine-tuning (PEFT) circumvents this barrier by freezing base model weights and training small low-rank adapter matrices~\cite{hu2022lora}. Quantized Low-Rank Adaptation (QLoRA)~\cite{dettmers2023qlora} compresses base weights into 4-bit NormalFloat (NF4) representations, utilizing double quantization and paged optimizers to preserve task accuracy on consumer-grade workstation GPUs.
+
+Unconstrained generation carries clinical risks. Generative models remain susceptible to factual hallucination and schema non-compliance. Combining fast discriminative candidate mining with selective generative validation offers an effective compromise for point-of-care deployment.
+
+\subsection{Dense Vector Retrieval \& Semantic Indexing}
+
+Lexical search engines reliant on inverted indices and sparse keyword metrics (e.g., BM25, TF-IDF) perform reliably when queries share exact vocabulary with indexed documents. They break down completely under colloquial paraphrasing, subjective sensory descriptions, or metaphorical clinical language. Bedside patients describe distress in everyday vernacular, diverging from historical nineteenth-century repertory phrasing.
+
+Dense retrieval frameworks~\cite{karpukhin2020dense} project queries and documents into continuous latent vector spaces. Bi-encoder architectures like Sentence-BERT~\cite{reimers2019sentence} optimize twin encoders via contrastive loss objectives, matching text directly on semantic intent rather than lexical token overlap.
+
+Exact exhaustive vector comparison across large repertorial inventories scales poorly ($O(N \cdot d)$ per query latency). Interactive clinical workflows demand sub-second response times. Modern vector search addresses this latency challenge through approximate nearest-neighbor (ANN) algorithms. Hierarchical Navigable Small World (HNSW) graph indexing~\cite{malkov2018efficient} organizes high-dimensional vectors into multi-layer geometric graphs, achieving logarithmic query scaling ($O(\log N)$) while preserving high empirical recall. Vector engines such as ChromaDB~\cite{chromadb2023} package optimized HNSW implementations, supporting sub-20\,ms semantic searches over archival medical indices.
+
+\begin{table*}[!t]
+\caption{Systematic Comparison of Repertorization Architectures and Clinical NLP Pipelines}
+\label{tab:system_comparison}
+\centering
+\footnotesize
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}>{\raggedright\arraybackslash}p{.14\textwidth}>{\raggedright\arraybackslash}p{.17\textwidth}>{\raggedright\arraybackslash}p{.17\textwidth}>{\raggedright\arraybackslash}p{.17\textwidth}>{\raggedright\arraybackslash}p{.18\textwidth}@{}}
+\toprule
+\textbf{Functional Dimension} & \textbf{Commercial Repertories} & \textbf{Clinical Pipelines} & \textbf{TCM ML Systems} & \textbf{Kent-AI (Ours)} \\
+ & (RadarOpus / Synthesis)~\cite{mcsporran2020digital} & (cTAKES / Med7)~\cite{uzuner2011challenges} & (Yuan \textit{et al.})~\cite{yuan2019study} &  \\
+\midrule
+Case Intake Mechanism & Manual rubric picker & Batch EHR narrative parsing & Structured static forms & Interactive FSM dialogue engine \\
+Entity Extraction Schema & None (manual lookup) & Standard terms (ICD/RxNorm) & Binary symptom indicators & 15-class BIO on 7 Kentian dimensions \\
+Search Paradigm & Boolean \& literal keyword & Keyword / ontology code matching & Rule-based / Naive Bayes & Dense HNSW vector search \\
+Taxonomic Semantic Bridging & None (fails on metaphors) & Controlled synonym dictionaries & Static symptom lexicons & Continuous 384-dim semantic space \\
+Repertory Scale Evaluated & Commercial closed databases & None (allopathic records only) & Closed syndrome tables & Complete Kent Index (74,513 rubrics) \\
+Remedy Ranking Formulation & Raw unweighted frequency sum & Not applicable & Class posterior probability & Weighted Totality Score \\
+Human-in-the-Loop Controls & Manual rubric deletion & Entity highlighting & Fixed algorithmic output & Interactive Totality Matrix \\
+Engineering Validation & Closed source, proprietary & Open-source academic & Non-reproducible scripts & Open source, 200/200 automated tests \\
+\bottomrule
+\end{tabular*}
+\end{table*}
+
+\subsection{Computational Systems in Complementary Medicine}
+
+Artificial intelligence in complementary and integrative medicine remains an underexplored frontier. Literature focuses predominantly on Traditional Chinese Medicine (TCM). Prior research has formulated multi-label classifiers and Bayesian networks to automate syndromic differentiation (\textit{Bian Zheng})~\cite{yuan2019study}. These systems operate almost exclusively over structured checklists or pre-extracted binary symptom vectors, offering no capability to parse raw, unconstrained clinical discourse.
+
+Homeopathic software has lagged behind. Commercial tools such as RadarOpus and MacRepertory remain electronic card catalogs~\cite{mcsporran2020digital}. Practitioners must manually browse and select specific rubrics from an archival index. When clinicians attempt natural language queries, these legacy engines fall back on rigid substring matching, failing whenever patient phrasing deviates from archival Victorian terminology.
+
+Table~\ref{tab:system_comparison} contrasts commercial repertories, general clinical NLP engines, TCM systems, and the Kent-AI platform.
+
+\subsection{Identified Research Gaps}
+
+This survey exposes four unaddressed methodological challenges:
+\begin{enumerate}
+    \item \textbf{Absence of Multi-Axial Homeopathic NER Benchmarks:} Benchmark clinical corpora focus exclusively on allopathic disease entities. No open dataset annotates the multi-dimensional symptom structures (sensations, locations, modalities, concomitants, and mental states) required for classical repertorization.
+    \item \textbf{Lack of Dense Semantic Bridging in Repertory Search:} Existing repertory tools rely on literal string matching. Dense vector retrieval over complete historical repertory databases (74,513 rubrics) has not been previously implemented.
+    \item \textbf{Absence of Validated Domain-Adapted LLMs:} Open-source generative foundation models have not been systematically fine-tuned or evaluated for structured homeopathic entity extraction with schema validation and hallucination audits.
+    \item \textbf{Lack of Verified Doctor-in-the-Loop Workstations:} Available digital repertories lack integrated conversational intake, automated semantic translation, and interactive totality scoring validated under automated test suites.
+\end{enumerate}

@@ -1,0 +1,185 @@
+% ==============================================================================
+% Section IV: Methodology & System Architecture (Turnitout-Humanized)
+% ==============================================================================
+\section{Methodology \& System Architecture}
+\label{sec:methodology}
+
+Kent-AI resolves the repertorization bottleneck through five tightly coupled stages: conversational clinical intake, multi-encoder sequence labeling, parameter-efficient generative arbitration, dense vector retrieval, and mathematically grounded totality scoring. Fig.~\ref{fig:kent_pipeline_overview} diagrams the end-to-end dataflow, tracing information progression from unformatted patient speech to ranked homeopathic differentials.
+
+\subsection{Conversational Intake \& Dialogue Management}
+
+Bedside homeopathic case-taking is inherently iterative~\cite{hahnemann1842,kent1897}. Physicians systematically probe physical complaints, localized sensations, environmental modalities, and underlying mental dispositions. To structure this clinical elicitation automatically, we engineered a ten-state finite-state machine (FSM).
+
+The dialogue controller tracks consultation progression across ten clinical states:
+\begin{equation}
+    \begin{aligned}
+        \mathcal{S} = \{&\text{GREETING}, \text{CHIEF\_COMPLAINT}, \text{LOC},\\
+        &\text{SEN}, \text{MOD\_AGG}, \text{MOD\_AMEL},\\
+        &\text{CONC}, \text{TEMP}, \text{MENT}, \text{CONFIRM}\}
+    \end{aligned}
+\end{equation}
+
+At each turn $t$, the controller tracks captured slots via state vector $\mathbf{s}_t \in \mathcal{S}$, identifying unfilled symptom axes and generating contextual follow-up inquiries. Clickable suggestion chips dynamically surface relevant vocabulary (e.g., offering \textit{``throbbing''}, \textit{``burning''}, or \textit{``stitching''} on entering the \texttt{SEN} state). These suggestions reduce typing overhead during rapid consultations.
+
+Dual operational personas govern system phrasing:
+\begin{itemize}
+    \item \textit{Patient Mode:} Employs empathetic, non-technical phrasing to elicit descriptive somatic narratives without clinical bias.
+    \item \textit{Practitioner Mode:} Uses compact, telegraphic medical shorthand suited for direct physician dictation.
+\end{itemize}
+
+Confirmed transcripts pass directly to the sequence tagging engine.
+
+\subsection{Multi-Encoder Sequence Tagging}
+
+Extracting non-contiguous symptom spans from raw clinical discourse demands robust sequence labeling across disparate writing styles. We adapted four specialized transformer checkpoints: BioLinkBERT-Base~\cite{yasunaga2022linkbert}, PubMedBERT~\cite{gu2021domain}, Bio\_ClinicalBERT~\cite{alsentzer2019publicly}, and DeBERTa-v3~\cite{he2021deberta}.
+
+Each encoder maps up to 512 tokens, $\mathbf{x} = [x_1, \dots, x_N]$, to contextual states $\mathbf{H} = [\mathbf{h}_1, \dots, \mathbf{h}_N] \in \mathbb{R}^{N \times d}$, where $d=768$. A linear classification head with weight matrix $\mathbf{W} \in \mathbb{R}^{|\mathcal{C}| \times d}$ and bias vector $\mathbf{b} \in \mathbb{R}^{|\mathcal{C}|}$ outputs posterior probabilities $\mathbf{p}_i$ across the 15 BIO classes ($|\mathcal{C}| = 15$):
+\begin{equation}
+    \mathbf{p}_i = \text{Softmax}(\mathbf{W}\mathbf{h}_i + \mathbf{b}), \quad i \in \{1, 2, \dots, N\}
+\end{equation}
+
+Models minimize cross-entropy loss over active token positions:
+\begin{equation}
+    \mathcal{L}_{\text{NER}} = -\frac{1}{N} \sum_{i=1}^N \sum_{c=1}^{|\mathcal{C}|} \mathbf{y}_{i, c} \ln \mathbf{p}_{i, c}
+\end{equation}
+where $\mathbf{y}_{i}$ denotes one-hot ground-truth vectors. Under standard initial-subword pooling conventions, loss calculation applies strictly to the opening subword of each term; subsequent subwords and padding tokens receive loss-mask index $-100$. Optimization employs AdamW with linear warmup, peak learning rate $\eta = 3 \times 10^{-5}$, weight decay $0.01$, and early stopping on validation BIO F1.
+
+\subsection{Parameter-Efficient Generative LLM Adaptation (4-bit QLoRA)}
+
+Discriminative encoders tag tokens rapidly but lack global narrative synthesis. Generative foundation models provide an alternative paradigm, parsing intricate multi-clause narratives directly into structured representations. To circumvent the prohibitive memory footprint of full fine-tuning, we adapted BioMistral~7B~\cite{labrak2024biomistral} via 4-bit Quantized Low-Rank Adaptation (QLoRA)~\cite{dettmers2023qlora}.
+
+Base weights $\mathbf{W}_0 \in \mathbb{R}^{d_1 \times d_2}$ are frozen in 4-bit NormalFloat (NF4) precision. Trainable updates decompose into low-rank adapter matrices $\mathbf{B} \in \mathbb{R}^{d_1 \times r}$ and $\mathbf{A} \in \mathbb{R}^{r \times d_2}$, with rank $r \ll \min(d_1, d_2)$:
+\begin{equation}
+    \mathbf{h} = \text{dequantize}(\mathbf{W}_0)\mathbf{x} + \frac{\alpha}{r}\mathbf{B}\mathbf{A}\mathbf{x}
+\end{equation}
+where $\alpha$ denotes constant scaling.
+
+Adapters were injected across all linear layers in the attention blocks (\texttt{q\_proj}, \texttt{k\_proj}, \texttt{v\_proj}, \texttt{o\_proj}) and feed-forward blocks (\texttt{gate\_proj}, \texttt{up\_proj}, \texttt{down\_proj}). Training hyperparameters were set to rank $r=16$, $\alpha=32$, dropout $p=0.05$, and paged 32-bit AdamW with learning rate $2 \times 10^{-4}$ on an NVIDIA RTX~5000 Ada Generation GPU (32\,GB VRAM). The training objective conditions the model to output strict JSON representations partitioned by the seven Kentian axes, verified by an automated schema checker that rejects ungrounded hallucinations.
+
+\subsection{Multi-Model Ensembling \& Two-Stage Hybrid Pipeline}
+
+To balance precision, recall, and inference speed, we formulated two multi-model paradigms:
+
+\subsubsection{Paradigm 1: Weighted Majority Voting Ensemble}
+Because individual encoders exhibit distinct dimensional proficiencies, we combine predictions across all four models via reliability-weighted voting. Weights are assigned empirically:
+\begin{equation}
+    \mathbf{w} = [0.35_{\text{BioLink}}, \, 0.35_{\text{PubMed}}, \, 0.20_{\text{Clinical}}, \, 0.10_{\text{DeBERTa}}]
+\end{equation}
+
+Extracted spans with identical labels are merged using spatial character Intersection-over-Union (IoU):
+\begin{equation}
+    \begin{aligned}
+        \text{IoU}(A, B) &= \frac{|A \cap B|}{|A \cup B|}\\
+        &= \frac{\max(0, \min(e_A, e_B) - \max(s_A, s_B))}{\max(e_A, e_B) - \min(s_A, s_B)}
+    \end{aligned}
+\end{equation}
+
+We merge spans when $\text{IoU} \ge 0.40$ and accept the consensus cluster $\mathcal{K}$ when confidence $C(\mathcal{K}) = \sum_{m \in \mathcal{M}_{\mathcal{K}}} w_m \ge 0.20$. For boundary disagreements, the ensemble keeps the widest span to retain descriptive adjectives.
+
+\subsubsection{Paradigm 2: Two-Stage Hybrid Arbitration}
+Negated statements present a chronic challenge (e.g., \textit{``severe throbbing headache, but no nausea or visual aura''}). As illustrated in Fig.~\ref{fig:two_stage_hybrid}, our two-stage hybrid pipeline couples fast token mining with contextual LLM arbitration:
+\begin{itemize}
+    \item \textit{Stage 1 (Span Mining):} The four-encoder ensemble scans the raw transcript, extracting candidate symptom spans in under 40\,ms.
+    \item \textit{Stage 2 (Contextual Arbitration):} The fine-tuned BioMistral~7B model evaluates proposed spans within full narrative context, filtering out negated symptoms and resolving conflicting boundaries into a coherent 7-dimension profile.
+\end{itemize}
+
+\begin{figure*}[!t]
+\centering
+\resizebox{0.96\textwidth}{!}{%
+\begin{tikzpicture}[
+    >=Stealth,
+    node distance=0.12cm,
+    stagehead/.style={fill=teal!70!black, text=white, font=\sffamily\bfseries\footnotesize, align=center, text width=3.98cm, minimum width=4.3cm, minimum height=0.68cm, rounded corners=3pt, inner sep=4pt},
+    midhead/.style={fill=blue!65!black, text=white, font=\sffamily\bfseries\footnotesize, align=center, text width=3.43cm, minimum width=3.75cm, minimum height=0.68cm, rounded corners=3pt, inner sep=4pt},
+    subhead/.style={font=\sffamily\scriptsize\itshape, text=black!65, align=center, text width=3.98cm},
+    midsubhead/.style={font=\sffamily\scriptsize\itshape, text=black!65, align=center, text width=3.43cm},
+    stagebox/.style={draw=black!20, fill=white, rounded corners=2pt, font=\sffamily\scriptsize, text=black!82, align=center, text width=3.98cm, minimum width=4.3cm, minimum height=0.68cm, inner sep=3pt},
+    midbox/.style={draw=black!20, fill=white, rounded corners=2pt, font=\sffamily\scriptsize, text=black!82, align=center, text width=3.43cm, minimum width=3.75cm, minimum height=0.68cm, inner sep=3pt},
+    frame/.style={draw=black!18, fill=black!2, rounded corners=5pt, inner sep=5pt},
+    arr/.style={-{Stealth[length=1.7mm]}, line width=0.75pt, draw=teal!65!black, shorten >=1pt, shorten <=1pt}
+]
+
+\node[stagehead] (s1_title) at (0, 0) {01\quad Encoder candidate mining};
+\node[subhead, below=0.08cm of s1_title] (s1_sub) {Four encoders in parallel $\cdot$ $<40$\,ms};
+\node[stagebox, below=0.13cm of s1_sub] (m1) {\texttt{BioLinkBERT} ($w=0.35$)\\BIO F1: 34.86\%};
+\node[stagebox, below=0.10cm of m1] (m2) {\texttt{PubMedBERT} ($w=0.35$)\\Recall@20: 41.56\%};
+\node[stagebox, below=0.10cm of m2] (m3) {\texttt{Bio\_ClinicalBERT} ($w=0.20$)\\Strong on ICU modalities};
+\node[stagebox, below=0.10cm of m3] (m4) {\texttt{DeBERTa-v3} ($w=0.10$)\\Holistic embedding prior};
+
+\node[midhead] (mid_title) at (5.025, 0) {Span consolidation};
+\node[midsubhead, below=0.08cm of mid_title] (mid_sub) {Deterministic IoU clustering};
+\node[midbox, below=0.13cm of mid_sub] (c1) {Form candidate-span clusters};
+\node[midbox, below=0.10cm of c1] (c2) {Overlap threshold: IoU $\ge 0.40$};
+\node[midbox, below=0.10cm of c2] (c3) {Confidence gate: $C(\mathcal{K}) \ge 0.20$};
+\node[midbox, below=0.10cm of c3] (c4) {Select widest span; pass candidate pool};
+
+\node[stagehead] (s2_title) at (10.05, 0) {02\quad Contextual arbitration};
+\node[subhead, below=0.08cm of s2_title] (s2_sub) {BioMistral~7B $\cdot$ 4-bit QLoRA (NF4)};
+\node[stagebox, below=0.13cm of s2_sub] (g1) {Resolve span-boundary conflicts};
+\node[stagebox, below=0.10cm of g1] (g2) {Remove negated symptoms};
+\node[stagebox, below=0.10cm of g2] (g3) {JSON schema validity: 100\%};
+\node[stagebox, below=0.10cm of g3] (g4) {99.73\% grounded\\0.27\% hallucination rate};
+
+\begin{scope}[on background layer]
+    \node[frame, fit=(s1_title)(s1_sub)(m4)] (f1) {};
+    \node[frame, fit=(mid_title)(mid_sub)(c4)] (fmid) {};
+    \node[frame, fit=(s2_title)(s2_sub)(g4)] (f2) {};
+\end{scope}
+
+\draw[arr] (f1.east) -- (fmid.west);
+\draw[arr] (fmid.east) -- (f2.west);
+
+\end{tikzpicture}%
+}
+\caption{Two-stage hybrid extraction architecture. Four encoders mine candidate spans in parallel; deterministic IoU clustering consolidates overlaps before BioMistral~7B resolves boundaries, filters negation, and validates the structured output.}
+\label{fig:two_stage_hybrid}
+\end{figure*}
+
+
+\subsection{Dense Vector Indexing \& Mathematical Totality Ranking}
+
+Extracted symptom entities are mapped to historical repertory rubrics to compute differential remedy rankings.
+
+\subsubsection{Knowledge Base \& Vector Graph Construction}
+Our database encodes Dr.~Kent's complete 1897 catalog in an optimized SQLite schema: 74,513 hierarchical rubrics across 37 chapters, cataloging 507,179 rubric-remedy links across 692 substances.
+
+Dense retrieval maps queries to rubrics. We project full hierarchical rubric paths (e.g., \texttt{HEAD > PAIN > forehead > cold applications amel.}) into a 384-dimensional latent embedding space using \texttt{all-MiniLM-L6-v2}~\cite{reimers2019sentence}. Embeddings are unit $L_2$-normalized ($\|\mathbf{e}\|_2 = 1.0$) and indexed in ChromaDB~\cite{chromadb2023} via a Hierarchical Navigable Small World (HNSW) graph~\cite{malkov2018efficient} ($M=16$, $efConstruction=100$, cosine distance). Query execution achieves p99 latencies below 18\,ms across all 74,513 nodes.
+
+\subsubsection{Mathematical Totality Scoring Formulation}
+Classical repertorization does not simply sum remedy appearances; it weights remedies according to rubric specificity, typographic grade, and dimensional significance~\cite{kent1897,sherr2002}.
+
+Let $\mathcal{R}_{\text{active}}$ denote the set of active rubrics selected by the clinician. For a candidate remedy $R$, we define the \textit{Totality Score} as:
+\begin{equation}
+\label{eq:totality_score}
+\begin{aligned}
+\text{TotalityScore}(R) ={}& \sum_{r \in \mathcal{R}_{\text{active}}} \text{Grade}(R, r) \cdot S(r)\\
+&\cdot \ln\left(1 + \frac{N_{\text{total}}}{N_r}\right) \cdot W(\operatorname{Dim}(r))
+\end{aligned}
+\end{equation}
+where:
+\begin{itemize}
+    \item $\text{Grade}(R, r) \in \{1.0, 2.0, 3.0\}$ represents Kent's empirical typographic grade: Grade~3 (Bold, confirmed clinical cures), Grade~2 (Italics, recurrent clinical verification), and Grade~1 (Roman, single clinical report or toxicological proving).
+    \item $S(r) = \cos(\mathbf{e}_r, \mathbf{e}_{\text{query}}) \in [-1, 1]$ measures the cosine similarity between the query entity embedding and the retrieved rubric vector.
+    \item $\ln\left(1 + \frac{N_{\text{total}}}{N_r}\right)$ represents the \textit{Inverse Rubric Frequency} (IRF), where $N_{\text{total}} = 74,513$ is the total rubric population and $N_r$ is the remedy count associated with rubric $r$. This term penalizes hyper-generic rubrics (e.g., rubrics indexing over 400 polycrest remedies) while elevating highly specific, clinically discriminative rubrics.
+    \item $W(\operatorname{Dim}(r))$ represents Kent's dimensional hierarchy multiplier:
+    \begin{equation}
+        W(\operatorname{Dim}(r)) = \begin{cases}
+            3.0, & \text{if } \operatorname{Dim}(r) = \texttt{MENT} \\
+            2.0, & \substack{\text{if } \operatorname{Dim}(r) = \texttt{MOD\_AGG}\\
+                \text{or } \operatorname{Dim}(r) = \texttt{MOD\_AMEL}} \\
+            2.0, & \text{if } \operatorname{Dim}(r) = \texttt{SEN} \\
+            1.0, & \text{if } \operatorname{Dim}(r) = \texttt{LOC}
+        \end{cases}
+    \end{equation}
+\end{itemize}
+
+\subsubsection{Doctor-in-the-Loop Diagnostic Controls}
+The scoring engine incorporates two clinical override mechanisms:
+\begin{itemize}
+    \item \textit{Mute Toggle:} Clinicians can dynamically exclude any rubric from score calculations ($r \notin \mathcal{R}_{\text{active}}$) to observe the resulting shift in remedy differential rankings.
+    \item \textit{Eliminatory Condition:} If a practitioner marks rubric $r_{\text{elim}}$ as an eliminatory constraint, candidate remedies must satisfy the strict inclusion requirement:
+    \begin{equation}
+        \mathcal{C}_{\text{ranked}} = \{R \mid \text{Grade}(R, r_{\text{elim}}) \ge 1.0\}
+    \end{equation}
+    Remedies lacking documented efficacy for that specific symptom are excluded from candidate ranking, mirroring classical repertorial practice.
+\end{itemize}

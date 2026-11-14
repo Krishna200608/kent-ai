@@ -1,0 +1,122 @@
+% ==============================================================================
+% Section VI: Discussion & Clinical Implications (Turnitout-Humanized)
+% ==============================================================================
+\section{Discussion \& Clinical Implications}
+\label{sec:discussion}
+
+Automating repertorial discovery shifts clinical decision support from static index lookups to continuous semantic inference. This paradigm shift raises foundational questions regarding epistemic fidelity, clinician autonomy, and real-world translational validity.
+
+\subsection{Epistemic Alignment \& Vocabulary Bridging}
+
+Repertorization is fundamentally a cross-linguistic alignment challenge. The vocabulary dilemma reflects a century-long divergence: patients convey somatic and mental distress through everyday metaphors, whereas archival repertories catalog illness in terse, nineteenth-century Victorian phrasing~\cite{kent1897,mcsporran2020digital}. Boolean search engines fail across this boundary because literal string matching presumes lexical overlap that clinical speech rarely provides.
+
+Continuous vector embeddings bridge this divide. By projecting 74,513 hierarchical rubrics into a shared 384-dimensional latent geometry, dense retrieval surfaces conceptual synonyms without requiring exact keyword matches. For example, a patient reporting \textit{``overwhelming dread that something terrible will happen before leaving home''} maps directly to \texttt{MIND > ANXIETY > anticipatory}, bypassing surface lexical discrepancies entirely.
+
+Our mathematical totality formulation (Equation~\ref{eq:totality_score}) enforces Kentian clinical doctrine. Weighting cosine proximity by typographic evidential grades and dimensional priority multipliers ($W(\texttt{MENT}) = 3.0$) implements the classical tenet that affective disturbances govern constitutional prescribing~\cite{hahnemann1842,sherr2002}. Concurrently, the Inverse Rubric Frequency (IRF) penalty prevents hyper-generic polycrests---which link to hundreds of common rubrics---from statistically overshadowing rare, high-specificity therapeutic agents.
+
+\subsection{Doctor-in-the-Loop Decision Support Architecture}
+
+Clinical AI often faces practitioner resistance when framed as an opaque diagnostic oracle. Kent-AI deliberately rejects autonomous prescription. The system serves as an interactive cognitive amplifier designed to sharpen physician discernment while leaving all diagnostic choices in human hands.
+
+The workstation structures clinical workflow into a four-stage stepper (Fig.~\ref{fig:clinical_workflow}):
+\begin{enumerate}
+    \item \textit{Conversational Intake:} A ten-state dialogue engine elicits symptoms sequentially, offering contextual vocabulary chips while tracking dimensional coverage in real time.
+    \item \textit{Symptom Review \& Span Verification:} Extracted entities populate a staging interface where clinicians inspect, correct, or discard proposed spans, preventing misclassified tokens from contaminating downstream vector search.
+    \item \textit{Totality Analysis Matrix:} Candidate remedies align against confirmed rubrics within a transparent provenance grid. Evidential weights appear as color-coded badges: Grade~3 in emerald, Grade~2 in cyan, and Grade~1 in slate.
+    \item \textit{Clinical Report Generation:} The repertorization summary compiles into a signed PDF document recording remedy differentials, active rubrics, and model confidence scores.
+\end{enumerate}
+
+\begin{figure*}[!t]
+\centering
+\resizebox{0.98\textwidth}{!}{%
+\begin{tikzpicture}[
+    >=Stealth,
+    node distance=0.12cm,
+    stepcol/.style={fill=teal!70!black, text=white, font=\sffamily\bfseries\footnotesize, align=center, text width=3.02cm, minimum height=0.68cm, minimum width=3.3cm, rounded corners=3pt, inner sep=4pt},
+    stepcard/.style={draw=black!22, fill=white, rounded corners=2pt, font=\sffamily\scriptsize, text=black!82, align=center, text width=3.02cm, minimum height=0.68cm, minimum width=3.3cm, inner sep=3pt},
+    stepframe/.style={draw=black!18, fill=black!2, rounded corners=4pt, inner sep=4pt},
+    arr/.style={-{Stealth[length=1.5mm]}, line width=0.7pt, draw=teal!65!black, shorten >=1pt, shorten <=1pt}
+]
+
+\node[stepcol] (h1) at (0, 0) {01\quad Intake};
+\node[stepcol] (h2) at (3.95, 0) {02\quad Span review};
+\node[stepcol] (h3) at (7.90, 0) {03\quad Totality matrix};
+\node[stepcol] (h4) at (11.85, 0) {04\quad Clinical report};
+
+\node[stepcard, below=0.15cm of h1] (s1_1) {10-state dialogue engine (FSM)};
+\node[stepcard, below=0.10cm of s1_1] (s1_2) {Contextual vocabulary suggestions};
+\node[stepcard, below=0.10cm of s1_2] (s1_3) {Real-time symptom-slot coverage};
+
+\node[stepcard, below=0.15cm of h2] (s2_1) {Seven-dimension entity validation};
+\node[stepcard, below=0.10cm of s2_1] (s2_2) {Provenance and confidence indicators};
+\node[stepcard, below=0.10cm of s2_2] (s2_3) {Interactive span correction};
+
+\node[stepcard, below=0.15cm of h3] (s3_1) {Classical repertorization grid};
+\node[stepcard, below=0.10cm of s3_1] (s3_2) {Grade 1--3 evidence indicators};
+\node[stepcard, below=0.10cm of s3_2] (s3_3) {Mute and eliminatory controls};
+
+\node[stepcard, below=0.15cm of h4] (s4_1) {Signed clinical report (PDF)};
+\node[stepcard, below=0.10cm of s4_1] (s4_2) {Remedy differential summary};
+\node[stepcard, below=0.10cm of s4_2] (s4_3) {Cryptographic audit trail};
+
+\begin{scope}[on background layer]
+    \node[stepframe, fit=(h1)(s1_3)] (bg1) {};
+    \node[stepframe, fit=(h2)(s2_3)] (bg2) {};
+    \node[stepframe, fit=(h3)(s3_3)] (bg3) {};
+    \node[stepframe, fit=(h4)(s4_3)] (bg4) {};
+\end{scope}
+
+\draw[arr] (bg1.east |- s1_2.center) -- (bg2.west |- s2_2.center);
+\draw[arr] (bg2.east |- s2_2.center) -- (bg3.west |- s3_2.center);
+\draw[arr] (bg3.east |- s3_2.center) -- (bg4.west |- s4_2.center);
+
+\node[draw=teal!35!black, fill=teal!5, rounded corners=3pt, font=\sffamily\scriptsize, text=black!82, align=center, text width=14.6cm, minimum width=15.0cm, minimum height=0.62cm, below=0.24cm of $(bg2.south)!0.5!(bg3.south)$] (comp_banner) {
+    \textbf{Prospective target:} under 10\,min per consultation, compared with 40--60\,min for traditional repertorization
+};
+
+\end{tikzpicture}%
+}
+\caption{Clinician-centered Kent-AI workflow from structured intake and entity verification to repertorization and report export. Clinicians retain control over span correction, rubric muting, and eliminatory constraints; the under-10-minute consultation duration is a prospective target.}
+\label{fig:clinical_workflow}
+\end{figure*}
+
+
+Physicians retain control through two interactive overrides:
+\begin{itemize}
+    \item \textbf{Mute Toggle:} Clinicians can silence any active rubric with a single click to assess its individual influence on candidate remedy rankings.
+    \item \textbf{Eliminatory Filtering:} Practitioners can designate essential symptoms as non-negotiable constraints. Any remedy lacking documented efficacy for an eliminatory rubric is excluded from ranking, mirroring classical repertorial analysis.
+\end{itemize}
+
+Software reliability is anchored by a test suite comprising 200 automated unit and integration tests across 23 submodules under complete mock isolation.
+
+\subsection{Prospective Clinical Validation Protocol}
+
+Retrospective evaluations establish algorithmic accuracy, but clinical translation requires prospective empirical validation alongside licensed medical practitioners~\cite{gulshan2016development}. We designed an observational clinical protocol partnering with certified homeopathic physicians (MD / BHMS credentials) across three primary endpoints:
+
+\subsubsection{Simillimum Concordance \& Differential Agreement}
+Blinded expert panels will audit the top-$k$ remedies suggested by the ranker across prospective outpatient encounters, evaluating agreement against classical Materia Medica references.
+
+\subsubsection{Semantic Rubric Mapping Fidelity}
+Expert reviewers will grade automated rubric selections, auditing whether colloquial complaints, weather sensitivities, and diurnal periodicities map to archival categories without clinical distortion.
+
+\subsubsection{Consultation Duration Compression}
+Traditional repertorization imposes heavy time penalties, requiring 40 to 60 minutes per clinical encounter. As benchmarked in Fig.~\ref{fig:clinical_workflow}, our protocol tracks consultation latencies under controlled trials, targeting a reduction to under 10 minutes ($<10$\,min) per patient to expand outpatient throughput while maintaining clinical rigor.
+
+\subsection{Error Analysis \& Domain Failure Modes}
+
+Error auditing over the 1,973 test cases revealed three distinct failure patterns:
+
+\begin{enumerate}
+    \item \textbf{Metaphorical and Figurative Ambiguity:} Idiosyncratic patient phrasing (e.g., \textit{``feeling like an abandoned building during a storm''}) degraded encoder token confidence, yielding imprecise boundaries. Generative LLMs parsed these figures more reliably, motivating our hybrid architecture.
+    \item \textbf{Multi-Clause Entity-Location Binding:} In complex compound sentences describing distinct sensations across separate anatomical loci (e.g., \textit{``throbbing in the left temple but sharp stitching in the right eye''}), encoders occasionally misattributed sensations to adjacent anatomical terms.
+    \item \textbf{Repertorial Sparsity in Under-Documented Rubrics:} Certain narrow rubrics in Kent's taxonomy index fewer than three remedies. For extremely sparse rubrics, small semantic shifts in vector space produce outsized volatility in downstream remedy scores.
+\end{enumerate}
+
+\subsection{Technical Limitations \& Safety Guardrails}
+
+Three operational boundaries constrain this investigation:
+\begin{itemize}
+    \item \textit{Synthetic Corpus Distributional Variance:} Although the 19,732 training encounters were generated with strict zero-offset repair, synthetic narratives cannot mirror every regional idiom or multilingual dialect encountered in outpatient settings.
+    \item \textit{Workstation Hardware Requirements:} Local 4-bit QLoRA BioMistral~7B inference demands 14\,GB of dedicated VRAM. While standard on workstation GPUs (such as the RTX~5000 Ada), this prevents deployment on legacy consumer laptops without network offloading.
+    \item \textit{Assistive Regulatory Boundary:} Kent-AI is engineered as an auxiliary decision support tool. It issues no definitive medical diagnoses and dispenses no prescriptions; every algorithmic recommendation requires independent validation and sign-off by a licensed physician before clinical administration.
+\end{itemize}

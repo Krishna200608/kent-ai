@@ -1,0 +1,114 @@
+% ==============================================================================
+% Section I: Introduction (Turnitout-Humanized)
+% ==============================================================================
+\section{Introduction}
+\label{sec:introduction}
+
+Classical homeopathy, codified toward the close of the eighteenth century by Samuel Hahnemann, departs from lesion-centric allopathy by treating through symptom analogy: the \textit{Law of Similars} (\textit{Similia Similibus Curentur})~\cite{hahnemann1842,hahnemann1810}. Prescription hinges on assembling an exhaustive clinical gestalt termed the \textit{symptom totality}. This multi-axial construct encompasses affective dispositions, bodily sensations, anatomical loci, environmental modalities, and chronobiological fluctuations. From this constellation, the physician isolates a single medicinal agent whose toxicological pathogenesis mirrors the patient's idiosyncratic suffering---the \textit{simillimum}~\cite{sherr2002}.
+
+Navigating this therapeutic space requires consulting massive historical indices, preeminently Dr.~James Tyler Kent's 1897 \textit{Repertory of the Homoeopathic Materia Medica}~\cite{kent1897}. Kent's taxonomy codifies two centuries of clinical toxicology into 74,513 hierarchical rubrics spanning 37 anatomical chapters, cataloging 507,179 rubric-remedy associations across 692 substances. Evidential confidence follows strict typographic gradations: Grade~3 (Bold, weight 3.0, denoting repeated clinical cures across independent patient cohorts), Grade~2 (Italics, weight 2.0, reflecting confirmed pathogenic verifications), and Grade~1 (Roman, weight 1.0, signifying well-documented provings)~\cite{kent1897,sherr2002}. Kentian doctrine assigns paramount prescriptive authority to Chapter~1 (\texttt{MIND}, 4,933 rubrics). Mental and emotional disturbances take precedence over tissue-level pathology.
+
+\subsection{The Semantic and Cognitive Bottlenecks}
+
+Bedside repertorization confronts severe operational bottlenecks:
+
+\begin{enumerate}
+    \item \textbf{Vocabulary Impedance Mismatch:} A patient may report ``a band-like headache triggered by deadlines and eased by cold towels.'' Repertories encode the same complaint in terse Victorian phrasing (e.g., \textit{Head pain, band-like; worse from mental exertion; better from cold}). Exact lexical matching misses this semantic connection.
+    \item \textbf{Manual Cross-Referencing Latency:} Bedside consultations routinely consume 40 to 60 minutes. The clinician must record patient narratives, isolate discrete symptom fragments, trace corresponding rubrics across disparate anatomical chapters, and calculate remedy sums by hand on ledger sheets.
+    \item \textbf{Cognitive Saturation and Polycrest Retreat:} Traversing 74,513 candidate rubrics overtaxes clinician working memory. Faced with cognitive saturation, practitioners routinely retreat to roughly 30 familiar broad-spectrum substances known as \textit{polycrests} (such as \textit{Sulphur}, \textit{Lycopodium}, or \textit{Arsenicum album})~\cite{sherr2002}. This heuristic crutch sidelines rarer, highly specific simillimum candidates that match the patient's presentation.
+    \item \textbf{Brittleness of Existing Software Systems:} Current commercial platforms (such as RadarOpus and MacRepertory) operate as electronic card catalogs reliant on literal keyword matching~\cite{mcsporran2020digital}. When a practitioner enters a colloquial description, queries return empty sets unless the clinician knows the exact nineteenth-century repertory phrase beforehand. They provide no automated sequence tagging, no dynamic conversational steering, and no continuous semantic similarity.
+\end{enumerate}
+
+\subsection{The Kent-AI Paradigm}
+
+Recent breakthroughs in biomedical natural language processing (NLP) and dense vector search provide an opportunity to resolve these operational bottlenecks. Domain-specific transformer encoders (e.g., BioLinkBERT~\cite{yasunaga2022linkbert}, PubMedBERT~\cite{gu2021domain}, and Bio\_ClinicalBERT~\cite{alsentzer2019publicly}) capture deep biomedical semantics. Bi-encoder architectures~\cite{reimers2019sentence} paired with Hierarchical Navigable Small World (HNSW) graph indexing~\cite{malkov2018efficient} support sub-millisecond nearest-neighbor search across high-dimensional latent vector spaces. In parallel, parameter-efficient fine-tuning (PEFT) via Quantized Low-Rank Adaptation (QLoRA)~\cite{dettmers2023qlora} enables generative foundation models (such as BioMistral~7B~\cite{labrak2024biomistral}) to extract structured diagnostic entities with rigid schema conformance on workstation GPUs.
+
+Kent-AI unifies these methodologies into an interactive clinical decision support system (CDSS) for homeopathic practice. As illustrated in Fig.~\ref{fig:kent_pipeline_overview}, the architecture addresses the repertorization pipeline end-to-end:
+\begin{itemize}
+    \item \textit{Dynamic Conversational Intake:} A ten-state dialogue engine structures patient intake, eliciting symptoms across physical locations, somatic modalities, and mental spheres.
+    \item \textit{Seven-Dimension Tagging:} Patient narratives are parsed into 15 BIO token classes covering the seven foundational Kentian symptom dimensions: Mental/Emotional (\texttt{MENT}), Anatomical Location (\texttt{LOC}), Sensation/Pain Quality (\texttt{SEN}), Aggravating Modality (\texttt{MOD\_AGG}), Ameliorating Modality (\texttt{MOD\_AMEL}), Concomitant Phenomenon (\texttt{CONC}), and Temporal Periodicity (\texttt{TEMP}).
+    \item \textit{Dense Latent Vector Indexing:} Extracted clinical spans project into a 384-dimensional latent embedding space, mapped against all 74,513 Kentian rubrics via an HNSW cosine index with query latencies below 18\,ms.
+    \item \textit{Mathematically Grounded Totality Ranking:} A deterministic scoring engine ranks candidate remedies by combining Kentian typographic weights, cosine semantic proximity, Inverse Rubric Frequency (IRF), and dimensional hierarchy multipliers.
+    \item \textit{Doctor-in-the-Loop Clinical Workstation:} A four-stage interactive interface enables physicians to review extracted entities, toggle diagnostic Mute or Eliminatory constraints, adjust rubric weightings, and generate authenticated clinical documentation.
+\end{itemize}
+
+\begin{figure*}[!t]
+\centering
+\resizebox{0.98\textwidth}{!}{%
+\begin{tikzpicture}[
+    >=Stealth,
+    node distance=0.14cm,
+    stagecol/.style={fill=teal!70!black, text=white, font=\sffamily\bfseries\footnotesize, align=center, text width=2.92cm, minimum width=3.2cm, minimum height=0.68cm, rounded corners=3pt, inner sep=4pt},
+    subcard/.style={draw=black!22, fill=white, rounded corners=2pt, font=\sffamily\scriptsize, text=black!82, align=center, text width=2.92cm, minimum width=3.2cm, minimum height=0.68cm, inner sep=3pt},
+    stagebg/.style={draw=black!18, fill=black!2, rounded corners=4pt, inner sep=4pt},
+    arr/.style={-{Stealth[length=1.5mm]}, line width=0.7pt, draw=teal!65!black, shorten >=1pt, shorten <=1pt}
+]
+
+\node[stagecol] (h1) at (0, 0) {01\quad Intake};
+\node[stagecol] (h2) at (3.77, 0) {02\quad Entity tagging};
+\node[stagecol] (h3) at (7.54, 0) {03\quad Span alignment};
+\node[stagecol] (h4) at (11.31, 0) {04\quad Rubric search};
+\node[stagecol] (h5) at (15.08, 0) {05\quad Remedy ranking};
+
+\node[subcard, below=0.16cm of h1] (s1_1) {Unstructured patient narrative};
+\node[subcard, below=0.11cm of s1_1] (s1_2) {10-state dialogue engine (FSM)};
+\node[subcard, below=0.11cm of s1_2] (s1_3) {Clickable suggestion palettes};
+\node[subcard, below=0.11cm of s1_3] (s1_4) {Patient and clinician modes};
+
+\node[subcard, below=0.16cm of h2] (s2_1) {Four biomedical encoders (768-d)};
+\node[subcard, below=0.11cm of s2_1] (s2_2) {15 BIO labels across 7 dimensions};
+\node[subcard, below=0.11cm of s2_2] (s2_3) {BioMistral~7B, 4-bit QLoRA};
+\node[subcard, below=0.11cm of s2_3] (s2_4) {Contextual boundary and negation checks};
+
+\node[subcard, below=0.16cm of h3] (s3_1) {Deterministic offset repair};
+\node[subcard, below=0.11cm of s3_1] (s3_2) {0\% character-offset drift};
+\node[subcard, below=0.11cm of s3_2] (s3_3) {Spatial IoU span clustering};
+\node[subcard, below=0.11cm of s3_3] (s3_4) {Confidence-weighted voting};
+
+\node[subcard, below=0.16cm of h4] (s4_1) {\texttt{all-MiniLM-L6-v2} (384-d)};
+\node[subcard, below=0.11cm of s4_1] (s4_2) {ChromaDB HNSW cosine index};
+\node[subcard, below=0.11cm of s4_2] (s4_3) {74,513 Kent repertory rubrics};
+\node[subcard, below=0.11cm of s4_3] (s4_4) {p99 retrieval latency $<18$\,ms};
+
+\node[subcard, below=0.16cm of h5] (s5_1) {Weighted totality ranking};
+\node[subcard, below=0.11cm of s5_1] (s5_2) {Grade, similarity, IRF\\and dimension weight};
+\node[subcard, below=0.11cm of s5_2] (s5_3) {Clinician-in-the-loop review};
+\node[subcard, below=0.11cm of s5_3] (s5_4) {Mute and eliminatory controls};
+
+\begin{scope}[on background layer]
+    \node[stagebg, fit=(h1)(s1_4)] (bg1) {};
+    \node[stagebg, fit=(h2)(s2_4)] (bg2) {};
+    \node[stagebg, fit=(h3)(s3_4)] (bg3) {};
+    \node[stagebg, fit=(h4)(s4_4)] (bg4) {};
+    \node[stagebg, fit=(h5)(s5_4)] (bg5) {};
+\end{scope}
+
+\draw[arr] (bg1.east |- s1_2.center) -- (bg2.west |- s2_2.center);
+\draw[arr] (bg2.east |- s2_2.center) -- (bg3.west |- s3_2.center);
+\draw[arr] (bg3.east |- s3_2.center) -- (bg4.west |- s4_2.center);
+\draw[arr] (bg4.east |- s4_2.center) -- (bg5.west |- s5_2.center);
+
+\node[draw=teal!35!black, fill=teal!5, rounded corners=3pt, font=\sffamily\scriptsize, text=black!82, align=center, text width=17.7cm, minimum width=18.2cm, minimum height=0.62cm, below=0.24cm of $(bg2.south)!0.5!(bg4.south)$] (footer) {
+    \textbf{19,732 encounters} \quad $\vert$ \quad \textbf{99,854 entity spans} \quad $\vert$ \quad \textbf{0\% offset drift} \quad $\vert$ \quad \textbf{p99 retrieval $<18$\,ms}
+};
+
+\end{tikzpicture}%
+}
+\caption{End-to-end Kent-AI architecture, from conversational intake and biomedical entity extraction through span alignment and semantic rubric retrieval to clinician-reviewed remedy ranking. The summary reports corpus size, annotation coverage, alignment drift, and retrieval latency.}
+\label{fig:kent_pipeline_overview}
+\end{figure*}
+
+
+\subsection{Research Contributions}
+
+This work provides four core contributions to clinical informatics and biomedical natural language processing:
+\begin{enumerate}
+    \item \textbf{First Large-Scale Homeopathic Clinical NER Corpus:} We construct a benchmark of 19,732 synthetic patient encounters annotated with 99,854 clinical entities across the seven Kentian symptom dimensions. We introduce a deterministic subword alignment repair algorithm that eliminates coordinate drift ($0$\% drift across all splits) between generative LLM outputs and underlying token spans.
+    \item \textbf{Systematic Multi-Encoder and Generative Benchmark:} We conduct an empirical study evaluating four biomedical transformer encoders alongside generative foundation models. We show that while BioLinkBERT leads discriminative models in token-level BIO F1 (34.86\%) and PubMedBERT leads in top-20 rubric retrieval recall (41.56\%), an adapted 4-bit QLoRA BioMistral~7B model yields a micro F1 of 47.59\% (+12.73\% absolute improvement) with 100\% JSON schema validity and 99.73\% clinical hallucination resistance.
+    \item \textbf{Real-Time Semantic Repertorization Engine:} We build an HNSW vector retrieval index over the complete 74,513-rubric Kentian database, achieving query latencies below 18\,ms. We pair this index with a multi-factor totality formulation that balances semantic proximity, typographic grade, rubric specificity via IRF, and clinical dimensional priority.
+    \item \textbf{Validated Doctor-in-the-Loop Workstation:} We deploy a clinical decision support interface backed by 200 automated unit and integration tests across 23 modules. We present a prospective validation protocol showing that the platform cuts clinical intake and repertorization time from 40--60 minutes down to under 10 minutes per patient while keeping the physician in direct diagnostic control.
+\end{enumerate}
+
+\subsection{Paper Structure}
+
+The remainder of this paper is structured as follows. Section~\ref{sec:related_work} surveys prior research in clinical named entity recognition, biomedical language modeling, dense vector search, and computational repertorization. Section~\ref{sec:dataset} details the seven-dimension taxonomy, synthetic corpus generation, and our deterministic subword alignment algorithm. Section~\ref{sec:methodology} describes the system architecture, sequence taggers, generative adaptation, dense vector indexing, and mathematical totality ranking. Section~\ref{sec:results} presents the empirical benchmarks, ablations, and latency-recall trade-offs. Section~\ref{sec:discussion} discusses clinical implications, doctor-in-the-loop decision support, prospective clinician validation, failure modes, and technical limitations. Finally, Section~\ref{sec:conclusion} concludes the paper and presents the future roadmap.

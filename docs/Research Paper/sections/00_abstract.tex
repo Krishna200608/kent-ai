@@ -1,0 +1,13 @@
+% ==============================================================================
+% Abstract & Index Terms (Turnitout-Humanized)
+% ==============================================================================
+\begin{abstract}
+Prescribing in classical homeopathy hinges on matching colloquial patient suffering to historical diagnostic compendia to isolate a single curative substance: the \textit{simillimum}. Bedside execution remains notoriously slow. Navigating the 74,513 nineteenth-century rubrics in Dr.~James Tyler Kent's 1897 \textit{Repertory} strains working memory, inflating consultation times beyond 40 minutes and driving clinicians toward broad-spectrum polycrest heuristics. Existing digital tools rely on literal string matching, collapsing entirely when patient descriptions turn metaphorical. To bridge this vocabulary divide and eliminate cognitive bottlenecks, we present Kent-AI, an interactive clinical decision support system uniting structured conversational intake, biomedical sequence taggers, dense approximate nearest-neighbor vector retrieval, and mathematically grounded totality scoring.
+
+We introduce the first large-scale homeopathic clinical extraction benchmark: 19,732 encounters annotated with 99,854 entity spans across seven Kentian symptom dimensions. A deterministic subword alignment repair algorithm resolves token boundary discrepancies, securing exactly zero character-offset drift ($0$\% drift across all splits). Benchmarking four fine-tuned transformer encoders reveals complementary operational strengths: BioLinkBERT leads token sequence classification (34.86\% BIO F1), whereas PubMedBERT achieves superior downstream rubric retrieval (41.56\% Recall@20) and top-5 remedy accuracy (35.02\%). Adapted with 4-bit Quantized Low-Rank Adaptation (QLoRA), BioMistral~7B attains a Micro F1 of 47.59\% (+12.73\% absolute lift over encoders) alongside 100\% JSON schema compliance and a 0.27\% hallucination rate. For real-time intake, a four-encoder voting ensemble achieves 49.91\% entity recall in 54.6\,ms, while a ChromaDB Hierarchical Navigable Small World (HNSW) index over all 74,513 rubrics delivers semantic matches in under 18\,ms. Packaged within a doctor-in-the-loop workstation with diagnostic Mute and Eliminatory controls, the system provides a prospective translational protocol to compress consultation and repertorization from 40--60 minutes down to under 10 minutes while preserving physician agency.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Clinical Decision Support Systems, Biomedical Natural Language Processing, Named Entity Recognition, Dense Vector Retrieval, Approximate Nearest Neighbor Search, Homeopathic Repertorization, Large Language Models.
+\end{IEEEkeywords}
+\vfill

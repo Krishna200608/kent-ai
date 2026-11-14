@@ -1,0 +1,98 @@
+\documentclass[conference]{IEEEtran}
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{url}
+\usepackage{microtype}
+\setlength{\emergencystretch}{1em}
+
+% TikZ and vector graphics packages
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, fit, backgrounds}
+
+
+% Graphicspath declaration
+\graphicspath{{figures/}}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+% 2x2 Author grid line-break helper for IEEEtran conference mode
+\makeatletter
+\newcommand{\linebreakand}{%
+  \end{@IEEEauthorhalign}
+  \mbox{}\vskip 1.5ex
+  \mbox{}\hfill\begin{@IEEEauthorhalign}
+}
+\makeatother
+
+\begin{document}
+
+\title{Kent-AI: A Neuro-Symbolic Architecture with Multi-Encoder Transformers and Dense Latent Retrieval for Classical Homeopathic Repertorization}
+
+\author{
+    \IEEEauthorblockN{Dr. Nikhilanand Arya}
+    \IEEEauthorblockA{\textit{Research Supervisor} \\
+    \textit{Department of Information Technology} \\
+    \textit{Indian Institute of Information Technology Allahabad} \\
+    Allahabad, India \\
+    narya@iiita.ac.in}
+    \and
+    \IEEEauthorblockN{Krishna Sikheriya}
+    \IEEEauthorblockA{\textit{Department of Information Technology} \\
+    \textit{Indian Institute of Information Technology Allahabad} \\
+    Allahabad, India \\
+    iit2023139@iiita.ac.in}
+    \linebreakand
+    \IEEEauthorblockN{Naitik Jain}
+    \IEEEauthorblockA{\textit{Department of Information Technology} \\
+    \textit{Indian Institute of Information Technology Allahabad} \\
+    Allahabad, India \\
+    iib2023036@iiita.ac.in}
+    \and
+    \IEEEauthorblockN{Lokesh Bawariya}
+    \IEEEauthorblockA{\textit{Department of Information Technology} \\
+    \textit{Indian Institute of Information Technology Allahabad} \\
+    Allahabad, India \\
+    iit2023138@iiita.ac.in}
+}
+
+\maketitle
+
+% Include Abstract & Index Terms
+\input{sections/00_abstract.tex}
+
+% Section I: Introduction
+\input{sections/01_introduction.tex}
+
+% Section II: Related Work
+\input{sections/02_related_work.tex}
+
+% Section III: Dataset Construction & Annotation Strategy
+\input{sections/03_dataset.tex}
+
+% Section IV: Methodology & System Architecture
+\input{sections/04_methodology.tex}
+
+% Section V: Empirical Benchmark & Results
+\input{sections/05_results.tex}
+
+% Section VI: Discussion & Clinical Implications
+\input{sections/06_discussion.tex}
+
+% Section VII: Conclusion & Future Roadmap
+\input{sections/07_conclusion.tex}
+
+% References
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}
