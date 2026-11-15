@@ -4,11 +4,11 @@
 \section{Discussion \& Clinical Implications}
 \label{sec:discussion}
 
-Automating repertorial discovery shifts clinical decision support from static index lookups to continuous semantic inference. This paradigm shift raises foundational questions regarding epistemic fidelity, clinician autonomy, and real-world translational validity.
+Automating repertorial discovery shifts clinical decision support from static index lookups to continuous semantic inference. This transition raises foundational questions regarding epistemic fidelity, clinician autonomy, and real-world translational validity.
 
 \subsection{Epistemic Alignment \& Vocabulary Bridging}
 
-Repertorization is fundamentally a cross-linguistic alignment challenge. The vocabulary dilemma reflects a century-long divergence: patients convey somatic and mental distress through everyday metaphors, whereas archival repertories catalog illness in terse, nineteenth-century Victorian phrasing~\cite{kent1897,mcsporran2020digital}. Boolean search engines fail across this boundary because literal string matching presumes lexical overlap that clinical speech rarely provides.
+Repertorization is fundamentally a cross-linguistic alignment challenge. The vocabulary dilemma reflects a century-long divergence: patients convey somatic and mental distress through everyday metaphors, whereas archival repertories catalog illness in terse, nineteenth-century Victorian phrasing~\cite{kent1897,radaropus2024}. Boolean search engines fail across this boundary because literal string matching presumes lexical overlap that clinical speech rarely provides.
 
 Continuous vector embeddings bridge this divide. By projecting 74,513 hierarchical rubrics into a shared 384-dimensional latent geometry, dense retrieval surfaces conceptual synonyms without requiring exact keyword matches. For example, a patient reporting \textit{``overwhelming dread that something terrible will happen before leaving home''} maps directly to \texttt{MIND > ANXIETY > anticipatory}, bypassing surface lexical discrepancies entirely.
 
@@ -32,10 +32,10 @@ The workstation structures clinical workflow into a four-stage stepper (Fig.~\re
 \begin{tikzpicture}[
     >=Stealth,
     node distance=0.12cm,
-    stepcol/.style={fill=teal!70!black, text=white, font=\sffamily\bfseries\footnotesize, align=center, text width=3.02cm, minimum height=0.68cm, minimum width=3.3cm, rounded corners=3pt, inner sep=4pt},
-    stepcard/.style={draw=black!22, fill=white, rounded corners=2pt, font=\sffamily\scriptsize, text=black!82, align=center, text width=3.02cm, minimum height=0.68cm, minimum width=3.3cm, inner sep=3pt},
-    stepframe/.style={draw=black!18, fill=black!2, rounded corners=4pt, inner sep=4pt},
-    arr/.style={-{Stealth[length=1.5mm]}, line width=0.7pt, draw=teal!65!black, shorten >=1pt, shorten <=1pt}
+    stepcol/.style={fill=KentTeal, text=white, font=\sffamily\bfseries\footnotesize, align=center, text width=3.02cm, minimum height=0.68cm, minimum width=3.3cm, rounded corners=3pt, inner sep=4pt},
+    stepcard/.style={draw=KentLine, fill=white, rounded corners=2pt, font=\sffamily\scriptsize, text=KentInk, align=center, text width=3.02cm, minimum height=0.68cm, minimum width=3.3cm, inner sep=3pt},
+    stepframe/.style={draw=KentLine, fill=KentPanel, rounded corners=4pt, inner sep=4pt},
+    arr/.style={-{Stealth[length=1.5mm]}, line width=0.7pt, draw=KentTeal, shorten >=1pt, shorten <=1pt}
 ]
 
 \node[stepcol] (h1) at (0, 0) {01\quad Intake};
@@ -70,7 +70,7 @@ The workstation structures clinical workflow into a four-stage stepper (Fig.~\re
 \draw[arr] (bg2.east |- s2_2.center) -- (bg3.west |- s3_2.center);
 \draw[arr] (bg3.east |- s3_2.center) -- (bg4.west |- s4_2.center);
 
-\node[draw=teal!35!black, fill=teal!5, rounded corners=3pt, font=\sffamily\scriptsize, text=black!82, align=center, text width=14.6cm, minimum width=15.0cm, minimum height=0.62cm, below=0.24cm of $(bg2.south)!0.5!(bg3.south)$] (comp_banner) {
+\node[draw=KentTeal, fill=KentTealTint, rounded corners=3pt, font=\sffamily\scriptsize, text=KentInk, align=center, text width=14.6cm, minimum width=15.0cm, minimum height=0.62cm, below=0.24cm of $(bg2.south)!0.5!(bg3.south)$] (comp_banner) {
     \textbf{Prospective target:} under 10\,min per consultation, compared with 40--60\,min for traditional repertorization
 };
 

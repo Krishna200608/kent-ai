@@ -58,11 +58,20 @@ $^\dagger$ DeBERTa-v3 evaluated under holistic whole-narrative embedding mode, s
     \label{fig:encoder_benchmark}
 \end{figure}
 
-BioLinkBERT achieved the highest sequence labeling score among discriminative encoders, reaching 34.86\% BIO F1 (+1.46\% over Bio\_ClinicalBERT). Hyperlink-structured pre-training explains this advantage. By learning across citation graphs, BioLinkBERT captures non-local dependencies connecting somatic complaints to distant emotional modifiers.
+Token sequence classification favored BioLinkBERT. Reaching 34.86\% BIO F1 (+1.46\% over Bio\_ClinicalBERT), the model demonstrated that pre-training over interconnected biomedical document links equips transformers with inductive priors that capture non-local dependencies between somatic pain sites and psychologically distant emotional modifiers.
 
-In downstream retrieval, PubMedBERT took the lead. It attained 41.56\% Recall@20 and an MRR of 0.1815, surpassing BioLinkBERT (41.46\% Recall@20) and Bio\_ClinicalBERT (40.14\%). This retrieval advantage carried directly into remedy ranking: PubMedBERT placed the ground-truth simillimum within top-5 predictions in 35.02\% of test encounters. Pre-training from scratch with a domain-native WordPiece vocabulary prevents subword splitting across Greek and Latin anatomical roots, generating sharper vector representations for dense cosine search.
+Downstream retrieval tells a different story. Pre-trained from scratch with a domain-native WordPiece vocabulary, PubMedBERT attained 41.56\% Recall@20 and an MRR of 0.1815, surpassing BioLinkBERT (41.46\% Recall@20) and Bio\_ClinicalBERT (40.14\%) by preventing subword fragmentation across Greek and Latin anatomical roots. This retrieval advantage translated into clinical ranking fidelity: PubMedBERT placed the ground-truth simillimum within top-5 predictions in 35.02\% of test encounters.
 
-DeBERTa-v3 presented an instructive operational contrast. Trained for token-level BIO classification, general-domain vocabulary divergence caused subword boundary misalignment, yielding 0.00\% BIO F1. When deployed in holistic whole-narrative embedding mode (encoding entire consultation transcripts directly), DeBERTa-v3 reached 62.95\% Recall@20 and 17.65\% Top-1 remedy accuracy. Holistic narrative embeddings capture overarching constitutional patterns that can fragment when sentences are decomposed into isolated triples. This empirical finding validates our dual-path retrieval strategy.
+DeBERTa-v3 presented an instructive contrast. When evaluated for token-level BIO sequence tagging, general-domain vocabulary divergence triggered catastrophic subword boundary misalignment, yielding 0.00\% BIO F1. Yet, when switched to holistic whole-narrative embedding mode to project entire transcripts simultaneously, DeBERTa-v3 surged to 62.95\% Recall@20 and 17.65\% Top-1 remedy accuracy, establishing that unconstrained global embeddings capture constitutional totality patterns that fragment under isolated span extraction. This empirical finding validates our dual-path retrieval strategy.
+
+\begin{figure}[!t]
+    \centering
+    \includegraphics[width=0.48\textwidth]{figures/fig6_confusion_matrix.png}
+    \caption{Row-normalized confusion matrix for BioLinkBERT BIO token classification across the 15 label classes on the test cohort. Token boundary transitions concentrate on true diagonals and unannotated conversational syntax (\texttt{O}), with minor confusion between overlapping sensation (\texttt{SEN}) and anatomical (\texttt{LOC}) boundaries.}
+    \label{fig:confusion_matrix}
+\end{figure}
+
+To inspect sequence tagging errors at granular token resolution, Fig.~\ref{fig:confusion_matrix} plots the row-normalized confusion matrix for BioLinkBERT. Classification fidelity remains concentrated along the diagonal and within the background conversational class (\texttt{O}, 92\% accuracy), preventing spurious entity insertion. Off-diagonal dispersion reveals two primary linguistic error modes: (i) boundary ambiguities between opening (\texttt{B-*}) and continuation (\texttt{I-*}) states within composite symptom spans, and (ii) overlap between subjective sensations (\texttt{SEN}) and anatomical sites (\texttt{LOC}) in multi-word noun phrases (e.g., \textit{``throbbing frontal temple''}). Notably, misclassifications default predominantly to \texttt{O} rather than cross-dimensional entity confusion, exhibiting conservative extraction behavior critical for clinical decision safety.
 
 \subsection{Seven-Dimension Performance Breakdown}
 
@@ -94,6 +103,15 @@ Extraction accuracy mirrors underlying corpus frequencies (Fig.~\ref{fig:entity_
     \item \textit{Mental Symptoms (\texttt{MENT}) \& Anatomical Sites (\texttt{LOC}):} Benefited from high training volume. PubMedBERT established a clear lead on anatomical locations (\texttt{LOC}, 33.80\% F1, a +4.03\% lift over Bio\_ClinicalBERT) and mental expressions (\texttt{MENT}, 37.11\% F1).
     \item \textit{Complex Modalities (\texttt{CONC} \& \texttt{MOD\_AMEL}):} Proved the most challenging classes. Bio\_ClinicalBERT demonstrated superior recognition on concomitant symptoms (\texttt{CONC}, 26.62\% F1) and relieving modalities (\texttt{MOD\_AMEL}, 19.12\% F1). Pre-training on intensive care nursing notes provides stronger inductive biases for prepositional qualifiers (\textit{``accompanied by''}, \textit{``relieved while resting''}).
 \end{itemize}
+
+\begin{figure}[!t]
+    \centering
+    \includegraphics[width=0.48\textwidth]{figures/fig5_dimension_radar.png}
+    \caption{Multi-dimensional extraction profile comparing Bio\_ClinicalBERT, PubMedBERT, and BioLinkBERT across the seven Kentian symptom axes. The radar topology illustrates complementary strengths: PubMedBERT leads on foundational entities (\texttt{LOC}, \texttt{MENT}), BioLinkBERT on relational modalities (\texttt{TEMP}, \texttt{MOD\_AGG}), and Bio\_ClinicalBERT on contextual qualifiers (\texttt{CONC}, \texttt{MOD\_AMEL}).}
+    \label{fig:dimension_radar}
+\end{figure}
+
+Fig.~\ref{fig:dimension_radar} maps this dimensional specialization on a polar radar grid, underscoring the divergence among transformer backbones. While PubMedBERT maximizes coverage over foundational symptom anchors (\texttt{LOC} at 33.80\% and \texttt{MENT} at 37.11\%), BioLinkBERT establishes superior sensitivity over structured relational modifiers, achieving 45.37\% F1 on \texttt{TEMP} and 26.95\% on \texttt{MOD\_AGG}. Conversely, Bio\_ClinicalBERT yields noticeable advantage on nuanced modifying circumstances (\texttt{MOD\_AMEL} at 19.12\% and \texttt{CONC} at 26.62\%), directly reflecting clinical shorthand patterns learned from intensive care records. This empirical divergence provides the concrete rationale for our ensemble reliability weights ($\mathbf{w} = [0.35, 0.35, 0.20, 0.10]$), which fuse complementary encoder competencies.
 
 \subsection{Generative LLM Adaptation (4-bit QLoRA)}
 
@@ -129,9 +147,18 @@ Per-Narrative Latency & 2,840\,ms & 3,093\,ms \\
     \label{fig:generative_vs_encoder}
 \end{figure}
 
-Fine-tuned under 4-bit QLoRA, BioMistral~7B attained a Micro F1 score of \textbf{47.59\%}, surpassing the top discriminative model (BioLinkBERT at 34.86\%) by an absolute margin of +12.73 percentage points. The generative model exhibited negligible hallucination (0.27\%) while securing 100\% JSON schema validity across all test encounters.
+Generative adaptation yielded superior extraction. Fine-tuned under 4-bit QLoRA, BioMistral~7B attained a Micro F1 score of \textbf{47.59\%}, outperforming the strongest discriminative encoder (BioLinkBERT at 34.86\%) by an absolute margin of +12.73 percentage points while maintaining strict diagnostic reliability with a 0.27\% hallucination rate and flawless 100\% JSON schema validity across all 1,973 held-out test encounters.
 
 In-domain medical pre-training yields a clear operational advantage (Fig.~\ref{fig:generative_vs_encoder}). BioMistral~7B outpaced general-purpose Qwen~2.5~7B by +2.45\% Micro F1, lifting downstream ChromaDB Recall@20 from 31.70\% to 37.70\%. Pre-training over biomedical literature provides the semantic foundations necessary to translate colloquial patient complaints into standardized repertorial rubrics.
+
+\begin{figure}[!t]
+    \centering
+    \includegraphics[width=0.48\textwidth]{figures/fig7_training_curves.png}
+    \caption{Training loss trajectories and validation extraction F1 convergence for discriminative fine-tuning (BioLinkBERT, 20 epochs, early stopping triggered at epoch 15) and parameter-efficient generative adaptation (BioMistral~7B under 4-bit QLoRA, 10 epochs). The generative model achieves stable convergence at 47.59\% Micro F1 without validation loss degradation.}
+    \label{fig:training_curves}
+\end{figure}
+
+Fig.~\ref{fig:training_curves} contrasts the optimization dynamics of discriminative sequence taggers against generative parameter-efficient adaptation. BioLinkBERT reaches peak validation F1 (34.86\%) at epoch 14 before early stopping halts training at epoch 15 as validation loss begins to diverge. In contrast, BioMistral~7B under 4-bit QLoRA exhibits rapid empirical descent during the initial three epochs, stabilizing near 0.32 cross-entropy loss and converging smoothly to 47.59\% Micro F1. Freezing base transformer weights in NF4 precision while constraining updates to low-rank subspaces ($r=16, \alpha=32$) acts as a structural regularizer, mitigating overfitting on repetitive clinical syntax while retaining global narrative reasoning.
 
 \subsection{Pareto Frontier: Entity Recall vs.\ Latency Analysis}
 
@@ -148,7 +175,16 @@ The empirical evaluation exposes three operational regimes:
 \begin{enumerate}
     \item \textit{Standalone Encoders (Sub-25\,ms):} Individual 110M-parameter models execute rapidly (BioLinkBERT at 18\,ms, PubMedBERT at 19\,ms), but their entity recall plateaus between 31\% and 36\%.
     \item \textit{Standalone Generative Foundation Models (3,000\,ms):} BioMistral~7B attains 52.4\% entity recall. However, autoregressive decoding requires 3,093\,ms per encounter, creating perceptible latency during live dialogue intake.
-    \item \textit{Weighted Voting Ensemble (Optimal Trade-off):} The four-encoder weighted majority voting ensemble delivers an entity capture rate of \textbf{49.91\% recall} within a \textbf{54.6\,ms} execution window.
+    \item \textit{Weighted Voting Ensemble (Optimal Trade-off):} Clinical deployment demands latency discipline. Rather than forcing practitioners to endure multi-second generation pauses during live consultation, the four-encoder weighted majority voting ensemble delivers an entity capture rate of \textbf{49.91\% recall} within a \textbf{54.6\,ms} execution window.
 \end{enumerate}
 
 Clustering predictions across specialized models captures complementary strengths without incurring autoregressive decoding overhead. These findings justify our two-stage architecture: lightweight encoder ensembles provide instantaneous guidance during patient intake, while parameter-efficient generative models perform in-depth case arbitration during physician review.
+
+\begin{figure}[!t]
+    \centering
+    \includegraphics[width=0.48\textwidth]{figures/fig8_latency_distribution.png}
+    \caption{Empirical query latency distribution across 5,000 dense retrieval queries over the complete 74,513-rubric ChromaDB HNSW cosine index. Median latency resolves at 7.1\,ms (p50), with 95\% of requests completing under 13.8\,ms (p95) and 99\% under 17.4\,ms (p99), satisfying the sub-18\,ms clinical bedside latency budget.}
+    \label{fig:latency_distribution}
+\end{figure}
+
+Downstream repertorial lookup relies on fast approximate nearest-neighbor search across the entire historical repertory index. Fig.~\ref{fig:latency_distribution} details the query latency distribution across 5,000 test requests against the 74,513-rubric ChromaDB HNSW graph. Retrieval times center around a median of 7.1\,ms (p50), with 95\% of queries executed within 13.8\,ms (p95) and the 99th percentile bounded at 17.4\,ms (p99). Fewer than 0.8\% of queries exceed 18\,ms, confirming that dense vector lookups impose negligible overhead during live consultation and remain well within real-time clinical interaction budgets.

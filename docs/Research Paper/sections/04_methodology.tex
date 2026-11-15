@@ -29,6 +29,58 @@ Dual operational personas govern system phrasing:
 
 Confirmed transcripts pass directly to the sequence tagging engine.
 
+\begin{figure*}[!t]
+\centering
+\resizebox{0.92\textwidth}{!}{%
+\begin{tikzpicture}[
+    >=Stealth,
+    state/.style={draw=KentTeal, fill=KentTealTint, rounded corners=3pt, font=\sffamily\footnotesize\bfseries, align=center, text=KentInk, text width=1.75cm, minimum height=0.7cm, inner sep=3pt},
+    startstate/.style={state, fill=KentTeal, text=white},
+    endstate/.style={state, fill=KentBlue, text=white},
+    straight/.style={-{Stealth[length=1.5mm]}, line width=0.65pt, draw=KentMuted}
+]
+
+\node[startstate] (s0) at (0, 0) {GREETING};
+\node[state] (s1) at (2.7, 0) {CHIEF\\COMPLAINT};
+\node[state] (s2) at (5.4, 0) {LOC};
+\node[state] (s3) at (8.1, 0) {SEN};
+\node[state] (s4) at (10.8, 0) {MOD\_AGG};
+\node[state] (s5) at (10.8, -1.8) {MOD\_AMEL};
+\node[state] (s6) at (8.1, -1.8) {CONC};
+\node[state] (s7) at (5.4, -1.8) {TEMP};
+\node[state] (s8) at (2.7, -1.8) {MENT};
+\node[endstate] (s9) at (0, -1.8) {CONFIRM};
+
+\draw[straight] (s0.east) -- (s1.west);
+\draw[straight] (s1.east) -- (s2.west);
+\draw[straight] (s2.east) -- (s3.west);
+\draw[straight] (s3.east) -- (s4.west);
+\draw[straight] (s4.south) -- (s5.north);
+\draw[straight] (s5.west) -- (s6.east);
+\draw[straight] (s6.west) -- (s7.east);
+\draw[straight] (s7.west) -- (s8.east);
+\draw[straight] (s8.west) -- (s9.east);
+
+% Skip arrows (dashed)
+\draw[-{Stealth[length=1.3mm]}, line width=0.5pt, draw=KentTeal, dashed] (s2.north) to[bend left=28] node[above, font=\sffamily\scriptsize, text=KentTeal] {skip} (s4.north);
+\draw[-{Stealth[length=1.3mm]}, line width=0.5pt, draw=KentTeal, dashed] (s6.north) to[bend right=23] node[above, font=\sffamily\scriptsize, text=KentTeal] {skip} (s8.north);
+
+% Back arrow from CONFIRM
+\draw[-{Stealth[length=1.3mm]}, line width=0.5pt, draw=KentRed, dashed] (s9.south) to[bend right=22] node[below, font=\sffamily\scriptsize, text=KentRed] {revise} (s8.south);
+
+\end{tikzpicture}%
+}
+\caption{Ten-state finite-state machine for structured clinical intake. Solid arrows denote the canonical elicitation sequence; dashed green arrows indicate optional skip transitions for abbreviated consultations; the dashed red arrow shows the revision path from confirmation back to mental symptom editing.}
+\label{fig:dialogue_fsm}
+\end{figure*}
+
+\begin{figure}[htb]
+    \centering
+    \includegraphics[width=0.48\textwidth]{figures/fig1_entity_distribution.png}
+    \caption{Distribution of 99,854 annotated clinical symptom entities across the seven Kentian totality dimensions in our 19,732-encounter corpus. Mental states (\texttt{MENT}) and anatomical locations (\texttt{LOC}) comprise over 51\% of all symptom spans.}
+    \label{fig:entity_distribution}
+\end{figure}
+
 \subsection{Multi-Encoder Sequence Tagging}
 
 Extracting non-contiguous symptom spans from raw clinical discourse demands robust sequence labeling across disparate writing styles. We adapted four specialized transformer checkpoints: BioLinkBERT-Base~\cite{yasunaga2022linkbert}, PubMedBERT~\cite{gu2021domain}, Bio\_ClinicalBERT~\cite{alsentzer2019publicly}, and DeBERTa-v3~\cite{he2021deberta}.
@@ -46,7 +98,7 @@ where $\mathbf{y}_{i}$ denotes one-hot ground-truth vectors. Under standard init
 
 \subsection{Parameter-Efficient Generative LLM Adaptation (4-bit QLoRA)}
 
-Discriminative encoders tag tokens rapidly but lack global narrative synthesis. Generative foundation models provide an alternative paradigm, parsing intricate multi-clause narratives directly into structured representations. To circumvent the prohibitive memory footprint of full fine-tuning, we adapted BioMistral~7B~\cite{labrak2024biomistral} via 4-bit Quantized Low-Rank Adaptation (QLoRA)~\cite{dettmers2023qlora}.
+Discriminative encoders tag tokens rapidly but lack global narrative synthesis. Generative foundation models provide an alternative paradigm, parsing compound multi-clause narratives directly into structured representations. To circumvent the prohibitive memory footprint of full fine-tuning, we adapted BioMistral~7B~\cite{labrak2024biomistral} via 4-bit Quantized Low-Rank Adaptation (QLoRA)~\cite{dettmers2023qlora}.
 
 Base weights $\mathbf{W}_0 \in \mathbb{R}^{d_1 \times d_2}$ are frozen in 4-bit NormalFloat (NF4) precision. Trainable updates decompose into low-rank adapter matrices $\mathbf{B} \in \mathbb{R}^{d_1 \times r}$ and $\mathbf{A} \in \mathbb{R}^{r \times d_2}$, with rank $r \ll \min(d_1, d_2)$:
 \begin{equation}
@@ -89,14 +141,14 @@ Negated statements present a chronic challenge (e.g., \textit{``severe throbbing
 \begin{tikzpicture}[
     >=Stealth,
     node distance=0.12cm,
-    stagehead/.style={fill=teal!70!black, text=white, font=\sffamily\bfseries\footnotesize, align=center, text width=3.98cm, minimum width=4.3cm, minimum height=0.68cm, rounded corners=3pt, inner sep=4pt},
-    midhead/.style={fill=blue!65!black, text=white, font=\sffamily\bfseries\footnotesize, align=center, text width=3.43cm, minimum width=3.75cm, minimum height=0.68cm, rounded corners=3pt, inner sep=4pt},
-    subhead/.style={font=\sffamily\scriptsize\itshape, text=black!65, align=center, text width=3.98cm},
-    midsubhead/.style={font=\sffamily\scriptsize\itshape, text=black!65, align=center, text width=3.43cm},
-    stagebox/.style={draw=black!20, fill=white, rounded corners=2pt, font=\sffamily\scriptsize, text=black!82, align=center, text width=3.98cm, minimum width=4.3cm, minimum height=0.68cm, inner sep=3pt},
-    midbox/.style={draw=black!20, fill=white, rounded corners=2pt, font=\sffamily\scriptsize, text=black!82, align=center, text width=3.43cm, minimum width=3.75cm, minimum height=0.68cm, inner sep=3pt},
-    frame/.style={draw=black!18, fill=black!2, rounded corners=5pt, inner sep=5pt},
-    arr/.style={-{Stealth[length=1.7mm]}, line width=0.75pt, draw=teal!65!black, shorten >=1pt, shorten <=1pt}
+    stagehead/.style={fill=KentTeal, text=white, font=\sffamily\bfseries\footnotesize, align=center, text width=3.98cm, minimum width=4.3cm, minimum height=0.68cm, rounded corners=3pt, inner sep=4pt},
+    midhead/.style={fill=KentBlue, text=white, font=\sffamily\bfseries\footnotesize, align=center, text width=3.43cm, minimum width=3.75cm, minimum height=0.68cm, rounded corners=3pt, inner sep=4pt},
+    subhead/.style={font=\sffamily\scriptsize\itshape, text=KentMuted, align=center, text width=3.98cm},
+    midsubhead/.style={font=\sffamily\scriptsize\itshape, text=KentMuted, align=center, text width=3.43cm},
+    stagebox/.style={draw=KentLine, fill=white, rounded corners=2pt, font=\sffamily\scriptsize, text=KentInk, align=center, text width=3.98cm, minimum width=4.3cm, minimum height=0.68cm, inner sep=3pt},
+    midbox/.style={draw=KentLine, fill=white, rounded corners=2pt, font=\sffamily\scriptsize, text=KentInk, align=center, text width=3.43cm, minimum width=3.75cm, minimum height=0.68cm, inner sep=3pt},
+    frame/.style={draw=KentLine, fill=KentPanel, rounded corners=5pt, inner sep=5pt},
+    arr/.style={-{Stealth[length=1.7mm]}, line width=0.75pt, draw=KentTeal, shorten >=1pt, shorten <=1pt}
 ]
 
 \node[stagehead] (s1_title) at (0, 0) {01\quad Encoder candidate mining};

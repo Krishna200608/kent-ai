@@ -16,7 +16,7 @@ Bedside repertorization confronts severe operational bottlenecks:
     \item \textbf{Vocabulary Impedance Mismatch:} A patient may report ``a band-like headache triggered by deadlines and eased by cold towels.'' Repertories encode the same complaint in terse Victorian phrasing (e.g., \textit{Head pain, band-like; worse from mental exertion; better from cold}). Exact lexical matching misses this semantic connection.
     \item \textbf{Manual Cross-Referencing Latency:} Bedside consultations routinely consume 40 to 60 minutes. The clinician must record patient narratives, isolate discrete symptom fragments, trace corresponding rubrics across disparate anatomical chapters, and calculate remedy sums by hand on ledger sheets.
     \item \textbf{Cognitive Saturation and Polycrest Retreat:} Traversing 74,513 candidate rubrics overtaxes clinician working memory. Faced with cognitive saturation, practitioners routinely retreat to roughly 30 familiar broad-spectrum substances known as \textit{polycrests} (such as \textit{Sulphur}, \textit{Lycopodium}, or \textit{Arsenicum album})~\cite{sherr2002}. This heuristic crutch sidelines rarer, highly specific simillimum candidates that match the patient's presentation.
-    \item \textbf{Brittleness of Existing Software Systems:} Current commercial platforms (such as RadarOpus and MacRepertory) operate as electronic card catalogs reliant on literal keyword matching~\cite{mcsporran2020digital}. When a practitioner enters a colloquial description, queries return empty sets unless the clinician knows the exact nineteenth-century repertory phrase beforehand. They provide no automated sequence tagging, no dynamic conversational steering, and no continuous semantic similarity.
+    \item \textbf{Brittleness of Existing Software Systems:} Current commercial platforms (such as RadarOpus and MacRepertory) operate as electronic card catalogs reliant on literal keyword matching~\cite{radaropus2024}. When a practitioner enters a colloquial description, queries return empty sets unless the clinician knows the exact nineteenth-century repertory phrase beforehand. They provide no automated sequence tagging, no dynamic conversational steering, and no continuous semantic similarity.
 \end{enumerate}
 
 \subsection{The Kent-AI Paradigm}
@@ -38,10 +38,10 @@ Kent-AI unifies these methodologies into an interactive clinical decision suppor
 \begin{tikzpicture}[
     >=Stealth,
     node distance=0.14cm,
-    stagecol/.style={fill=teal!70!black, text=white, font=\sffamily\bfseries\footnotesize, align=center, text width=2.92cm, minimum width=3.2cm, minimum height=0.68cm, rounded corners=3pt, inner sep=4pt},
-    subcard/.style={draw=black!22, fill=white, rounded corners=2pt, font=\sffamily\scriptsize, text=black!82, align=center, text width=2.92cm, minimum width=3.2cm, minimum height=0.68cm, inner sep=3pt},
-    stagebg/.style={draw=black!18, fill=black!2, rounded corners=4pt, inner sep=4pt},
-    arr/.style={-{Stealth[length=1.5mm]}, line width=0.7pt, draw=teal!65!black, shorten >=1pt, shorten <=1pt}
+    stagecol/.style={fill=KentTeal, text=white, font=\sffamily\bfseries\footnotesize, align=center, text width=2.92cm, minimum width=3.2cm, minimum height=0.68cm, rounded corners=3pt, inner sep=4pt},
+    subcard/.style={draw=KentLine, fill=white, rounded corners=2pt, font=\sffamily\scriptsize, text=KentInk, align=center, text width=2.92cm, minimum width=3.2cm, minimum height=0.68cm, inner sep=3pt},
+    stagebg/.style={draw=KentLine, fill=KentPanel, rounded corners=4pt, inner sep=4pt},
+    arr/.style={-{Stealth[length=1.5mm]}, line width=0.7pt, draw=KentTeal, shorten >=1pt, shorten <=1pt}
 ]
 
 \node[stagecol] (h1) at (0, 0) {01\quad Intake};
@@ -88,7 +88,7 @@ Kent-AI unifies these methodologies into an interactive clinical decision suppor
 \draw[arr] (bg3.east |- s3_2.center) -- (bg4.west |- s4_2.center);
 \draw[arr] (bg4.east |- s4_2.center) -- (bg5.west |- s5_2.center);
 
-\node[draw=teal!35!black, fill=teal!5, rounded corners=3pt, font=\sffamily\scriptsize, text=black!82, align=center, text width=17.7cm, minimum width=18.2cm, minimum height=0.62cm, below=0.24cm of $(bg2.south)!0.5!(bg4.south)$] (footer) {
+\node[draw=KentTeal, fill=KentTealTint, rounded corners=3pt, font=\sffamily\scriptsize, text=KentInk, align=center, text width=17.7cm, minimum width=18.2cm, minimum height=0.62cm, below=0.24cm of $(bg2.south)!0.5!(bg4.south)$] (footer) {
     \textbf{19,732 encounters} \quad $\vert$ \quad \textbf{99,854 entity spans} \quad $\vert$ \quad \textbf{0\% offset drift} \quad $\vert$ \quad \textbf{p99 retrieval $<18$\,ms}
 };
 

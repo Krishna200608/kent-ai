@@ -51,20 +51,68 @@ Generating realistic training cases without compromising patient confidentiality
     \item Anchoring synthesis within a coherent chapter preserves distributional stability across training and evaluation partitions.
 \end{itemize}
 
-Using an instruction-tuned LLaMA~3 8B model hosted locally on an Ollama runtime, we generated synthetic clinical encounters conditioned on four inputs: (i) an archival rubric path (e.g., \texttt{MIND > ANXIETY > anticipating}), (ii) associated Materia Medica remedies, (iii) patient personas (age, occupation, life stressors), and (iv) colloquial phrasing instructions discouraging technical jargon. The generator output was constrained to a rigid JSON schema containing a continuous patient narrative alongside extracted symptom spans, character offsets, and dimension tags. In total, the pipeline synthesized 19,732 validated narratives comprising 99,854 annotated entity spans. Fig.~\ref{fig:case_annotation_trace} displays the live clinical decision support workstation running at \texttt{http://localhost:8501/}, capturing real-time seven-dimension symptom extraction and interactive physician curation.
+Using an instruction-tuned LLaMA~3 8B model hosted locally on an Ollama runtime, we generated synthetic clinical encounters conditioned on four inputs: (i) an archival rubric path (e.g., \texttt{MIND > ANXIETY > anticipating}), (ii) associated Materia Medica remedies, (iii) patient personas (age, occupation, life stressors), and (iv) colloquial phrasing instructions discouraging technical jargon. The generator output was constrained to a rigid JSON schema containing a continuous patient narrative alongside extracted symptom spans, character offsets, and dimension tags. In total, the pipeline synthesized 19,732 validated narratives comprising 99,854 annotated entity spans. Fig.~\ref{fig:synth_pipeline} illustrates the four-stage generation and validation workflow, while Fig.~\ref{fig:case_annotation_trace} displays the live clinical decision support workstation.
 
-\begin{figure}[!t]
+\begin{figure*}[t]
+\centering
+\resizebox{0.96\textwidth}{!}{%
+\begin{tikzpicture}[
+    >=Stealth,
+    node distance=0.12cm,
+    stagecol/.style={fill=KentTeal, text=white, font=\sffamily\bfseries\footnotesize, align=center, text width=3.1cm, minimum width=3.4cm, minimum height=0.68cm, rounded corners=3pt, inner sep=4pt},
+    subcard/.style={draw=KentLine, fill=white, rounded corners=2pt, font=\sffamily\scriptsize, text=KentInk, align=center, text width=3.1cm, minimum width=3.4cm, minimum height=0.62cm, inner sep=3pt},
+    stagebg/.style={draw=KentLine, fill=KentPanel, rounded corners=4pt, inner sep=4pt},
+    arr/.style={-{Stealth[length=1.5mm]}, line width=0.7pt, draw=KentTeal, shorten >=1pt, shorten <=1pt},
+    inputbox/.style={draw=KentBlue, fill=KentBlueTint, rounded corners=2pt, font=\sffamily\scriptsize, text=KentBlue, align=center, text width=3.1cm, minimum width=3.4cm, minimum height=0.62cm, inner sep=3pt}
+]
+
+\node[stagecol] (h1) at (0, 0) {01\quad Rubric Sampling};
+\node[stagecol] (h2) at (4.05, 0) {02\quad LLM Generation};
+\node[stagecol] (h3) at (8.10, 0) {03\quad Alignment Repair};
+\node[stagecol] (h4) at (12.15, 0) {04\quad Quality Gating};
+
+\node[subcard, below=0.14cm of h1] (s1_1) {Kent Ch.\,1 MIND index\\(4,933 rubrics)};
+\node[subcard, below=0.10cm of s1_1] (s1_2) {Rubric path + remedy set};
+\node[subcard, below=0.10cm of s1_2] (s1_3) {Patient persona template\\(age, occupation, stressors)};
+\node[inputbox, below=0.10cm of s1_3] (s1_4) {Colloquial phrasing\\instructions (no jargon)};
+
+\node[subcard, below=0.14cm of h2] (s2_1) {LLaMA\,3 8B (Ollama)\\instruction-tuned};
+\node[subcard, below=0.10cm of s2_1] (s2_2) {Strict JSON schema:\\narrative + entities + offsets};
+\node[subcard, below=0.10cm of s2_2] (s2_3) {Character coordinates\\for each entity span};
+\node[subcard, below=0.10cm of s2_3] (s2_4) {7-dimension label tags};
+
+\node[subcard, below=0.14cm of h3] (s3_1) {3-tier offset reconciliation\\(Exact $\to$ Local $\to$ Global)};
+\node[subcard, below=0.10cm of s3_1] (s3_2) {$\pm$15-char window search};
+\node[subcard, below=0.10cm of s3_2] (s3_3) {Subword $\to$ BIO projection\\(HuggingFace offsets)};
+\node[subcard, below=0.10cm of s3_3] (s3_4) {\textbf{0\% coordinate drift}\\across 99,854 entities};
+
+\node[subcard, below=0.14cm of h4] (s4_1) {Schema validation\\(JSON structure check)};
+\node[subcard, below=0.10cm of s4_1] (s4_2) {Label $\in \mathcal{L}$ verification};
+\node[subcard, below=0.10cm of s4_2] (s4_3) {Hallucination filter:\\reject unanchored spans};
+\node[inputbox, below=0.10cm of s4_3] (s4_4) {\textbf{19,732 validated}\\clinical encounters};
+
+\begin{scope}[on background layer]
+    \node[stagebg, fit=(h1)(s1_4)] (bg1) {};
+    \node[stagebg, fit=(h2)(s2_4)] (bg2) {};
+    \node[stagebg, fit=(h3)(s3_4)] (bg3) {};
+    \node[stagebg, fit=(h4)(s4_4)] (bg4) {};
+\end{scope}
+
+\draw[arr] (bg1.east |- s1_2.center) -- (bg2.west |- s2_2.center);
+\draw[arr] (bg2.east |- s2_2.center) -- (bg3.west |- s3_2.center);
+\draw[arr] (bg3.east |- s3_2.center) -- (bg4.west |- s4_2.center);
+
+\end{tikzpicture}%
+}
+\caption{Four-stage synthetic clinical corpus generation pipeline. Rubric paths and patient personas condition LLaMA\,3 generation; deterministic offset repair eliminates subword drift; quality gating rejects schema violations and ungrounded hallucinations.}
+\label{fig:synth_pipeline}
+\end{figure*}
+
+\begin{figure}[htb]
     \centering
     \includegraphics[width=0.48\textwidth]{figures/fig2_real_clinical_workstation.png}
-    \caption{The Kent-AI clinical decision support interface (captured live from active deployment at \texttt{http://localhost:8501/}): Step~2 multi-dimensional clinical review, automated seven-dimension symptom span extraction, and physician verification controls.}
+    \caption{The Kent-AI clinical decision support interface (captured live at \texttt{localhost:8501}): Step~2 multi-dimensional clinical review with automated seven-dimension symptom span extraction and physician verification controls.}
     \label{fig:case_annotation_trace}
-\end{figure}
-
-\begin{figure}[!t]
-    \centering
-    \includegraphics[width=0.48\textwidth]{figures/fig1_entity_distribution.png}
-    \caption{Distribution of 99,854 annotated clinical symptom entities across the seven Kentian totality dimensions in our 19,732-encounter corpus. Mental states (\texttt{MENT}) and anatomical locations (\texttt{LOC}) comprise over 51\% of all symptom spans.}
-    \label{fig:entity_distribution}
 \end{figure}
 
 \subsection{Deterministic Subword Alignment Algorithm}
@@ -73,7 +121,7 @@ Direct autoregressive extraction introduces a subtle failure mode: character coo
 
 Our repair procedure eliminates coordinate drift entirely. Algorithm~\ref{alg:alignment} details the deterministic alignment logic.
 
-\begin{algorithm}[!t]
+\begin{algorithm}[htb]
 \caption{Deterministic Subword Alignment Repair}
 \label{alg:alignment}
 \footnotesize
