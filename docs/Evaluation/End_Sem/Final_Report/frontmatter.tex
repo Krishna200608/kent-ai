@@ -12,7 +12,10 @@
 
 {\huge \bfseries \ttitle\par}
 
-\vspace{5mm}
+\vspace{3mm}
+{\normalsize \textbf{Repository:} \url{https://github.com/Krishna200608/kent-ai}\par}
+
+\vspace{4mm}
 \textit{A project report submitted in partial fulfillment of the requirements\\for the award of the degree of}
 
 \vspace{7mm}
@@ -161,7 +164,7 @@ Prescribing within classical homeopathy demands that the physician synthesize an
 
 Our architecture unifies four domain-adapted transformer encoders (BioLinkBERT-Base, PubMedBERT, Bio\_ClinicalBERT, and DeBERTa-v3) encompassing 414 million parameters, optimized over an annotated corpus of 19,732 synthetic patient narratives containing 99,854 entities labeled across 15 BIO token classes. To overcome colloquial-taxonomic vocabulary mismatch, an in-memory ChromaDB HNSW vector store indexes all 74,513 rubrics via 384-dimensional unit-norm sentence embeddings, delivering nearest-neighbor retrieval in under 18 milliseconds. Downstream, an instruction-tuned BioMistral 7B large language model fine-tuned via 4-bit QLoRA acts as an arbitration engine within a two-stage hybrid extraction pipeline, securing 47.59\% Micro F1, 100\% JSON syntax compliance, and 99.73\% clinical hallucination resistance on a held-out test cohort.
 
-At the presentation tier, an ergonomic Streamlit workstation guides practitioners through a 4-step consultation stepper (Intake $\to$ Review $\to$ Analysis $\to$ Report), featuring an interactive Totality Matrix, transactional SQLite case archiving, and multi-page ReportLab PDF export. System integrity is verified through 200 automated tests across 23 submodules. Empirically, BioLinkBERT leads token sequence tagging with 34.86\% BIO F1, PubMedBERT yields top dense rubric Recall@20 at 41.56\%, and DeBERTa-v3 achieves 42.16\% Top-5 Simillimum accuracy under narrative embedding. Kent-AI delivers a reproducible, fully open-source foundation modernizing classical repertorization while safeguarding physician autonomy.
+At the presentation tier, an ergonomic Streamlit workstation guides practitioners through a 4-step consultation stepper (Intake $\to$ Review $\to$ Analysis $\to$ Report), featuring an interactive Totality Matrix, transactional SQLite case archiving, and multi-page ReportLab PDF export. System integrity is verified through 200 automated tests across 23 submodules. Empirically, BioLinkBERT leads token sequence tagging with 34.86\% BIO F1, PubMedBERT yields top dense rubric Recall@20 at 41.56\%, and DeBERTa-v3 achieves 42.16\% Top-5 Simillimum accuracy under narrative embedding. Kent-AI delivers a reproducible, fully open-source foundation modernizing classical repertorization while safeguarding physician autonomy. The complete software repository and models are publicly accessible at \url{https://github.com/Krishna200608/kent-ai}.
 
 \textbf{Keywords:} Homeopathic Repertorization, Biomedical Named Entity Recognition, Dense Retrieval, Clinical Decision Support, Large Language Models, Parameter-Efficient Fine-Tuning, QLoRA, ChromaDB.
 

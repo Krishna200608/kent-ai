@@ -36,6 +36,9 @@ def render_materia_medica_view(db: KentDB) -> None:
             )
             st.markdown("Browse cataloged remedies with Latin names, abbreviations, and characteristic Grade 3 keynotes.")
 
+            def _clear_rem_filter() -> None:
+                st.session_state.rem_filter_text = ""
+
             col_rem_search, col_rem_clear, col_rem_toggle = st.columns([3.5, 0.9, 2.4], vertical_alignment="bottom")
             with col_rem_search:
                 rem_search = st.text_input(
@@ -44,9 +47,12 @@ def render_materia_medica_view(db: KentDB) -> None:
                     placeholder="e.g. 'Lach', 'Phos', 'Nux-v', 'Ars', 'Acon'...",
                 )
             with col_rem_clear:
-                if st.button("Clear", help="Clear remedy search filter", width="stretch"):
-                    st.session_state.rem_filter_text = ""
-                    st.rerun()
+                st.button(
+                    "Clear",
+                    help="Clear remedy search filter",
+                    width="stretch",
+                    on_click=_clear_rem_filter,
+                )
             with col_rem_toggle:
                 prioritize_mind = st.checkbox(
                     "Prioritize MIND Keynotes",
